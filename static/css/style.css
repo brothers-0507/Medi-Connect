@@ -27,6 +27,14 @@
     padding: 0;
 }
 
+html, body {
+    width: 100%;
+    overflow-x: hidden;
+    margin: 0;
+    padding: 0;
+    -webkit-text-size-adjust: 100%;
+}
+
 body {
     background-color: var(--bg-dark);
     color: var(--text-primary);
@@ -36,7 +44,6 @@ body {
     display: flex;
     flex-direction: column;
     position: relative;
-    overflow-x: hidden;
 }
 
 /* Background decorative glowing circles */

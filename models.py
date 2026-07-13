@@ -41,6 +41,7 @@ class Prescription(db.Model):
     patient_contact = db.Column(db.String(50), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     instructions = db.Column(db.Text, nullable=True)
+    is_claimed = db.Column(db.Boolean, default=False, nullable=False)
     
     # Relationships
     doctor = db.relationship('User', back_populates='prescriptions_written', foreign_keys=[doctor_id])

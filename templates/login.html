@@ -99,5 +99,45 @@
             regTab.classList.add('active');
         }
     }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const action = urlParams.get('action');
+        const role = urlParams.get('role');
+        
+        if (action === 'register') {
+            switchAuth('register');
+        }
+        
+        if (role) {
+            // Auto-select role dropdown in registration
+            const roleSelect = document.getElementById('reg-role');
+            if (roleSelect) {
+                roleSelect.value = role;
+            }
+            
+            // Show custom portal welcome message inside form
+            const welcomeText = document.createElement('div');
+            welcomeText.style.textAlign = 'center';
+            welcomeText.style.marginBottom = '1.5rem';
+            welcomeText.style.fontSize = '0.9rem';
+            welcomeText.style.fontWeight = '600';
+            welcomeText.style.textTransform = 'uppercase';
+            welcomeText.style.letterSpacing = '0.05em';
+            
+            if (role === 'doctor') {
+                welcomeText.innerHTML = '<span style="color: var(--primary);"><i class="ph-bold ph-stethoscope"></i> Practitioner Portal</span>';
+            } else if (role === 'patient') {
+                welcomeText.innerHTML = '<span style="color: var(--secondary);"><i class="ph-bold ph-user"></i> Patient Personal Space</span>';
+            } else if (role === 'pharmacy') {
+                welcomeText.innerHTML = '<span style="color: var(--accent);"><i class="ph-bold ph-first-aid"></i> Pharmacy Network Portal</span>';
+            }
+            
+            const cardElement = document.querySelector('.card');
+            if (cardElement) {
+                cardElement.insertBefore(welcomeText, cardElement.children[1]);
+            }
+        }
+    });
 </script>
 {% endblock %}

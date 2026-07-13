@@ -142,9 +142,7 @@ def logout():
 def doctor_dashboard():
     doctor_id = session['user_id']
     prescriptions = Prescription.query.filter_by(doctor_id=doctor_id).order_by(Prescription.created_at.desc()).all()
-    # List of all patients for helper dropdown
-    patients = User.query.filter_by(role='patient').all()
-    return render_template('doctor.html', prescriptions=prescriptions, patients=patients)
+    return render_template('doctor.html', prescriptions=prescriptions)
 
 @app.route('/prescription/create', methods=['POST'])
 @login_required
@@ -157,14 +155,18 @@ def create_prescription():
     patient_contact = request.form.get('patient_contact')
     instructions = request.form.get('instructions')
     
-    # Try to link existing registered patient
-    patient_id = None
+    # Find registered patient by username (required)
+    pat_user = None
     if patient_username:
-        pat_user = User.query.filter_by(username=patient_username, role='patient').first()
-        if pat_user:
-            patient_id = pat_user.id
-            patient_name = pat_user.name
-            patient_contact = pat_user.contact
+        pat_user = User.query.filter_by(username=patient_username.strip(), role='patient').first()
+    
+    if not pat_user:
+        flash('Error: Patient username not found. Please verify the registered username with the patient.', 'danger')
+        return redirect(url_for('doctor_dashboard'))
+        
+    patient_id = pat_user.id
+    patient_name = pat_user.name
+    patient_contact = pat_user.contact
             
     prescription = Prescription(
         doctor_id=doctor_id,
@@ -172,7 +174,8 @@ def create_prescription():
         patient_name=patient_name,
         patient_age=int(patient_age) if patient_age else None,
         patient_contact=patient_contact,
-        instructions=instructions
+        instructions=instructions,
+        is_claimed=False
     )
     
     db.session.add(prescription)
@@ -209,21 +212,17 @@ def create_prescription():
 def patient_dashboard():
     patient_id = session['user_id']
     
-    # Get prescriptions linked to patient (or search by contact info matches)
-    user = User.query.get(patient_id)
-    prescriptions = Prescription.query.filter(
-        (Prescription.patient_id == patient_id) | 
-        ((Prescription.patient_contact == user.contact) & (Prescription.patient_id == None))
+    # Get claimed prescriptions
+    prescriptions = Prescription.query.filter_by(
+        patient_id=patient_id, 
+        is_claimed=True
     ).order_by(Prescription.created_at.desc()).all()
     
-    # Auto-link prescriptions that match contact but aren't explicitly linked
-    linked_any = False
-    for rx in prescriptions:
-        if rx.patient_id is None:
-            rx.patient_id = patient_id
-            linked_any = True
-    if linked_any:
-        db.session.commit()
+    # Get pending (unclaimed) prescriptions for pop-up alert
+    pending_prescriptions = Prescription.query.filter_by(
+        patient_id=patient_id,
+        is_claimed=False
+    ).order_by(Prescription.created_at.desc()).all()
 
     # Medi-Tracker: Active medication schedules
     schedules = MedicationSchedule.query.filter_by(patient_id=patient_id).all()
@@ -259,6 +258,7 @@ def patient_dashboard():
     return render_template(
         'patient.html', 
         prescriptions=prescriptions,
+        pending_prescriptions=pending_prescriptions,
         schedules=schedules,
         refill_alerts=refill_alerts,
         broadcasts=broadcasts,
@@ -281,9 +281,81 @@ def claim_prescription():
         flash('This prescription is already linked to another patient profile.', 'danger')
     else:
         rx.patient_id = patient_id
+        rx.is_claimed = True
         db.session.commit()
         flash('Prescription successfully claimed and linked to your profile!', 'success')
         
+    return redirect(url_for('patient_dashboard'))
+
+@app.route('/prescription/accept/<int:rx_id>', methods=['POST'])
+@login_required
+@role_required('patient')
+def accept_prescription(rx_id):
+    patient_id = session['user_id']
+    rx = Prescription.query.filter_by(id=rx_id, patient_id=patient_id).first()
+    if not rx:
+        flash('Prescription not found or unauthorized.', 'danger')
+        return redirect(url_for('patient_dashboard'))
+        
+    # Mark as claimed/accepted
+    rx.is_claimed = True
+    
+    # Automatically import medications to tracker
+    duration_days = 7
+    for item in rx.items:
+        dur_str = item.duration.lower()
+        if 'day' in dur_str:
+            try:
+                duration_days = int(''.join(filter(str.isdigit, dur_str)))
+            except ValueError:
+                pass
+        elif 'week' in dur_str:
+            try:
+                duration_days = int(''.join(filter(str.isdigit, dur_str))) * 7
+            except ValueError:
+                pass
+        elif 'month' in dur_str:
+            try:
+                duration_days = int(''.join(filter(str.isdigit, dur_str))) * 30
+            except ValueError:
+                pass
+                
+        freq_str = item.frequency.lower()
+        times = "09:00"
+        doses_per_day = 1
+        if 'twice' in freq_str or '2 times' in freq_str or 'bid' in freq_str:
+            times = "09:00, 21:00"
+            doses_per_day = 2
+        elif 'three' in freq_str or '3 times' in freq_str or 'tid' in freq_str:
+            times = "08:00, 14:00, 20:00"
+            doses_per_day = 3
+        elif 'four' in freq_str or '4 times' in freq_str or 'qid' in freq_str:
+            times = "08:00, 12:00, 16:00, 20:00"
+            doses_per_day = 4
+            
+        total_doses = doses_per_day * duration_days
+        
+        exists = MedicationSchedule.query.filter_by(
+            patient_id=patient_id, 
+            medicine_name=item.medicine_name
+        ).first()
+        
+        if not exists:
+            sched = MedicationSchedule(
+                patient_id=patient_id,
+                medicine_name=item.medicine_name,
+                dosage=item.dosage,
+                frequency=item.frequency,
+                time_of_day=times,
+                start_date=date.today(),
+                end_date=date.today() + timedelta(days=duration_days),
+                current_stock=total_doses,
+                refill_alert_threshold=doses_per_day * 3
+            )
+            db.session.add(sched)
+            
+    db.session.commit()
+    flash('Prescription accepted and imported to your Medi-Tracker!', 'success')
     return redirect(url_for('patient_dashboard'))
 
 @app.route('/tracker/import/<int:rx_id>', methods=['POST'])

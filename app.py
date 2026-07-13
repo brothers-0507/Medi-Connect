@@ -86,7 +86,7 @@ def index():
             return redirect(url_for('patient_dashboard'))
         elif user.role == 'pharmacy':
             return redirect(url_for('pharmacy_dashboard'))
-    return redirect(url_for('login'))
+    return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():

@@ -262,5 +262,42 @@ class MediConnectTestCase(unittest.TestCase):
         self.assertTrue(data['success'])
         self.assertIn('Sold stock contains batches near expiration: Batch EXP-999', data['message'])
 
+    def test_accept_prescription(self):
+        # Create prescription first
+        with app.app_context():
+            rx = Prescription(
+                doctor_id=self.doc_id, 
+                patient_id=self.pat_id, 
+                patient_name='Patient Test', 
+                patient_contact='555-9988',
+                is_claimed=False
+            )
+            # Add item
+            item = PrescriptionItem(medicine_name='Amoxicillin', dosage='500mg', frequency='twice daily', duration='7 days')
+            rx.items.append(item)
+            db.session.add(rx)
+            db.session.commit()
+            rx_id = rx.id
+
+        # Log in as patient
+        self.login_as('test_patient')
+        
+        # Verify it appears in pending
+        response = self.app.get('/dashboard/patient')
+        self.assertIn(b'New Prescription Alert!', response.data)
+        
+        # Accept it
+        response = self.app.post(f'/prescription/accept/{rx_id}', follow_redirects=True)
+        self.assertIn(b'Prescription accepted and imported', response.data)
+        
+        # Verify is_claimed is True and schedule exists
+        with app.app_context():
+            rx_updated = Prescription.query.get(rx_id)
+            self.assertTrue(rx_updated.is_claimed)
+            
+            sched = MedicationSchedule.query.filter_by(patient_id=self.pat_id, medicine_name='Amoxicillin').first()
+            self.assertIsNotNone(sched)
+            self.assertEqual(sched.current_stock, 14) # 2 doses/day * 7 days
+
 if __name__ == '__main__':
     unittest.main()

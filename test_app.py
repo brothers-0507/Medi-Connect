@@ -18,21 +18,26 @@ class MediConnectTestCase(unittest.TestCase):
             self.doc = User(username='test_doctor', name='Dr. Test', role='doctor', contact='doc@test.com')
             self.doc.set_password('password')
             
-            self.pat = User(username='test_patient', name='Patient Test', role='patient', contact='555-9988')
+            self.pat = User(username='test_patient', name='Patient Test', role='patient', contact='555-9988', location='London')
             self.pat.set_password('password')
             
-            self.ph = User(username='test_pharmacy', name='Pharmacy Test', role='pharmacy', contact='ph@test.com')
+            self.ph = User(username='test_pharmacy', name='Pharmacy Test', role='pharmacy', contact='ph@test.com', location='London')
             self.ph.set_password('password')
+
+            self.ph_2 = User(username='test_pharmacy_2', name='Pharmacy Test 2', role='pharmacy', contact='ph2@test.com', location='Paris')
+            self.ph_2.set_password('password')
             
             db.session.add(self.doc)
             db.session.add(self.pat)
             db.session.add(self.ph)
+            db.session.add(self.ph_2)
             db.session.commit()
             
             # Save IDs for reference
             self.doc_id = self.doc.id
             self.pat_id = self.pat.id
             self.ph_id = self.ph.id
+            self.ph_2_id = self.ph_2.id
 
     def tearDown(self):
         with app.app_context():
@@ -71,7 +76,8 @@ class MediConnectTestCase(unittest.TestCase):
             password='newpassword',
             name='New Person',
             role='patient',
-            contact='111-2222'
+            contact='111-2222',
+            location='London'
         ), follow_redirects=True)
         
         self.assertEqual(response.status_code, 200)
@@ -81,6 +87,7 @@ class MediConnectTestCase(unittest.TestCase):
             user = User.query.filter_by(username='new_user').first()
             self.assertIsNotNone(user)
             self.assertEqual(user.name, 'New Person')
+            self.assertEqual(user.location, 'London')
             self.assertTrue(user.check_password('newpassword'))
 
     # --- Doctor Prescription Tests ---
@@ -298,6 +305,37 @@ class MediConnectTestCase(unittest.TestCase):
             sched = MedicationSchedule.query.filter_by(patient_id=self.pat_id, medicine_name='Amoxicillin').first()
             self.assertIsNotNone(sched)
             self.assertEqual(sched.current_stock, 14) # 2 doses/day * 7 days
+
+    def test_location_broadcast_filtering(self):
+        # Create prescription and broadcast it
+        with app.app_context():
+            rx = Prescription(
+                doctor_id=self.doc_id,
+                patient_id=self.pat_id,
+                patient_name='Patient Test',
+                patient_contact='555-9988',
+                is_claimed=True
+            )
+            # Add item
+            item = PrescriptionItem(medicine_name='Amoxicillin', dosage='500mg', frequency='twice daily', duration='7 days')
+            rx.items.append(item)
+            db.session.add(rx)
+            db.session.commit()
+            
+            bc = Broadcast(prescription_id=rx.id, patient_id=self.pat_id)
+            db.session.add(bc)
+            db.session.commit()
+            rx_uuid = rx.uuid
+
+        # Log in as test_pharmacy (location = London, matches patient)
+        self.login_as('test_pharmacy')
+        response = self.app.get('/dashboard/pharmacy')
+        self.assertIn(rx_uuid[:8].encode(), response.data) # London pharmacy sees the broadcast!
+
+        # Log in as test_pharmacy_2 (location = Paris, does NOT match patient)
+        self.login_as('test_pharmacy_2')
+        response = self.app.get('/dashboard/pharmacy')
+        self.assertNotIn(rx_uuid[:8].encode(), response.data) # Paris pharmacy does NOT see the broadcast!
 
 if __name__ == '__main__':
     unittest.main()

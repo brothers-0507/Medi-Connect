@@ -115,12 +115,13 @@ def register():
     name = request.form['name']
     role = request.form['role']
     contact = request.form['contact']
+    location = request.form.get('location', '').strip()
     
     if User.query.filter_by(username=username).first():
         flash('Username already exists.', 'danger')
         return redirect(url_for('login'))
         
-    user = User(username=username, name=name, role=role, contact=contact)
+    user = User(username=username, name=name, role=role, contact=contact, location=location)
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
@@ -548,7 +549,18 @@ def pharmacy_dashboard():
     inventory = InventoryItem.query.filter_by(pharmacy_id=pharmacy_id).order_by(InventoryItem.medicine_name).all()
     
     # Active broadcasts from patients
-    broadcasts = Broadcast.query.filter_by(status='active').order_by(Broadcast.created_at.desc()).all()
+    pharmacy_user = User.query.get(pharmacy_id)
+    pharmacy_loc = (pharmacy_user.location or "").strip().lower()
+    
+    all_broadcasts = Broadcast.query.filter_by(status='active').order_by(Broadcast.created_at.desc()).all()
+    
+    # Filter by matching location (city name match)
+    broadcasts = []
+    for bc in all_broadcasts:
+        patient_user = bc.patient
+        patient_loc = (patient_user.location or "").strip().lower() if patient_user else ""
+        if not pharmacy_loc or not patient_loc or pharmacy_loc == patient_loc:
+            broadcasts.append(bc)
     
     # Map broadcasts to whether this pharmacy has already responded
     active_broadcasts_info = []
@@ -744,6 +756,20 @@ def view_prescription(rx_uuid):
     qr_base64 = generate_qr_base64(secure_url)
     
     return render_template('view_prescription.html', prescription=prescription, qr_base64=qr_base64, secure_url=secure_url)
+
+@app.route('/prescription/api/<string:rx_uuid>')
+@login_required
+def prescription_api(rx_uuid):
+    rx = Prescription.query.filter_by(uuid=rx_uuid).first()
+    if not rx:
+        return jsonify({'success': False, 'message': 'Prescription not found'}), 404
+        
+    items = [{'medicine_name': item.medicine_name, 'dosage': item.dosage} for item in rx.items]
+    return jsonify({
+        'success': True,
+        'patient_name': rx.patient_name,
+        'items': items
+    })
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

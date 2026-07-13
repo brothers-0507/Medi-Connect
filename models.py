@@ -14,6 +14,7 @@ class User(db.Model):
     role = db.Column(db.String(20), nullable=False)  # 'doctor', 'patient', 'pharmacy'
     name = db.Column(db.String(120), nullable=False)
     contact = db.Column(db.String(50), nullable=True)
+    location = db.Column(db.String(100), nullable=True)
     
     # Relationships
     prescriptions_written = db.relationship('Prescription', back_populates='doctor', foreign_keys='Prescription.doctor_id')

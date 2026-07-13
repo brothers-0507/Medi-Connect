@@ -1,0 +1,23 @@
+# Python virtual environment
+venv/
+.venv/
+env/
+ENV/
+
+# Python cache / compiled files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local database (private patient data & SQLite file)
+mediconnect.db
+instance/
+
+# Flask config overrides / keys (if any)
+.env
+local_config.py
+
+# OS generated files
+.DS_Store
+Thumbs.db

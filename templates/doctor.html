@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+
+{% block title %}Doctor Dashboard - MediConnect{% endblock %}
+
+{% block content %}
+<div class="grid-container">
+    <!-- Left Column: Create Digital Prescription -->
+    <div>
+        <div class="card">
+            <h2 class="card-title">
+                <span><i class="ph-bold ph-prescription card-title-icon"></i> New Digital Prescription</span>
+            </h2>
+            
+            <form action="{{ url_for('create_prescription') }}" method="POST" id="prescription-form">
+                <!-- Patient Info -->
+                <div style="margin-bottom: 2rem;">
+                    <h3 style="font-size: 1rem; color: var(--secondary); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em;">Patient Information</h3>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="patient_username">Link Registered Username (Optional)</label>
+                            <select id="patient_username" name="patient_username" class="form-control" style="background-color: #12131e; color: white;" onchange="autoFillPatient()">
+                                <option value="">-- Select Registered Patient --</option>
+                                {% for pat in patients %}
+                                    <option value="{{ pat.username }}" data-name="{{ pat.name }}" data-contact="{{ pat.contact }}">{{ pat.name }} ({{ pat.username }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="patient_name">Patient Full Name</label>
+                            <input type="text" id="patient_name" name="patient_name" class="form-control" placeholder="John Doe" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="patient_age">Age</label>
+                            <input type="number" id="patient_age" name="patient_age" class="form-control" placeholder="e.g. 35" min="0" max="150">
+                        </div>
+                        <div class="form-group">
+                            <label for="patient_contact">Contact (Phone/Email)</label>
+                            <input type="text" id="patient_contact" name="patient_contact" class="form-control" placeholder="e.g. 555-0199" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Medications -->
+                <div style="margin-bottom: 2rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3 style="font-size: 1rem; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">Medications</h3>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="addMedicationRow()">
+                            <i class="ph-bold ph-plus"></i> Add Medicine
+                        </button>
+                    </div>
+                    
+                    <div id="medications-container">
+                        <!-- Default Row -->
+                        <div class="prescription-item-row" id="med-row-0">
+                            <div>
+                                <input type="text" name="med_name[]" class="form-control" placeholder="Medicine Name" required>
+                            </div>
+                            <div>
+                                <input type="text" name="med_dosage[]" class="form-control" placeholder="Dosage (e.g. 1 tab)" required>
+                            </div>
+                            <div>
+                                <input type="text" name="med_frequency[]" class="form-control" placeholder="Frequency (e.g. twice daily)" required>
+                            </div>
+                            <div>
+                                <input type="text" name="med_duration[]" class="form-control" placeholder="Duration (e.g. 7 days)" required>
+                            </div>
+                            <div>
+                                <input type="text" name="med_instructions[]" class="form-control" placeholder="Notes (e.g. before food)">
+                            </div>
+                            <div>
+                                <button type="button" class="btn btn-danger btn-sm" onclick="removeMedicationRow('med-row-0')" style="padding: 0.55rem;"><i class="ph-bold ph-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- General Instructions -->
+                <div class="form-group" style="margin-bottom: 2rem;">
+                    <label for="instructions">General Doctor Notes / Instructions</label>
+                    <textarea id="instructions" name="instructions" class="form-control" rows="3" placeholder="Rest well, drink plenty of fluids..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.9rem;">
+                    <i class="ph-bold ph-check"></i> Generate Digital Prescription & QR Link
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Right Column: Prescription History -->
+    <div>
+        <div class="card" style="max-height: 80vh; overflow-y: auto;">
+            <h2 class="card-title">
+                <span><i class="ph-bold ph-clock-counter-clockwise card-title-icon"></i> Issued History</span>
+            </h2>
+            
+            {% if prescriptions %}
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    {% for rx in prescriptions %}
+                        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem; transition: var(--transition);">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                                <div style="font-weight: 600; font-size: 1.05rem;">{{ rx.patient_name }}</div>
+                                <span class="badge badge-info">{{ rx.created_at.strftime('%d %b %Y') }}</span>
+                            </div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+                                <i class="ph ph-hash"></i> Code: <code>{{ rx.uuid[:8] }}...</code><br>
+                                <i class="ph ph-pill"></i> Medications: {{ rx.items|length }}
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <a href="{{ url_for('view_prescription', rx_uuid=rx.uuid) }}" target="_blank" class="btn btn-outline btn-sm" style="flex: 1;">
+                                    <i class="ph ph-eye"></i> View / QR
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div style="text-align: center; padding: 3rem 1rem; color: var(--text-secondary);">
+                    <i class="ph ph-prescription" style="font-size: 3rem; margin-bottom: 1rem; color: var(--card-border);"></i>
+                    <p>No prescriptions generated yet.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let medRowCount = 1;
+
+    function addMedicationRow() {
+        const container = document.getElementById('medications-container');
+        const newId = `med-row-${medRowCount}`;
+        
+        const row = document.createElement('div');
+        row.className = 'prescription-item-row';
+        row.id = newId;
+        row.innerHTML = `
+            <div>
+                <input type="text" name="med_name[]" class="form-control" placeholder="Medicine Name" required>
+            </div>
+            <div>
+                <input type="text" name="med_dosage[]" class="form-control" placeholder="Dosage (e.g. 1 tab)" required>
+            </div>
+            <div>
+                <input type="text" name="med_frequency[]" class="form-control" placeholder="Frequency (e.g. twice daily)" required>
+            </div>
+            <div>
+                <input type="text" name="med_duration[]" class="form-control" placeholder="Duration (e.g. 7 days)" required>
+            </div>
+            <div>
+                <input type="text" name="med_instructions[]" class="form-control" placeholder="Notes (e.g. before food)">
+            </div>
+            <div>
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeMedicationRow('${newId}')" style="padding: 0.55rem;"><i class="ph-bold ph-trash"></i></button>
+            </div>
+        `;
+        
+        container.appendChild(row);
+        medRowCount++;
+    }
+
+    function removeMedicationRow(id) {
+        const row = document.getElementById(id);
+        const container = document.getElementById('medications-container');
+        if (container.children.length > 1) {
+            row.remove();
+        } else {
+            alert("At least one medicine is required in the prescription.");
+        }
+    }
+
+    function autoFillPatient() {
+        const select = document.getElementById('patient_username');
+        const selectedOption = select.options[select.selectedIndex];
+        
+        if (selectedOption.value) {
+            document.getElementById('patient_name').value = selectedOption.getAttribute('data-name');
+            document.getElementById('patient_contact').value = selectedOption.getAttribute('data-contact');
+        }
+    }
+</script>
+{% endblock %}

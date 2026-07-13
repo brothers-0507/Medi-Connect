@@ -1,0 +1,374 @@
+{% extends 'base.html' %}
+
+{% block title %}Patient Dashboard - MediConnect{% endblock %}
+
+{% block content %}
+<div class="tabs">
+    <button class="tab-btn active" onclick="openTab(event, 'tracker-tab')">
+        <i class="ph-bold ph-calendar"></i> Medi-Tracker
+    </button>
+    <button class="tab-btn" onclick="openTab(event, 'prescriptions-tab')">
+        <i class="ph-bold ph-prescription"></i> My Prescriptions
+    </button>
+    <button class="tab-btn" onclick="openTab(event, 'broadcasts-tab')">
+        <i class="ph-bold ph-broadcast"></i> Broadcast Quotes
+    </button>
+</div>
+
+<!-- ================= TAB: MEDI-TRACKER ================= -->
+<div id="tracker-tab" class="tab-content active">
+    <!-- Refill Warnings -->
+    {% if refill_alerts %}
+        <div class="no-print" style="margin-bottom: 2rem;">
+            {% for alert in refill_alerts %}
+                <div class="alert alert-warning" style="justify-content: space-between; display: flex; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="ph-bold ph-warning-octagon" style="font-size: 1.5rem;"></i>
+                        <div>
+                            <strong>Refill Alert: {{ alert.medicine_name }}</strong>
+                            <div style="font-size: 0.85rem; opacity: 0.9;">Only {{ alert.current_stock }} doses remaining (alert threshold: {{ alert.refill_alert_threshold }}).</div>
+                        </div>
+                    </div>
+                    
+                    <form action="{{ url_for('refill_stock', schedule_id=alert.id) }}" method="POST" style="display: flex; gap: 0.5rem; align-items: center; margin: 0;">
+                        <input type="number" name="amount" class="form-control btn-sm" style="width: 70px; background: rgba(0,0,0,0.2);" value="30" min="1" required>
+                        <button type="submit" class="btn btn-secondary btn-sm">
+                            <i class="ph ph-plus-circle"></i> Refill
+                        </button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <div class="grid-container">
+        <!-- Checklist for Today -->
+        <div>
+            <div class="card">
+                <h2 class="card-title">
+                    <span><i class="ph-bold ph-check-square card-title-icon"></i> Today's Dosages</span>
+                    <span style="font-size: 0.85rem; font-weight: normal; color: var(--text-secondary);">Click dots to log doses</span>
+                </h2>
+
+                {% if checklist %}
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        {% for item in checklist %}
+                            <div class="checklist-item" id="sched-card-{{ item.schedule.id }}">
+                                <div class="checklist-info">
+                                    <div class="checklist-med-name">{{ item.schedule.medicine_name }}</div>
+                                    <div class="checklist-details">
+                                        <i class="ph ph-pill"></i> {{ item.schedule.dosage }} | 
+                                        <i class="ph ph-clock"></i> Times: {{ item.schedule.time_of_day }} | 
+                                        <i class="ph ph-archive"></i> Stock: <span class="stock-display">{{ item.schedule.current_stock }}</span> left
+                                    </div>
+                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                        Start: {{ item.schedule.start_date }} - End: {{ item.schedule.end_date }}
+                                    </div>
+                                </div>
+                                <div class="checklist-checkboxes">
+                                    {% for idx in range(item.total_needed) %}
+                                        <button 
+                                            class="log-dot {% if idx < item.logged_count %}checked{% endif %}" 
+                                            onclick="logDoseClick(this, {{ item.schedule.id }}, {{ idx }}, {{ item.logged_count }})"
+                                            {% if idx < item.logged_count %}disabled{% endif %}
+                                            title="Dose {{ idx + 1 }}"
+                                        >
+                                            {% if idx < item.logged_count %}
+                                                <i class="ph-bold ph-check"></i>
+                                            {% else %}
+                                                {{ idx + 1 }}
+                                            {% endif %}
+                                        </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div style="text-align: center; padding: 4rem 1rem; color: var(--text-secondary);">
+                        <i class="ph ph-calendar-blank" style="font-size: 3rem; margin-bottom: 1rem; color: var(--card-border);"></i>
+                        <p>No medication schedule active for today.</p>
+                        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Link a prescription or add a custom schedule to begin tracking.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Add Custom Schedule Form -->
+        <div>
+            <div class="card">
+                <h2 class="card-title">
+                    <span><i class="ph-bold ph-plus-circle card-title-icon"></i> Custom Tracker</span>
+                </h2>
+                
+                <form action="{{ url_for('add_custom_tracker') }}" method="POST">
+                    <div class="form-group">
+                        <label for="medicine_name">Medicine Name</label>
+                        <input type="text" id="medicine_name" name="medicine_name" class="form-control" placeholder="e.g. Vitamin C" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="dosage">Dosage</label>
+                            <input type="text" id="dosage" name="dosage" class="form-control" placeholder="e.g. 1 capsule" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="frequency">Frequency</label>
+                            <input type="text" id="frequency" name="frequency" class="form-control" placeholder="e.g. daily">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="time_of_day">Times of Day (comma separated)</label>
+                        <input type="text" id="time_of_day" name="time_of_day" class="form-control" placeholder="e.g. 08:00, 20:00" value="08:00" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="end_date">End Date</label>
+                        <input type="date" id="end_date" name="end_date" class="form-control" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="current_stock">Initial Stock (doses)</label>
+                            <input type="number" id="current_stock" name="current_stock" class="form-control" value="30" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="refill_alert_threshold">Alert Threshold</label>
+                            <input type="number" id="refill_alert_threshold" name="refill_alert_threshold" class="form-control" value="5" min="0">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                        <i class="ph ph-plus-circle"></i> Add to Tracker
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= TAB: PRESCRIPTIONS ================= -->
+<div id="prescriptions-tab" class="tab-content">
+    <div class="grid-container">
+        <!-- Claim Prescription -->
+        <div class="card" style="grid-column: 1 / -1;">
+            <h2 class="card-title">
+                <span><i class="ph-bold ph-plus-circle card-title-icon"></i> Link a Digital Prescription</span>
+            </h2>
+            <form action="{{ url_for('claim_prescription') }}" method="POST" style="display: flex; gap: 1rem; align-items: flex-end;">
+                <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                    <label for="prescription_code">Prescription Code / Secure Key (UUID)</label>
+                    <input type="text" id="prescription_code" name="prescription_code" class="form-control" placeholder="e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required>
+                </div>
+                <button type="submit" class="btn btn-secondary" style="height: 43px;">
+                    <i class="ph ph-link"></i> Claim & Link
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2 class="card-title">
+            <span><i class="ph-bold ph-prescription card-title-icon"></i> My Linked Prescriptions</span>
+        </h2>
+
+        {% if prescriptions %}
+            <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                {% for rx in prescriptions %}
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
+                        <div>
+                            <div style="display: flex; gap: 0.75rem; align-items: center; margin-bottom: 0.5rem;">
+                                <h3 style="font-size: 1.15rem; margin: 0;">Prescription by {{ rx.doctor.name }}</h3>
+                                <span class="badge badge-info">{{ rx.created_at.strftime('%d %b %Y') }}</span>
+                            </div>
+                            <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                                <i class="ph ph-user"></i> Patient: <strong>{{ rx.patient_name }}</strong> (Age: {{ rx.patient_age or 'N/A' }}) | Code: <code>{{ rx.uuid }}</code>
+                            </div>
+                            <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">
+                                {% for item in rx.items %}
+                                    <span style="background: rgba(255,255,255,0.05); padding: 0.25rem 0.5rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.02);">
+                                        {{ item.medicine_name }} ({{ item.dosage }} - {{ item.duration }})
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <a href="{{ url_for('view_prescription', rx_uuid=rx.uuid) }}" target="_blank" class="btn btn-outline btn-sm">
+                                <i class="ph ph-eye"></i> View QR
+                            </a>
+                            
+                            <form action="{{ url_for('import_prescription_to_tracker', rx_id=rx.id) }}" method="POST" style="margin: 0;">
+                                <button type="submit" class="btn btn-secondary btn-sm">
+                                    <i class="ph ph-calendar"></i> Import Tracker
+                                </button>
+                            </form>
+                            
+                            <form action="{{ url_for('create_broadcast', prescription_id=rx.id) }}" method="POST" style="margin: 0;">
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    <i class="ph ph-broadcast"></i> Broadcast
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 4rem 1rem; color: var(--text-secondary);">
+                <i class="ph ph-prescription" style="font-size: 4rem; margin-bottom: 1rem; color: var(--card-border);"></i>
+                <p>You haven't claimed any prescriptions yet.</p>
+                <p style="font-size: 0.85rem; margin-top: 0.5rem;">Enter a prescription UUID code above to claim it.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ================= TAB: BROADCAST QUOTES ================= -->
+<div id="broadcasts-tab" class="tab-content">
+    <div class="card">
+        <h2 class="card-title">
+            <span><i class="ph-bold ph-broadcast card-title-icon"></i> Active Broadcasts & Pharmacy Offers</span>
+        </h2>
+        
+        {% if broadcasts %}
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                {% for bc in broadcasts %}
+                    <div style="border: 1px solid var(--card-border); background: rgba(255,255,255,0.01); border-radius: 12px; padding: 1.5rem;">
+                        <!-- Broadcast Header -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 1rem; margin-bottom: 1rem;">
+                            <div>
+                                <h3 style="font-size: 1.1rem; margin: 0;">Broadcast for Prescription #{{ bc.prescription.uuid[:8] }}...</h3>
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                    Doctor: {{ bc.prescription.doctor.name }} | Broadcasted: {{ bc.created_at.strftime('%d %b %Y, %H:%M') }}
+                                </p>
+                            </div>
+                            <span class="badge {% if bc.status == 'active' %}badge-success{% else %}badge-info{% endif %}">
+                                {{ bc.status }}
+                            </span>
+                        </div>
+                        
+                        <!-- Offers Received -->
+                        <div style="margin-top: 1rem;">
+                            <h4 style="font-size: 0.9rem; color: var(--secondary); text-transform: uppercase; margin-bottom: 0.75rem;">Offers Received ({{ bc.offers|length }})</h4>
+                            
+                            {% if bc.offers %}
+                                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
+                                    {% for offer in bc.offers %}
+                                        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 10px; padding: 1rem; transition: var(--transition);">
+                                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+                                                <strong style="color: var(--text-primary);">{{ offer.pharmacy.name }}</strong>
+                                                <span style="font-size: 1.2rem; font-weight: 700; color: var(--secondary);">${{ "%.2f"|format(offer.estimated_price) }}</span>
+                                            </div>
+                                            <div style="margin-bottom: 0.5rem;">
+                                                {% if offer.availability_status == 'available' %}
+                                                    <span class="badge badge-success"><i class="ph-bold ph-check"></i> In Stock</span>
+                                                {% elif offer.availability_status == 'partial' %}
+                                                    <span class="badge badge-warning"><i class="ph-bold ph-warning"></i> Partial Stock</span>
+                                                {% else %}
+                                                    <span class="badge badge-danger"><i class="ph-bold ph-x"></i> Out of Stock</span>
+                                                {% endif %}
+                                            </div>
+                                            {% if offer.notes %}
+                                                <p style="font-size: 0.85rem; color: var(--text-secondary); background: rgba(0,0,0,0.15); padding: 0.5rem; border-radius: 6px; margin-bottom: 0.5rem;">
+                                                    <strong>Note:</strong> {{ offer.notes }}
+                                                </p>
+                                            {% endif %}
+                                            <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                                                <i class="ph ph-phone"></i> {{ offer.pharmacy.contact or 'No contact number' }}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <div style="text-align: center; padding: 2rem; background: rgba(0,0,0,0.1); border-radius: 10px; color: var(--text-secondary); font-size: 0.9rem;">
+                                    <i class="ph ph-dots-three-circle-horizontal" style="font-size: 2rem; margin-bottom: 0.5rem; display: block; color: var(--card-border);"></i>
+                                    Awaiting price estimates from local pharmacies...
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 4rem 1rem; color: var(--text-secondary);">
+                <i class="ph ph-broadcast" style="font-size: 4rem; margin-bottom: 1rem; color: var(--card-border);"></i>
+                <p>No active broadcasts.</p>
+                <p style="font-size: 0.85rem; margin-top: 0.5rem;">Go to "My Prescriptions" and click "Broadcast" on any prescription to request pharmacy estimates.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Tab switching logic
+    function openTab(evt, tabName) {
+        let i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].classList.remove("active");
+        }
+        tablinks = document.getElementsByClassName("tab-btn");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+        }
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    // Set default value for custom tracker date (today + 7 days)
+    document.addEventListener("DOMContentLoaded", function() {
+        const today = new Date();
+        const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const yyyy = nextWeek.getFullYear();
+        let mm = nextWeek.getMonth() + 1;
+        let dd = nextWeek.getDate();
+        if (mm < 10) mm = '0' + mm;
+        if (dd < 10) dd = '0' + dd;
+        document.getElementById('end_date').value = `${yyyy}-${mm}-${dd}`;
+    });
+
+    // Logging dose AJAX submission
+    function logDoseClick(btn, scheduleId, index, alreadyLogged) {
+        if (btn.classList.contains('checked')) return; // already logged
+
+        const formData = new FormData();
+        formData.append('action', 'taken');
+
+        fetch(`/tracker/log/${scheduleId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Update button visual
+                btn.classList.add('checked');
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ph-bold ph-check"></i>';
+                
+                // Update stock numbers dynamically on card
+                const card = document.getElementById(`sched-card-${scheduleId}`);
+                const stockSpan = card.querySelector('.stock-display');
+                if (stockSpan) {
+                    stockSpan.textContent = data.current_stock;
+                }
+
+                // Show alert if running low
+                if (data.running_low && data.alert_message) {
+                    // Create alert dynamically
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-warning no-print';
+                    alertDiv.style.animation = 'fadeIn 0.3s ease';
+                    alertDiv.innerHTML = `<i class="ph-bold ph-warning"></i> <span>${data.alert_message}</span>`;
+                    
+                    const main = document.querySelector('main');
+                    main.insertBefore(alertDiv, main.firstChild);
+                }
+            } else {
+                alert("Error: " + data.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("An error occurred while logging the dose.");
+        });
+    }
+</script>
+{% endblock %}

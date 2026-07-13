@@ -1,0 +1,358 @@
+{% extends 'base.html' %}
+
+{% block title %}Pharmacy Dashboard - MediConnect{% endblock %}
+
+{% block content %}
+<div class="tabs">
+    <button class="tab-btn active" onclick="openTab(event, 'inventory-tab')">
+        <i class="ph-bold ph-pill"></i> Stock Inventory
+    </button>
+    <button class="tab-btn" onclick="openTab(event, 'broadcasts-tab')">
+        <i class="ph-bold ph-broadcast"></i> Active Broadcast Requests
+    </button>
+    <button class="tab-btn" onclick="openTab(event, 'checkout-tab')">
+        <i class="ph-bold ph-shopping-cart-simple"></i> Quick Checkout Counter
+    </button>
+</div>
+
+<!-- ================= TAB: STOCK INVENTORY ================= -->
+<div id="inventory-tab" class="tab-content active">
+    <div class="grid-container">
+        <!-- Stock List Table -->
+        <div>
+            <div class="card" style="width: 100%; overflow-x: auto;">
+                <h2 class="card-title">
+                    <span><i class="ph-bold ph-list-bullets card-title-icon"></i> Current Inventory</span>
+                </h2>
+                
+                {% if inventory %}
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Medicine</th>
+                                <th>Stock Qty</th>
+                                <th>Unit Price</th>
+                                <th>Batch No.</th>
+                                <th>Expiry Date</th>
+                                <th>Status</th>
+                                <th class="no-print">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in inventory %}
+                                <tr class="{% if item.is_expiring_soon %}expiring-row{% elif item.stock_level == 0 %}low-stock-row{% endif %}" id="inv-row-{{ item.id }}">
+                                    <form action="{{ url_for('update_inventory', item_id=item.id) }}" method="POST" style="margin:0;">
+                                        <td><strong>{{ item.medicine_name }}</strong></td>
+                                        <td>
+                                            <input type="number" name="stock_level" class="form-control btn-sm" style="width: 80px;" value="{{ item.stock_level }}" min="0" required>
+                                        </td>
+                                        <td>
+                                            <input type="number" step="0.01" name="price" class="form-control btn-sm" style="width: 80px;" value="{{ "%.2f"|format(item.price) }}" min="0" required>
+                                        </td>
+                                        <td>
+                                            <input type="text" name="batch_number" class="form-control btn-sm" style="width: 100px;" value="{{ item.batch_number }}" required>
+                                        </td>
+                                        <td>
+                                            <span style="font-size: 0.9rem;">{{ item.expiry_date.strftime('%d %b %Y') }}</span>
+                                        </td>
+                                        <td>
+                                            {% if item.stock_level == 0 %}
+                                                <span class="badge badge-danger">Out of Stock</span>
+                                            {% elif item.is_expiring_soon %}
+                                                <span class="badge badge-danger">Expiring Soon</span>
+                                            {% elif item.stock_level <= 10 %}
+                                                <span class="badge badge-warning">Low Stock</span>
+                                            {% else %}
+                                                <span class="badge badge-success">In Stock</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="no-print" style="display: flex; gap: 0.25rem;">
+                                            <button type="submit" class="btn btn-secondary btn-sm" title="Save changes">
+                                                <i class="ph-bold ph-floppy-disk"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-danger btn-sm" onclick="deleteInventoryItem({{ item.id }})" title="Delete item">
+                                                <i class="ph-bold ph-trash"></i>
+                                            </button>
+                                        </td>
+                                    </form>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div style="text-align: center; padding: 4rem 1rem; color: var(--text-secondary);">
+                        <i class="ph ph-pill" style="font-size: 3rem; margin-bottom: 1rem; color: var(--card-border);"></i>
+                        <p>Your inventory is empty.</p>
+                        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Use the form on the right to add items to your stock list.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Add Stock Item Form -->
+        <div>
+            <div class="card">
+                <h2 class="card-title">
+                    <span><i class="ph-bold ph-plus-circle card-title-icon"></i> Add Stock Item</span>
+                </h2>
+                
+                <form action="{{ url_for('add_inventory') }}" method="POST">
+                    <div class="form-group">
+                        <label for="medicine_name">Medicine Name</label>
+                        <input type="text" id="medicine_name" name="medicine_name" class="form-control" placeholder="e.g. Paracetamol" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="stock_level">Stock Qty</label>
+                            <input type="number" id="stock_level" name="stock_level" class="form-control" placeholder="100" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="price">Unit Price ($)</label>
+                            <input type="number" step="0.01" id="price" name="price" class="form-control" placeholder="9.99" min="0" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="batch_number">Batch Number</label>
+                        <input type="text" id="batch_number" name="batch_number" class="form-control" placeholder="e.g. B-998811" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="expiry_date">Expiration Date</label>
+                        <input type="date" id="expiry_date" name="expiry_date" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
+                        <i class="ph ph-plus"></i> Add Item
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= TAB: BROADCAST REQUESTS ================= -->
+<div id="broadcasts-tab" class="tab-content">
+    <div class="card">
+        <h2 class="card-title">
+            <span><i class="ph-bold ph-broadcast card-title-icon"></i> Patient Prescription Broadcasts</span>
+        </h2>
+        
+        {% if broadcasts_info %}
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                {% for info in broadcasts_info %}
+                    <div style="border: 1px solid var(--card-border); background: rgba(255,255,255,0.01); border-radius: 12px; padding: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                        
+                        <!-- Left pane: Prescription requirements -->
+                        <div>
+                            <div style="margin-bottom: 1rem;">
+                                <h3 style="font-size: 1.1rem; margin: 0; display: flex; gap: 0.5rem; align-items: center;">
+                                    Prescription #{{ info.broadcast.prescription.uuid[:8] }}...
+                                    {% if info.status_calc == 'available' %}
+                                        <span class="badge badge-success">In Stock</span>
+                                    {% elif info.status_calc == 'partial' %}
+                                        <span class="badge badge-warning">Partial Stock</span>
+                                    {% else %}
+                                        <span class="badge badge-danger">Out of Stock</span>
+                                    {% endif %}
+                                </h3>
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                    Patient: <strong>{{ info.broadcast.prescription.patient_name }}</strong> (Age: {{ info.broadcast.prescription.patient_age or 'N/A' }}) | Request Sent: {{ info.broadcast.created_at.strftime('%d %b %Y, %H:%M') }}
+                                </p>
+                            </div>
+                            
+                            <h4 style="font-size: 0.85rem; color: var(--secondary); text-transform: uppercase; margin-bottom: 0.5rem;">Medications Prescribed</h4>
+                            <ul style="padding-left: 1.25rem; font-size: 0.95rem; line-height: 1.8; color: var(--text-primary);">
+                                {% for item in info.broadcast.prescription.items %}
+                                    <li>
+                                        <strong>{{ item.medicine_name }}</strong> - {{ item.dosage }} ({{ item.frequency }}, for {{ item.duration }})
+                                        {% if item.medicine_name in info.missing_meds %}
+                                            <span style="color: var(--danger); font-size: 0.8rem; margin-left: 0.5rem; font-weight: 550;">(No Stock)</span>
+                                        {% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        
+                        <!-- Right pane: Bid submission -->
+                        <div style="background: rgba(255,255,255,0.02); padding: 1.25rem; border-radius: 8px; border: 1px solid var(--card-border);">
+                            {% if info.offered %}
+                                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                                    <h4 style="font-size: 0.9rem; margin: 0; color: var(--text-secondary);"><i class="ph ph-check-circle"></i> Offered Previously</h4>
+                                    <span class="badge badge-info">${{ "%.2f"|format(info.offered.estimated_price) }}</span>
+                                </div>
+                            {% endif %}
+                            
+                            <form action="{{ url_for('submit_offer') }}" method="POST" style="margin:0;">
+                                <input type="hidden" name="broadcast_id" value="{{ info.broadcast.id }}">
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="price-{{ info.broadcast.id }}">Total Price Estimate ($)</label>
+                                        <input type="number" step="0.01" id="price-{{ info.broadcast.id }}" name="price" class="form-control" value="{% if info.offered %}{{ info.offered.estimated_price }}{% else %}{{ info.estimated_price }}{% endif %}" min="0" required>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label for="status-{{ info.broadcast.id }}">Availability Status</label>
+                                        <select id="status-{{ info.broadcast.id }}" name="availability_status" class="form-control" style="background-color: #12131e; color: white;" required>
+                                            <option value="available" {% if (info.offered and info.offered.availability_status == 'available') or (not info.offered and info.status_calc == 'available') %}selected{% endif %}>Fully In Stock</option>
+                                            <option value="partial" {% if (info.offered and info.offered.availability_status == 'partial') or (not info.offered and info.status_calc == 'partial') %}selected{% endif %}>Partial Stock</option>
+                                            <option value="unavailable" {% if (info.offered and info.offered.availability_status == 'unavailable') or (not info.offered and info.status_calc == 'unavailable') %}selected{% endif %}>Out of Stock</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="notes-{{ info.broadcast.id }}">Additional Notes</label>
+                                    <textarea id="notes-{{ info.broadcast.id }}" name="notes" class="form-control" rows="2" placeholder="e.g. ready for pickup in 15 mins...">{{ info.offered.notes if info.offered else '' }}</textarea>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-secondary btn-sm" style="width: 100%;">
+                                    <i class="ph ph-paper-plane-tilt"></i> {% if info.offered %}Update Price Quote{% else %}Submit Price Quote{% endif %}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div style="text-align: center; padding: 4rem 1rem; color: var(--text-secondary);">
+                <i class="ph ph-broadcast" style="font-size: 3rem; margin-bottom: 1rem; color: var(--card-border);"></i>
+                <p>No active prescription broadcasts from patients.</p>
+                <p style="font-size: 0.85rem; margin-top: 0.5rem;">Patient broadcasts requesting stock availability and price estimates will show up here.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ================= TAB: QUICK CHECKOUT ================= -->
+<div id="checkout-tab" class="tab-content">
+    <div class="card" style="max-width: 600px; margin: 0 auto;">
+        <h2 class="card-title">
+            <span><i class="ph-bold ph-shopping-cart-simple card-title-icon"></i> Fast Sale Checkout</span>
+        </h2>
+        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
+            Quickly deduct medicine stock on sale checkout. This tool automatically manages FIFO (First-In, First-Out) expiration batches and alerts you if expiring items are being sold.
+        </p>
+        
+        <form id="checkout-form" onsubmit="submitCheckout(event)">
+            <div class="form-group">
+                <label for="checkout_medicine_name">Medicine Name</label>
+                <input type="text" id="checkout_medicine_name" name="medicine_name" class="form-control" placeholder="Start typing medicine name..." required>
+                <!-- Quick list helper for demo -->
+                <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    {% for item in inventory %}
+                        <button type="button" class="btn btn-outline btn-sm" onclick="selectCheckoutMed('{{ item.medicine_name }}')" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                            {{ item.medicine_name }}
+                        </button>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <label for="checkout_quantity">Quantity (Number of units sold)</label>
+                <input type="number" id="checkout_quantity" name="quantity" class="form-control" value="10" min="1" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.9rem;">
+                <i class="ph-bold ph-barcode"></i> Complete Sale & Deduct Inventory
+            </button>
+        </form>
+        
+        <div id="checkout-result" style="margin-top: 1.5rem; display: none;"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Tab switching logic
+    function openTab(evt, tabName) {
+        let i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].classList.remove("active");
+        }
+        tablinks = document.getElementsByClassName("tab-btn");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+        }
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    // Set default value for adding stock item expiry (today + 1 year)
+    document.addEventListener("DOMContentLoaded", function() {
+        const today = new Date();
+        const nextYear = new Date(today.getTime() + 365 * 24 * 60 * 60 * 1000);
+        const yyyy = nextYear.getFullYear();
+        let mm = nextYear.getMonth() + 1;
+        let dd = nextYear.getDate();
+        if (mm < 10) mm = '0' + mm;
+        if (dd < 10) dd = '0' + dd;
+        const expiryInput = document.getElementById('expiry_date');
+        if (expiryInput) expiryInput.value = `${yyyy}-${mm}-${dd}`;
+    });
+
+    // Delete Inventory Item AJAX
+    function deleteInventoryItem(itemId) {
+        if (!confirm("Are you sure you want to delete this medicine from inventory?")) return;
+        
+        fetch(`/inventory/delete/${itemId}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById(`inv-row-${itemId}`).remove();
+            } else {
+                alert("Error: " + data.message);
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("An error occurred while deleting the inventory item.");
+        });
+    }
+
+    // Helper to click-fill checkout name
+    function selectCheckoutMed(name) {
+        document.getElementById('checkout_medicine_name').value = name;
+    }
+
+    // Submit sale checkout AJAX
+    function submitCheckout(e) {
+        e.preventDefault();
+        
+        const form = document.getElementById('checkout-form');
+        const formData = new FormData(form);
+        const resultDiv = document.getElementById('checkout-result');
+        
+        fetch('/checkout', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            resultDiv.style.display = 'block';
+            if (data.success) {
+                resultDiv.className = 'alert alert-success';
+                resultDiv.innerHTML = `<i class="ph-bold ph-check-circle" style="font-size: 1.5rem;"></i> <div>${data.message}</div>`;
+                // Reset checkout quantity
+                document.getElementById('checkout_quantity').value = 10;
+                
+                // Alert warning if expiration batch is flagged
+                if (data.message.includes("Note:")) {
+                    resultDiv.className = 'alert alert-warning';
+                }
+            } else {
+                resultDiv.className = 'alert alert-danger';
+                resultDiv.innerHTML = `<i class="ph-bold ph-warning-octagon" style="font-size: 1.5rem;"></i> <div>${data.message}</div>`;
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'alert alert-danger';
+            resultDiv.innerHTML = `<i class="ph-bold ph-warning-octagon"></i> An error occurred during checkout.`;
+        });
+    }
+</script>
+{% endblock %}

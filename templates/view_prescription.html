@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+
+{% block title %}View Prescription - MediConnect{% endblock %}
+
+{% block content %}
+<div class="no-print" style="margin-bottom: 2rem;">
+    <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm">
+        <i class="ph ph-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="grid-container">
+    <!-- Left Column: The official Prescription Form -->
+    <div>
+        <div class="card" style="background: rgba(255, 255, 255, 0.95); color: #1e293b; padding: 3rem; border-radius: 12px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.25);">
+            
+            <!-- Prescription Watermark or Header -->
+            <div style="display: flex; justify-content: space-between; align-items: start; border-bottom: 3px double #6366f1; padding-bottom: 1.5rem; margin-bottom: 2rem;">
+                <div>
+                    <h1 style="color: #6366f1; font-size: 2.2rem; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="ph-fill ph-prescription"></i> MediConnect
+                    </h1>
+                    <span style="font-size: 0.85rem; letter-spacing: 0.1em; color: #64748b; font-weight: 600;">OFFICIAL DIGITAL PRESCRIPTION</span>
+                </div>
+                <div style="text-align: right; font-size: 0.9rem; color: #475569;">
+                    <strong>{{ prescription.doctor.name }}</strong><br>
+                    {{ prescription.doctor.contact or 'doctor@mediconnect.com' }}<br>
+                    Lic: #MC-{{ prescription.doctor_id + 10480 }}
+                </div>
+            </div>
+
+            <!-- Patient Info Block -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.25rem; margin-bottom: 2.5rem; display: grid; grid-template-columns: 2fr 1fr; gap: 1rem;">
+                <div>
+                    <div style="font-size: 0.8rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Patient Name</div>
+                    <div style="font-size: 1.15rem; font-weight: 700; color: #0f172a;">{{ prescription.patient_name }}</div>
+                    
+                    <div style="margin-top: 0.75rem; font-size: 0.8rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Contact Details</div>
+                    <div style="font-size: 0.95rem; font-weight: 550; color: #334155;">{{ prescription.patient_contact or 'No contact number provided' }}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.8rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Age</div>
+                    <div style="font-size: 1.15rem; font-weight: 700; color: #0f172a;">{{ prescription.patient_age or 'N/A' }}</div>
+                    
+                    <div style="margin-top: 0.75rem; font-size: 0.8rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Date Issued</div>
+                    <div style="font-size: 0.95rem; font-weight: 550; color: #334155;">{{ prescription.created_at.strftime('%d %b %Y') }}</div>
+                </div>
+            </div>
+
+            <!-- Rx Medications list -->
+            <div style="margin-bottom: 3rem;">
+                <h3 style="font-size: 1.4rem; color: #0f172a; margin-bottom: 1rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="ph-bold ph-pill" style="color: #6366f1;"></i> Rx Medications
+                </h3>
+                
+                <table style="color: #334155; margin-top: 0;">
+                    <thead>
+                        <tr style="border-bottom: 2px solid #cbd5e1;">
+                            <th style="color: #475569; font-weight: 700; padding: 0.75rem 0.5rem;">Medicine Name</th>
+                            <th style="color: #475569; font-weight: 700; padding: 0.75rem 0.5rem;">Dosage</th>
+                            <th style="color: #475569; font-weight: 700; padding: 0.75rem 0.5rem;">Frequency</th>
+                            <th style="color: #475569; font-weight: 700; padding: 0.75rem 0.5rem;">Duration</th>
+                            <th style="color: #475569; font-weight: 700; padding: 0.75rem 0.5rem;">Instructions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in prescription.items %}
+                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                                <td style="padding: 1rem 0.5rem; font-weight: 700; color: #0f172a;">{{ item.medicine_name }}</td>
+                                <td style="padding: 1rem 0.5rem;">{{ item.dosage }}</td>
+                                <td style="padding: 1rem 0.5rem;">{{ item.frequency }}</td>
+                                <td style="padding: 1rem 0.5rem;">{{ item.duration }}</td>
+                                <td style="padding: 1rem 0.5rem; font-style: italic; font-size: 0.9rem; color: #64748b;">{{ item.instructions or '-' }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Notes and Signature -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; align-items: flex-end; border-top: 1px solid #e2e8f0; padding-top: 1.5rem;">
+                <div>
+                    {% if prescription.instructions %}
+                        <div style="font-size: 0.8rem; text-transform: uppercase; color: #64748b; font-weight: 600; margin-bottom: 0.25rem;">Doctor's Advice</div>
+                        <p style="font-size: 0.95rem; color: #475569; line-height: 1.5; margin: 0;">{{ prescription.instructions }}</p>
+                    {% endif %}
+                </div>
+                <div style="text-align: center;">
+                    <div style="border-bottom: 1px solid #94a3b8; height: 40px; margin-bottom: 0.5rem; font-family: 'Courier New', Courier, monospace; font-size: 1.2rem; color: #1e3a8a; display: flex; align-items: center; justify-content: center; font-style: italic;">
+                        {{ prescription.doctor.name }}
+                    </div>
+                    <span style="font-size: 0.8rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Signature / Auth</span>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Right Column: Secure Details & Actions -->
+    <div class="no-print">
+        <!-- QR Code Card -->
+        <div class="card" style="text-align: center;">
+            <h2 class="card-title" style="justify-content: center;">
+                <span><i class="ph-bold ph-qr-code card-title-icon"></i> Secure QR Link</span>
+            </h2>
+            
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                Scan this QR code with any mobile device to securely access this digital prescription instantly.
+            </p>
+            
+            <div class="qr-container">
+                <img src="data:image/png;base64,{{ qr_base64 }}" alt="Prescription QR Code">
+                <div class="qr-link" id="rx-link">{{ secure_url }}</div>
+            </div>
+            
+            <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+                <button class="btn btn-outline" style="flex: 1;" onclick="copyLink()">
+                    <i class="ph ph-copy"></i> Copy Link
+                </button>
+                <button class="btn btn-primary" style="flex: 1;" onclick="window.print()">
+                    <i class="ph ph-printer"></i> Print / PDF
+                </button>
+            </div>
+        </div>
+
+        <!-- Action Card for Registered Patients -->
+        <div class="card">
+            <h2 class="card-title">
+                <span><i class="ph-bold ph-shield-check card-title-icon"></i> Claim Prescription</span>
+            </h2>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                Are you the patient? Claim this prescription to add it to your Medi-Tracker dashboard and request quotes from pharmacies.
+            </p>
+            
+            {% if current_user and current_user.role == 'patient' %}
+                <form action="{{ url_for('claim_prescription') }}" method="POST">
+                    <input type="hidden" name="prescription_code" value="{{ prescription.uuid }}">
+                    <button type="submit" class="btn btn-secondary" style="width: 100%;">
+                        <i class="ph ph-check"></i> Add to My Dashboard
+                    </button>
+                </form>
+            {% else %}
+                <div style="background: rgba(255,255,255,0.02); border: 1px dashed var(--card-border); padding: 1rem; border-radius: 8px; font-size: 0.85rem; text-align: center; color: var(--text-secondary);">
+                    Please <a href="{{ url_for('login') }}">log in as a Patient</a> to link this prescription to your account.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function copyLink() {
+        const linkText = document.getElementById('rx-link').innerText;
+        navigator.clipboard.writeText(linkText).then(() => {
+            alert('Secure prescription link copied to clipboard!');
+        }).catch(err => {
+            console.error('Error copying text: ', err);
+        });
+    }
+</script>
+{% endblock %}

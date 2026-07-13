@@ -18,13 +18,8 @@
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="patient_username">Link Registered Username (Optional)</label>
-                            <select id="patient_username" name="patient_username" class="form-control" style="background-color: #12131e; color: white;" onchange="autoFillPatient()">
-                                <option value="">-- Select Registered Patient --</option>
-                                {% for pat in patients %}
-                                    <option value="{{ pat.username }}" data-name="{{ pat.name }}" data-contact="{{ pat.contact }}">{{ pat.name }} ({{ pat.username }})</option>
-                                {% endfor %}
-                            </select>
+                            <label for="patient_username">Patient Registered Username (Required for Auto-Linking)</label>
+                            <input type="text" id="patient_username" name="patient_username" class="form-control" placeholder="Enter patient username" required>
                         </div>
                         <div class="form-group">
                             <label for="patient_name">Patient Full Name</label>
@@ -175,14 +170,6 @@
         }
     }
 
-    function autoFillPatient() {
-        const select = document.getElementById('patient_username');
-        const selectedOption = select.options[select.selectedIndex];
-        
-        if (selectedOption.value) {
-            document.getElementById('patient_name').value = selectedOption.getAttribute('data-name');
-            document.getElementById('patient_contact').value = selectedOption.getAttribute('data-contact');
-        }
-    }
+
 </script>
 {% endblock %}

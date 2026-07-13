@@ -17,6 +17,31 @@
 
 <!-- ================= TAB: MEDI-TRACKER ================= -->
 <div id="tracker-tab" class="tab-content active">
+    <!-- Pending Prescriptions Notification -->
+    {% if pending_prescriptions %}
+        <div class="no-print" style="margin-bottom: 2rem;">
+            {% for rx in pending_prescriptions %}
+                <div class="alert alert-info" style="justify-content: space-between; display: flex; align-items: center; border-left: 5px solid var(--accent); background: rgba(139, 92, 246, 0.15); box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15);">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="ph-bold ph-bell-ringing" style="font-size: 1.5rem; color: var(--accent);"></i>
+                        <div>
+                            <strong style="color: var(--text-primary);">New Prescription Alert!</strong>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                You received a prescription. Link it to automate your daily dosage tracker.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <form action="{{ url_for('accept_prescription', rx_id=rx.id) }}" method="POST" style="margin: 0;">
+                        <button type="submit" class="btn btn-secondary btn-sm" style="box-shadow: 0 4px 15px rgba(20, 184, 166, 0.3);">
+                            <i class="ph-bold ph-check"></i> Accept & Import
+                        </button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
     <!-- Refill Warnings -->
     {% if refill_alerts %}
         <div class="no-print" style="margin-bottom: 2rem;">

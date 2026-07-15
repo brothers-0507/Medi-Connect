@@ -96,7 +96,7 @@
             {% if prescriptions %}
                 <div style="display: flex; flex-direction: column; gap: 1rem;">
                     {% for rx in prescriptions %}
-                        <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem; transition: var(--transition);">
+                        <div class="rx-history-item {% if loop.index > 5 %}rx-older-item{% endif %}" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem; transition: var(--transition); {% if loop.index > 5 %}display: none;{% endif %}">
                             <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
                                 <div style="font-weight: 600; font-size: 1.05rem;">{{ rx.patient_name }}</div>
                                 <span class="badge badge-info">{{ rx.created_at.strftime('%d %b %Y') }}</span>
@@ -112,6 +112,12 @@
                             </div>
                         </div>
                     {% endfor %}
+                    
+                    {% if prescriptions|length > 5 %}
+                        <button id="toggle-older-rx-btn" class="btn btn-outline btn-sm" style="width: 100%; margin-top: 1rem; justify-content: center;" onclick="toggleOlderRx()">
+                            <i class="ph-bold ph-caret-down"></i> View Older Prescriptions ({{ prescriptions|length - 5 }})
+                        </button>
+                    {% endif %}
                 </div>
             {% else %}
                 <div style="text-align: center; padding: 3rem 1rem; color: var(--text-secondary);">
@@ -171,5 +177,23 @@
     }
 
 
+    function toggleOlderRx() {
+        const items = document.querySelectorAll('.rx-older-item');
+        const btn = document.getElementById('toggle-older-rx-btn');
+        let isHidden = true;
+        if (items.length > 0) {
+            isHidden = items[0].style.display === 'none';
+        }
+        
+        items.forEach(item => {
+            item.style.display = isHidden ? 'block' : 'none';
+        });
+        
+        if (isHidden) {
+            btn.innerHTML = '<i class="ph-bold ph-caret-up"></i> Hide Older Prescriptions';
+        } else {
+            btn.innerHTML = `<i class="ph-bold ph-caret-down"></i> View Older Prescriptions (${items.length})`;
+        }
+    }
 </script>
 {% endblock %}

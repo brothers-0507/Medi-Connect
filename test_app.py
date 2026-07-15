@@ -179,6 +179,29 @@ class MediConnectTestCase(unittest.TestCase):
             self.assertEqual(len(logs), 1)
             self.assertEqual(logs[0].status, 'taken')
 
+    def test_add_custom_tracker(self):
+        self.login_as('test_patient')
+        
+        # Submit simplified custom tracker parameters
+        response = self.app.post('/tracker/add', data=dict(
+            medicine_name='Vitamin D3',
+            dosage='1 capsule',
+            time_of_day='09:00',
+            current_stock='30'
+        ), follow_redirects=True)
+        
+        self.assertIn(b'Medication added to Medi-Tracker!', response.data)
+        
+        with app.app_context():
+            sched = MedicationSchedule.query.filter_by(patient_id=self.pat_id, medicine_name='Vitamin D3').first()
+            self.assertIsNotNone(sched)
+            self.assertEqual(sched.dosage, '1 capsule')
+            self.assertEqual(sched.time_of_day, '09:00')
+            self.assertEqual(sched.current_stock, 30)
+            self.assertEqual(sched.frequency, 'Daily') # Default applied
+            self.assertEqual(sched.refill_alert_threshold, 5) # Default applied
+            self.assertEqual(sched.end_date, date.today() + timedelta(days=30)) # Default applied
+
     def test_prescription_broadcast_and_offer(self):
         # Create prescription
         with app.app_context():

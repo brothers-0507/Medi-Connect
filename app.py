@@ -495,13 +495,13 @@ def add_custom_tracker():
     patient_id = session['user_id']
     med_name = request.form['medicine_name']
     dosage = request.form['dosage']
-    frequency = request.form.get('frequency', '')
     times = request.form['time_of_day']  # raw list of times, e.g. "08:00, 20:00"
-    end_date_str = request.form['end_date']
-    current_stock = int(request.form.get('current_stock', 0))
-    refill_alert = int(request.form.get('refill_alert_threshold', 5))
+    current_stock = int(request.form.get('current_stock', 10))
     
-    end_date = datetime.strptime(end_date_str, '%Y-%m-%d').date()
+    # Sensible defaults for simplified form
+    frequency = "Daily"
+    end_date = date.today() + timedelta(days=30)
+    refill_alert = 5
     
     sched = MedicationSchedule(
         patient_id=patient_id,

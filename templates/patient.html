@@ -42,30 +42,6 @@
         </div>
     {% endif %}
 
-    <!-- Refill Warnings -->
-    {% if refill_alerts %}
-        <div class="no-print" style="margin-bottom: 2rem;">
-            {% for alert in refill_alerts %}
-                <div class="alert alert-warning" style="justify-content: space-between; display: flex; align-items: center;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <i class="ph-bold ph-warning-octagon" style="font-size: 1.5rem;"></i>
-                        <div>
-                            <strong>Refill Alert: {{ alert.medicine_name }}</strong>
-                            <div style="font-size: 0.85rem; opacity: 0.9;">Only {{ alert.current_stock }} doses remaining (alert threshold: {{ alert.refill_alert_threshold }}).</div>
-                        </div>
-                    </div>
-                    
-                    <form action="{{ url_for('refill_stock', schedule_id=alert.id) }}" method="POST" style="display: flex; gap: 0.5rem; align-items: center; margin: 0;">
-                        <input type="number" name="amount" class="form-control btn-sm" style="width: 70px; background: rgba(0,0,0,0.2);" value="30" min="1" required>
-                        <button type="submit" class="btn btn-secondary btn-sm">
-                            <i class="ph ph-plus-circle"></i> Refill
-                        </button>
-                    </form>
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-
     <div class="grid-container">
         <!-- Checklist for Today -->
         <div>
@@ -80,7 +56,20 @@
                         {% for item in checklist %}
                             <div class="checklist-item" id="sched-card-{{ item.schedule.id }}">
                                 <div class="checklist-info">
-                                    <div class="checklist-med-name">{{ item.schedule.medicine_name }}</div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                        <span class="checklist-med-name">{{ item.schedule.medicine_name }}</span>
+                                        {% if item.schedule.current_stock <= item.schedule.refill_alert_threshold %}
+                                            <span class="badge badge-danger" style="text-transform: none; font-size: 0.7rem; padding: 0.15rem 0.4rem; display: inline-flex; align-items: center; gap: 0.2rem;">
+                                                <i class="ph-bold ph-warning-octagon"></i> Low Stock
+                                            </span>
+                                            <form action="{{ url_for('refill_stock', schedule_id=item.schedule.id) }}" method="POST" style="display: inline-flex; align-items: center; margin: 0; padding: 0;">
+                                                <input type="hidden" name="amount" value="30">
+                                                <button type="submit" class="badge badge-warning" style="cursor: pointer; border: none; text-transform: none; font-size: 0.7rem; padding: 0.15rem 0.4rem; display: inline-flex; align-items: center; gap: 0.2rem;" title="Replenish stock by 30 doses instantly">
+                                                    <i class="ph-bold ph-plus-circle"></i> Quick Refill (+30)
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </div>
                                     <div class="checklist-details">
                                         <i class="ph ph-pill"></i> {{ item.schedule.dosage }} | 
                                         <i class="ph ph-clock"></i> Times: {{ item.schedule.time_of_day }} | 
@@ -151,46 +140,35 @@
 
         <!-- Add Custom Schedule Form -->
         <div>
-            <div class="card">
-                <h2 class="card-title">
-                    <span><i class="ph-bold ph-plus-circle card-title-icon"></i> Custom Tracker</span>
+            <button id="toggle-tracker-btn" class="btn btn-outline" style="width: 100%; margin-bottom: 1.5rem; justify-content: center; gap: 0.5rem;" onclick="toggleCustomTracker()">
+                <i class="ph-bold ph-plus-circle"></i> Add Custom Medication
+            </button>
+
+            <div class="card" id="custom-tracker-card" style="display: none; animation: fadeIn 0.3s ease;">
+                <h2 class="card-title" style="margin-bottom: 1rem; border-bottom: none; padding-bottom: 0;">
+                    <span><i class="ph-bold ph-plus-circle card-title-icon"></i> Custom Medication</span>
                 </h2>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1.5rem;">Manually add a medication to your tracker checklist.</p>
                 
                 <form action="{{ url_for('add_custom_tracker') }}" method="POST">
                     <div class="form-group">
                         <label for="medicine_name">Medicine Name</label>
-                        <input type="text" id="medicine_name" name="medicine_name" class="form-control" placeholder="e.g. Vitamin C" required>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="dosage">Dosage</label>
-                            <input type="text" id="dosage" name="dosage" class="form-control" placeholder="e.g. 1 capsule" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="frequency">Frequency</label>
-                            <input type="text" id="frequency" name="frequency" class="form-control" placeholder="e.g. daily">
-                        </div>
+                        <input type="text" id="medicine_name" name="medicine_name" class="form-control" placeholder="e.g. Paracetamol" required>
                     </div>
                     <div class="form-group">
-                        <label for="time_of_day">Times of Day (comma separated)</label>
-                        <input type="text" id="time_of_day" name="time_of_day" class="form-control" placeholder="e.g. 08:00, 20:00" value="08:00" required>
+                        <label for="dosage">Dosage (e.g. 1 pill, 5ml)</label>
+                        <input type="text" id="dosage" name="dosage" class="form-control" placeholder="e.g. 1 tablet" required>
                     </div>
                     <div class="form-group">
-                        <label for="end_date">End Date</label>
-                        <input type="date" id="end_date" name="end_date" class="form-control" required>
+                        <label for="time_of_day">Taking Time (e.g. 08:00, 20:00)</label>
+                        <input type="text" id="time_of_day" name="time_of_day" class="form-control" placeholder="e.g. 09:00" value="09:00" required>
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="current_stock">Initial Stock (doses)</label>
-                            <input type="number" id="current_stock" name="current_stock" class="form-control" value="30" min="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="refill_alert_threshold">Alert Threshold</label>
-                            <input type="number" id="refill_alert_threshold" name="refill_alert_threshold" class="form-control" value="5" min="0">
-                        </div>
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label for="current_stock">Tablets Left (in strip / bottle)</label>
+                        <input type="number" id="current_stock" name="current_stock" class="form-control" placeholder="e.g. 10" value="10" min="0" required>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-                        <i class="ph ph-plus-circle"></i> Add to Tracker
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i class="ph ph-plus-circle"></i> Save Medication
                     </button>
                 </form>
             </div>
@@ -233,7 +211,7 @@
                                 <span class="badge badge-info">{{ rx.created_at.strftime('%d %b %Y') }}</span>
                             </div>
                             <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-                                <i class="ph ph-user"></i> Patient: <strong>{{ rx.patient_name }}</strong> (Age: {{ rx.patient_age or 'N/A' }}) | Code: <code>{{ rx.uuid }}</code>
+                                Code ID: <code>{{ rx.uuid[:8] }}...</code>
                             </div>
                             <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">
                                 {% for item in rx.items %}
@@ -424,6 +402,18 @@
             console.error(err);
             alert("An error occurred while logging the dose.");
         });
+    }
+
+    function toggleCustomTracker() {
+        const card = document.getElementById('custom-tracker-card');
+        const btn = document.getElementById('toggle-tracker-btn');
+        if (card.style.display === 'none') {
+            card.style.display = 'block';
+            btn.innerHTML = '<i class="ph-bold ph-minus-circle"></i> Hide Form';
+        } else {
+            card.style.display = 'none';
+            btn.innerHTML = '<i class="ph-bold ph-plus-circle"></i> Add Custom Medication';
+        }
     }
 </script>
 {% endblock %}

@@ -160,7 +160,7 @@
                         <!-- Left pane: Prescription requirements -->
                         <div>
                             <div style="margin-bottom: 1rem;">
-                                <h3 style="font-size: 1.1rem; margin: 0; display: flex; gap: 0.5rem; align-items: center;">
+                                <h3 style="font-size: 1.1rem; margin: 0; display: flex; gap: 0.5rem; align-items: center; width: 100%;">
                                     Prescription #{{ info.broadcast.prescription.uuid[:8] }}...
                                     {% if info.status_calc == 'available' %}
                                         <span class="badge badge-success">In Stock</span>
@@ -169,6 +169,9 @@
                                     {% else %}
                                         <span class="badge badge-danger">Out of Stock</span>
                                     {% endif %}
+                                    <a href="{{ url_for('view_prescription', rx_uuid=info.broadcast.prescription.uuid) }}" target="_blank" style="margin-left: auto; font-size: 0.8rem; color: var(--secondary); display: inline-flex; align-items: center; gap: 0.25rem; text-decoration: none;" title="View official prescription sheet">
+                                        <i class="ph-bold ph-eye"></i> View Full Sheet
+                                    </a>
                                 </h3>
                                 <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
                                     Patient: <strong>{{ info.broadcast.prescription.patient_name }}</strong> (Age: {{ info.broadcast.prescription.patient_age or 'N/A' }}) | Request Sent: {{ info.broadcast.created_at.strftime('%d %b %Y, %H:%M') }}
@@ -355,14 +358,21 @@
                         
                         let medList = data.items.map(i => `${i.medicine_name} (${i.dosage})`).join(', ');
                         resultDiv.innerHTML = `
-                            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                <i class="ph-bold ph-check-circle" style="font-size: 1.5rem; color: var(--success);"></i>
-                                <div>
-                                    <strong>Prescription QR Code Scanned!</strong>
-                                    <div style="font-size: 0.85rem; margin-top: 0.25rem;">
-                                        Patient: <strong>${data.patient_name}</strong> | Medications: <strong>${medList}</strong>. 
-                                        Stock checkout loaded for <strong>${data.items[0].medicine_name}</strong>.
+                            <div style="display: flex; flex-direction: column; gap: 0.75rem; width: 100%;">
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <i class="ph-bold ph-check-circle" style="font-size: 1.5rem; color: var(--success); flex-shrink: 0;"></i>
+                                    <div>
+                                        <strong>Prescription QR Code Scanned!</strong>
+                                        <div style="font-size: 0.85rem; margin-top: 0.25rem;">
+                                            Patient: <strong>${data.patient_name}</strong> | Medications: <strong>${medList}</strong>. 
+                                            Stock checkout loaded for <strong>${data.items[0].medicine_name}</strong>.
+                                        </div>
                                     </div>
+                                </div>
+                                <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.75rem; display: flex;">
+                                    <a href="/prescription/view/${uuid}" target="_blank" class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.8rem; font-size: 0.8rem; border-color: var(--secondary); color: var(--secondary);">
+                                        <i class="ph-bold ph-eye"></i> View Full Prescription Sheet
+                                    </a>
                                 </div>
                             </div>
                         `;

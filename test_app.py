@@ -337,5 +337,77 @@ class MediConnectTestCase(unittest.TestCase):
         response = self.app.get('/dashboard/pharmacy')
         self.assertNotIn(rx_uuid[:8].encode(), response.data) # Paris pharmacy does NOT see the broadcast!
 
+    def test_settings_page_requires_auth(self):
+        # Accessing settings without login should redirect
+        response = self.app.get('/settings')
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login', response.location)
+
+    def test_update_profile_settings(self):
+        self.login_as('test_doctor')
+        
+        # Update details
+        response = self.app.post('/settings/update', data=dict(
+            name='Dr. New Name',
+            username='doctor_new',
+            contact='newcontact@test.com',
+            location='Edinburgh'
+        ), follow_redirects=True)
+        
+        self.assertIn(b'Profile details updated successfully!', response.data)
+        
+        with app.app_context():
+            user = User.query.get(self.doc_id)
+            self.assertEqual(user.name, 'Dr. New Name')
+            self.assertEqual(user.username, 'doctor_new')
+            self.assertEqual(user.contact, 'newcontact@test.com')
+            self.assertEqual(user.location, 'Edinburgh')
+
+    def test_update_profile_username_collision(self):
+        self.login_as('test_doctor')
+        
+        # Try to take 'test_patient' username
+        response = self.app.post('/settings/update', data=dict(
+            name='Dr. New Name',
+            username='test_patient',
+            contact='doc@test.com',
+            location='Edinburgh'
+        ), follow_redirects=True)
+        
+        self.assertIn(b'Username is already taken by another account.', response.data)
+        
+        with app.app_context():
+            user = User.query.get(self.doc_id)
+            self.assertEqual(user.username, 'test_doctor') # Remained unchanged
+
+    def test_update_password_success(self):
+        self.login_as('test_doctor')
+        
+        # Change password
+        response = self.app.post('/settings/password', data=dict(
+            current_password='password',
+            new_password='newsecurepassword',
+            confirm_password='newsecurepassword'
+        ), follow_redirects=True)
+        
+        self.assertIn(b'Password updated successfully!', response.data)
+        
+        # Log out and log back in with new password
+        self.login_as('test_doctor', password='newsecurepassword')
+        response = self.app.get('/dashboard/doctor')
+        self.assertIn(b'Dr. Test', response.data)
+
+    def test_update_password_wrong_current(self):
+        self.login_as('test_doctor')
+        
+        # Change password with wrong current password
+        response = self.app.post('/settings/password', data=dict(
+            current_password='wrongpassword',
+            new_password='newsecurepassword',
+            confirm_password='newsecurepassword'
+        ), follow_redirects=True)
+        
+        self.assertIn(b'Current password is incorrect.', response.data)
+
 if __name__ == '__main__':
     unittest.main()

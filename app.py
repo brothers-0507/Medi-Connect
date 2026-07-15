@@ -135,6 +135,65 @@ def logout():
     flash('Logged out successfully.', 'info')
     return redirect(url_for('login'))
 
+@app.route('/settings')
+@login_required
+def settings():
+    return render_template('settings.html')
+
+@app.route('/settings/update', methods=['POST'])
+@login_required
+def update_settings():
+    user_id = session['user_id']
+    user = User.query.get(user_id)
+    
+    name = request.form['name'].strip()
+    username = request.form['username'].strip()
+    contact = request.form['contact'].strip()
+    location = request.form.get('location', '').strip()
+    
+    if not username:
+        flash('Username cannot be empty.', 'danger')
+        return redirect(url_for('settings'))
+        
+    if username != user.username:
+        exists = User.query.filter_by(username=username).first()
+        if exists:
+            flash('Username is already taken by another account.', 'danger')
+            return redirect(url_for('settings'))
+            
+    user.name = name
+    user.username = username
+    user.contact = contact
+    user.location = location
+    db.session.commit()
+    
+    flash('Profile details updated successfully!', 'success')
+    return redirect(url_for('settings'))
+
+@app.route('/settings/password', methods=['POST'])
+@login_required
+def update_password():
+    user_id = session['user_id']
+    user = User.query.get(user_id)
+    
+    current_password = request.form['current_password']
+    new_password = request.form['new_password']
+    confirm_password = request.form['confirm_password']
+    
+    if not user.check_password(current_password):
+        flash('Current password is incorrect.', 'danger')
+        return redirect(url_for('settings'))
+        
+    if new_password != confirm_password:
+        flash('New passwords do not match.', 'danger')
+        return redirect(url_for('settings'))
+        
+    user.set_password(new_password)
+    db.session.commit()
+    
+    flash('Password updated successfully!', 'success')
+    return redirect(url_for('settings'))
+
 # ----------------- DOCTOR PORTAL -----------------
 
 @app.route('/dashboard/doctor')

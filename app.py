@@ -32,7 +32,10 @@ def inject_user():
     user_id = session.get('user_id')
     if user_id:
         user = User.query.get(user_id)
-        return dict(current_user=user)
+        if user:
+            return dict(current_user=user)
+        else:
+            session.clear()
     return dict(current_user=None)
 
 # Decorator to restrict access to authenticated users
@@ -41,6 +44,11 @@ def login_required(f):
     @functools.wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
+            flash('Please log in first.', 'danger')
+            return redirect(url_for('login'))
+        user = User.query.get(session['user_id'])
+        if not user:
+            session.clear()
             flash('Please log in first.', 'danger')
             return redirect(url_for('login'))
         return f(*args, **kwargs)
@@ -56,7 +64,8 @@ def role_required(role):
             if not user_id:
                 return redirect(url_for('login'))
             user = User.query.get(user_id)
-            if user.role != role:
+            if not user or user.role != role:
+                session.clear()
                 flash('Unauthorized access.', 'danger')
                 return redirect(url_for('index'))
             return f(*args, **kwargs)
@@ -70,7 +79,11 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if 'user_id' in session:
-        return redirect(url_for(session.get('role') + '_dashboard'))
+        user = User.query.get(session['user_id'])
+        if user:
+            return redirect(url_for(user.role + '_dashboard'))
+        else:
+            session.clear()
         
     if request.method == 'POST':
         username = request.form['username']

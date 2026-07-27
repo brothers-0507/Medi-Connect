@@ -23,8 +23,21 @@ def generate_qr_base64(data):
 # Create database tables and dummy admin/users if database is empty
 with app.app_context():
     db.create_all()
-    # Database tables initialized empty
-    pass
+    # Pre-populate demo accounts for easy access and testing
+    if not User.query.filter_by(username='doctor').first():
+        doc = User(username='doctor', name='Dr. Sarah Jenkins', role='doctor', contact='doctor@mediconnect.com')
+        doc.set_password('password')
+        db.session.add(doc)
+        
+        pat = User(username='patient', name='John Doe', role='patient', contact='555-0199', location='London')
+        pat.set_password('password')
+        db.session.add(pat)
+        
+        ph = User(username='pharmacy', name='City Central Pharmacy', role='pharmacy', contact='info@citycentral.com', location='London')
+        ph.set_password('password')
+        db.session.add(ph)
+        
+        db.session.commit()
 
 # Context processor to make current_user globally available in templates
 @app.context_processor
@@ -821,6 +834,32 @@ def prescription_api(rx_uuid):
         'patient_name': rx.patient_name,
         'items': items
     })
+
+import click
+
+@app.cli.command('list-users')
+def list_users():
+    """Lists all registered users in the database."""
+    users = User.query.all()
+    if not users:
+        print("No users found in the database.")
+        return
+    print("\n--- Registered Users ---")
+    for u in users:
+        print(f"ID: {u.id} | Username: {u.username} | Name: {u.name} | Role: {u.role} | Location: {u.location or 'N/A'}")
+    print("------------------------\n")
+
+@app.cli.command('delete-user')
+@click.argument('username')
+def delete_user(username):
+    """Deletes a user by username."""
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        print(f"User '{username}' not found.")
+        return
+    db.session.delete(user)
+    db.session.commit()
+    print(f"User '{username}' successfully deleted.")
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

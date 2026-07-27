@@ -22,6 +22,9 @@
                         <span>{{ current_user.name }}</span>
                         <span class="badge-role">({{ current_user.role }})</span>
                     </div>
+                    <a href="{{ url_for(current_user.role + '_dashboard') }}" class="btn btn-primary btn-sm">
+                        <i class="ph-bold ph-layout"></i> My Dashboard
+                    </a>
                     <a href="{{ url_for('settings') }}" class="btn btn-outline btn-sm" title="Account Settings">
                         <i class="ph-bold ph-gear"></i> Settings
                     </a>

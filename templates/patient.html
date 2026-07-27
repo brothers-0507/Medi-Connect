@@ -153,19 +153,19 @@
                 <form action="{{ url_for('add_custom_tracker') }}" method="POST">
                     <div class="form-group">
                         <label for="medicine_name">Medicine Name</label>
-                        <input type="text" id="medicine_name" name="medicine_name" class="form-control" placeholder="e.g. Paracetamol" required>
+                        <input type="text" id="medicine_name" name="medicine_name" class="form-control" required>
                     </div>
                     <div class="form-group">
                         <label for="dosage">Dosage (e.g. 1 pill, 5ml)</label>
-                        <input type="text" id="dosage" name="dosage" class="form-control" placeholder="e.g. 1 tablet" required>
+                        <input type="text" id="dosage" name="dosage" class="form-control" required>
                     </div>
                     <div class="form-group">
                         <label for="time_of_day">Taking Time (e.g. 08:00, 20:00)</label>
-                        <input type="text" id="time_of_day" name="time_of_day" class="form-control" placeholder="e.g. 09:00" value="09:00" required>
+                        <input type="text" id="time_of_day" name="time_of_day" class="form-control" value="09:00" required>
                     </div>
                     <div class="form-group" style="margin-bottom: 1.5rem;">
                         <label for="current_stock">Tablets Left (in strip / bottle)</label>
-                        <input type="number" id="current_stock" name="current_stock" class="form-control" placeholder="e.g. 10" value="10" min="0" required>
+                        <input type="number" id="current_stock" name="current_stock" class="form-control" value="10" min="0" required>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width: 100%;">
                         <i class="ph ph-plus-circle"></i> Save Medication

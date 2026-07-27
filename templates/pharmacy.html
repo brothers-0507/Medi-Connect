@@ -116,21 +116,21 @@
                 <form action="{{ url_for('add_inventory') }}" method="POST">
                     <div class="form-group">
                         <label for="medicine_name">Medicine Name</label>
-                        <input type="text" id="medicine_name" name="medicine_name" class="form-control" placeholder="e.g. Paracetamol" required>
+                        <input type="text" id="medicine_name" name="medicine_name" class="form-control" required>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="stock_level">Stock Qty</label>
-                            <input type="number" id="stock_level" name="stock_level" class="form-control" placeholder="100" min="0" required>
+                            <input type="number" id="stock_level" name="stock_level" class="form-control" min="0" required>
                         </div>
                         <div class="form-group">
                             <label for="price">Unit Price ($)</label>
-                            <input type="number" step="0.01" id="price" name="price" class="form-control" placeholder="9.99" min="0" required>
+                            <input type="number" step="0.01" id="price" name="price" class="form-control" min="0" required>
                         </div>
                     </div>
                     <div class="form-group">
                         <label for="batch_number">Batch Number</label>
-                        <input type="text" id="batch_number" name="batch_number" class="form-control" placeholder="e.g. B-998811" required>
+                        <input type="text" id="batch_number" name="batch_number" class="form-control" required>
                     </div>
                     <div class="form-group">
                         <label for="expiry_date">Expiration Date</label>
@@ -269,7 +269,7 @@
         <form id="checkout-form" onsubmit="submitCheckout(event)">
             <div class="form-group">
                 <label for="checkout_medicine_name">Medicine Name</label>
-                <input type="text" id="checkout_medicine_name" name="medicine_name" class="form-control" placeholder="Start typing medicine name..." required>
+                <input type="text" id="checkout_medicine_name" name="medicine_name" class="form-control" required>
                 <!-- Quick list helper for demo -->
                 <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     {% for item in inventory %}

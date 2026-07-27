@@ -23,21 +23,8 @@ def generate_qr_base64(data):
 # Create database tables and dummy admin/users if database is empty
 with app.app_context():
     db.create_all()
-    # Check if we need to pre-populate roles or dummy users
-    if not User.query.filter_by(username='doctor').first():
-        doc = User(username='doctor', name='Dr. Sarah Jenkins', role='doctor', contact='doctor@mediconnect.com')
-        doc.set_password('password')
-        db.session.add(doc)
-        
-        pat = User(username='patient', name='John Doe', role='patient', contact='555-0199')
-        pat.set_password('password')
-        db.session.add(pat)
-        
-        ph = User(username='pharmacy', name='City Central Pharmacy', role='pharmacy', contact='info@citycentral.com')
-        ph.set_password('password')
-        db.session.add(ph)
-        
-        db.session.commit()
+    # Database tables initialized empty
+    pass
 
 # Context processor to make current_user globally available in templates
 @app.context_processor
@@ -78,14 +65,6 @@ def role_required(role):
 
 @app.route('/')
 def index():
-    if 'user_id' in session:
-        user = User.query.get(session['user_id'])
-        if user.role == 'doctor':
-            return redirect(url_for('doctor_dashboard'))
-        elif user.role == 'patient':
-            return redirect(url_for('patient_dashboard'))
-        elif user.role == 'pharmacy':
-            return redirect(url_for('pharmacy_dashboard'))
     return render_template('index.html')
 
 @app.route('/login', methods=['GET', 'POST'])

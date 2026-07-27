@@ -19,22 +19,22 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label for="patient_username">Patient Registered Username (Required for Auto-Linking)</label>
-                            <input type="text" id="patient_username" name="patient_username" class="form-control" placeholder="Enter patient username" required>
+                            <input type="text" id="patient_username" name="patient_username" class="form-control" required>
                         </div>
                         <div class="form-group">
                             <label for="patient_name">Patient Full Name</label>
-                            <input type="text" id="patient_name" name="patient_name" class="form-control" placeholder="John Doe" required>
+                            <input type="text" id="patient_name" name="patient_name" class="form-control" required>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label for="patient_age">Age</label>
-                            <input type="number" id="patient_age" name="patient_age" class="form-control" placeholder="e.g. 35" min="0" max="150">
+                            <input type="number" id="patient_age" name="patient_age" class="form-control" min="0" max="150">
                         </div>
                         <div class="form-group">
                             <label for="patient_contact">Contact (Phone/Email)</label>
-                            <input type="text" id="patient_contact" name="patient_contact" class="form-control" placeholder="e.g. 555-0199" required>
+                            <input type="text" id="patient_contact" name="patient_contact" class="form-control" required>
                         </div>
                     </div>
                 </div>
@@ -52,19 +52,19 @@
                         <!-- Default Row -->
                         <div class="prescription-item-row" id="med-row-0">
                             <div>
-                                <input type="text" name="med_name[]" class="form-control" placeholder="Medicine Name" required>
+                                <input type="text" name="med_name[]" class="form-control" required>
                             </div>
                             <div>
-                                <input type="text" name="med_dosage[]" class="form-control" placeholder="Dosage (e.g. 1 tab)" required>
+                                <input type="text" name="med_dosage[]" class="form-control" required>
                             </div>
                             <div>
-                                <input type="text" name="med_frequency[]" class="form-control" placeholder="Frequency (e.g. twice daily)" required>
+                                <input type="text" name="med_frequency[]" class="form-control" required>
                             </div>
                             <div>
-                                <input type="text" name="med_duration[]" class="form-control" placeholder="Duration (e.g. 7 days)" required>
+                                <input type="text" name="med_duration[]" class="form-control" required>
                             </div>
                             <div>
-                                <input type="text" name="med_instructions[]" class="form-control" placeholder="Notes (e.g. before food)">
+                                <input type="text" name="med_instructions[]" class="form-control">
                             </div>
                             <div>
                                 <button type="button" class="btn btn-danger btn-sm" onclick="removeMedicationRow('med-row-0')" style="padding: 0.55rem;"><i class="ph-bold ph-trash"></i></button>
@@ -76,7 +76,7 @@
                 <!-- General Instructions -->
                 <div class="form-group" style="margin-bottom: 2rem;">
                     <label for="instructions">General Doctor Notes / Instructions</label>
-                    <textarea id="instructions" name="instructions" class="form-control" rows="3" placeholder="Rest well, drink plenty of fluids..."></textarea>
+                    <textarea id="instructions" name="instructions" class="form-control" rows="3"></textarea>
                 </div>
 
                 <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.9rem;">
@@ -143,19 +143,19 @@
         row.id = newId;
         row.innerHTML = `
             <div>
-                <input type="text" name="med_name[]" class="form-control" placeholder="Medicine Name" required>
+                <input type="text" name="med_name[]" class="form-control" required>
             </div>
             <div>
-                <input type="text" name="med_dosage[]" class="form-control" placeholder="Dosage (e.g. 1 tab)" required>
+                <input type="text" name="med_dosage[]" class="form-control" required>
             </div>
             <div>
-                <input type="text" name="med_frequency[]" class="form-control" placeholder="Frequency (e.g. twice daily)" required>
+                <input type="text" name="med_frequency[]" class="form-control" required>
             </div>
             <div>
-                <input type="text" name="med_duration[]" class="form-control" placeholder="Duration (e.g. 7 days)" required>
+                <input type="text" name="med_duration[]" class="form-control" required>
             </div>
             <div>
-                <input type="text" name="med_instructions[]" class="form-control" placeholder="Notes (e.g. before food)">
+                <input type="text" name="med_instructions[]" class="form-control">
             </div>
             <div>
                 <button type="button" class="btn btn-danger btn-sm" onclick="removeMedicationRow('${newId}')" style="padding: 0.55rem;"><i class="ph-bold ph-trash"></i></button>

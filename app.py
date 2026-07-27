@@ -70,7 +70,7 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if 'user_id' in session:
-        return redirect(url_for('index'))
+        return redirect(url_for(session.get('role') + '_dashboard'))
         
     if request.method == 'POST':
         username = request.form['username']
@@ -81,7 +81,7 @@ def login():
             session['user_id'] = user.id
             session['role'] = user.role
             flash(f'Welcome back, {user.name}!', 'success')
-            return redirect(url_for('index'))
+            return redirect(url_for(user.role + '_dashboard'))
         else:
             flash('Invalid username or password.', 'danger')
             

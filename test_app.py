@@ -432,5 +432,76 @@ class MediConnectTestCase(unittest.TestCase):
         
         self.assertIn(b'Current password is incorrect.', response.data)
 
+    # --- Role-Based Portal Access Control Tests ---
+
+    def test_cross_portal_dashboard_access_denied_and_safe_redirect(self):
+        # Patient logs in
+        self.login_as('test_patient')
+        
+        # Attempt to access doctor dashboard
+        response = self.app.get('/dashboard/doctor', follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Access Denied', response.data)
+        self.assertIn(b'Doctor', response.data)
+        # Verify session is preserved and user redirected to patient dashboard
+        self.assertIn(b'Patient Test', response.data)
+
+        # Attempt to access pharmacy dashboard
+        response = self.app.get('/dashboard/pharmacy', follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Access Denied', response.data)
+        self.assertIn(b'Pharmacy', response.data)
+        self.assertIn(b'Patient Test', response.data)
+
+    def test_portal_login_role_rejection(self):
+        self.app.get('/logout')
+        
+        # Attempt to log in through Doctor Portal using Patient account
+        response = self.app.post('/login', data=dict(
+            portal='doctor',
+            username='test_patient',
+            password='password'
+        ), follow_redirects=True)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Access Denied', response.data)
+        self.assertIn(b'registered as a Patient', response.data)
+        
+        # Verify no dashboard was accessed
+        self.assertNotIn(b'My Dashboard', response.data)
+
+    def test_portal_login_role_success(self):
+        self.app.get('/logout')
+        
+        # Log in through Doctor Portal using Doctor account
+        response = self.app.post('/login', data=dict(
+            portal='doctor',
+            username='test_doctor',
+            password='password'
+        ), follow_redirects=True)
+        
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Welcome back, Dr. Test!', response.data)
+        self.assertIn(b'New Digital Prescription', response.data)
+
+    def test_portal_gateway_routes(self):
+        # Unauthenticated access redirects to portal login
+        self.app.get('/logout')
+        response = self.app.get('/portal/doctor', follow_redirects=False)
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/login?portal=doctor', response.headers['Location'])
+
+        # Doctor accesses doctor portal gateway
+        self.login_as('test_doctor')
+        response = self.app.get('/portal/doctor', follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'New Digital Prescription', response.data)
+
+        # Doctor attempts to access patient portal gateway
+        response = self.app.get('/portal/patient', follow_redirects=True)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'Access Denied', response.data)
+        self.assertIn(b'Dr. Test', response.data)
+
 if __name__ == '__main__':
     unittest.main()

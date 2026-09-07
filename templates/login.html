@@ -1,10 +1,41 @@
 {% extends 'base.html' %}
 
-{% block title %}Authentication - MediConnect{% endblock %}
+{% block title %}
+    {% if portal %}
+        {{ portal.title() }} Portal Authentication - MediConnect
+    {% else %}
+        Authentication - MediConnect
+    {% endif %}
+{% endblock %}
 
 {% block content %}
-<div style="max-width: 480px; margin: 4rem auto; width: 100%;">
+<div style="max-width: 480px; margin: 3rem auto; width: 100%;">
     <div class="card" style="padding: 2.5rem;">
+        
+        <!-- Portal Specific Gateway Banner -->
+        {% if portal %}
+        <div style="text-align: center; margin-bottom: 1.75rem; padding: 0.75rem 1rem; border-radius: 12px; font-size: 0.95rem; font-weight: 600;
+            {% if portal == 'doctor' %}
+                background: rgba(2, 132, 199, 0.1); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.25);
+            {% elif portal == 'patient' %}
+                background: rgba(13, 148, 136, 0.1); color: #0d9488; border: 1px solid rgba(13, 148, 136, 0.25);
+            {% elif portal == 'pharmacy' %}
+                background: rgba(99, 102, 241, 0.1); color: #6366f1; border: 1px solid rgba(99, 102, 241, 0.25);
+            {% endif %}
+        ">
+            {% if portal == 'doctor' %}
+                <i class="ph-bold ph-stethoscope" style="margin-right: 0.25rem;"></i> Practitioner Portal Authentication
+            {% elif portal == 'patient' %}
+                <i class="ph-bold ph-user" style="margin-right: 0.25rem;"></i> Patient Personal Space Authentication
+            {% elif portal == 'pharmacy' %}
+                <i class="ph-bold ph-first-aid" style="margin-right: 0.25rem;"></i> Pharmacy Network Authentication
+            {% endif %}
+            <div style="font-size: 0.75rem; font-weight: 400; opacity: 0.85; margin-top: 0.25rem;">
+                Only registered {{ portal }} accounts are permitted to enter this portal.
+            </div>
+        </div>
+        {% endif %}
+
         <div class="tabs" style="margin-bottom: 2rem; justify-content: center; border-bottom: none; gap: 2rem;">
             <button class="tab-btn active" id="login-tab" onclick="switchAuth('login')">
                 <i class="ph-bold ph-lock-key" style="margin-right: 0.25rem;"></i> LOG IN
@@ -16,21 +47,25 @@
 
         <!-- Login Form -->
         <form id="login-form" action="{{ url_for('login') }}" method="POST" style="animation: fadeIn 0.3s ease;">
+            {% if portal %}
+            <input type="hidden" name="portal" value="{{ portal }}">
+            {% endif %}
+
             <div class="form-group">
                 <label for="login-username">Username</label>
-                <input type="text" id="login-username" name="username" class="form-control" required>
+                <input type="text" id="login-username" name="username" class="form-control" placeholder="Enter your registered username" required autofocus>
             </div>
             <div class="form-group" style="margin-bottom: 2rem;">
                 <label for="login-password">Password</label>
                 <div style="position: relative; display: flex; align-items: center;">
-                    <input type="password" id="login-password" name="password" class="form-control" required style="padding-right: 2.5rem;">
+                    <input type="password" id="login-password" name="password" class="form-control" placeholder="Enter password" required style="padding-right: 2.5rem;">
                     <button type="button" onclick="togglePasswordVisibility('login-password', this)" style="position: absolute; right: 1rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; padding: 0;">
                         <i class="ph-bold ph-eye" style="font-size: 1.2rem;"></i>
                     </button>
                 </div>
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.9rem;">
-                <i class="ph-bold ph-sign-in"></i> Sign In
+                <i class="ph-bold ph-sign-in"></i> Sign In to {{ portal.title() if portal else 'MediConnect' }}
             </button>
             <div style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem; color: var(--text-secondary);">
                 Don't have an account? <a href="#" onclick="switchAuth('register'); event.preventDefault();">Create one here</a>.
@@ -38,25 +73,38 @@
             
             <!-- Quick Login Hints for Testing -->
             <div style="margin-top: 2rem; padding: 1.25rem; background: rgba(255,255,255,0.02); border: 1px dashed var(--card-border); border-radius: 12px; font-size: 0.85rem; color: var(--text-secondary);">
-                <div style="font-weight: 600; margin-bottom: 0.75rem; color: var(--text-primary);">Demo Accounts (Password: <code>password</code>):</div>
+                <div style="font-weight: 600; margin-bottom: 0.75rem; color: var(--text-primary);">
+                    Demo Account (Password: <code>password</code>):
+                </div>
                 <ul style="list-style: none; padding-left: 0.25rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                    <li><i class="ph ph-stethoscope" style="color: var(--primary);"></i> Doctor: <code>doctor</code></li>
-                    <li><i class="ph ph-user" style="color: var(--secondary);"></i> Patient: <code>patient</code></li>
-                    <li><i class="ph ph-first-aid" style="color: var(--accent);"></i> Pharmacy: <code>pharmacy</code></li>
+                    {% if not portal or portal == 'doctor' %}
+                    <li><i class="ph ph-stethoscope" style="color: var(--primary);"></i> Doctor Portal: <code>doctor</code></li>
+                    {% endif %}
+                    {% if not portal or portal == 'patient' %}
+                    <li><i class="ph ph-user" style="color: var(--secondary);"></i> Patient Portal: <code>patient</code></li>
+                    {% endif %}
+                    {% if not portal or portal == 'pharmacy' %}
+                    <li><i class="ph ph-first-aid" style="color: var(--accent);"></i> Pharmacy Portal: <code>pharmacy</code></li>
+                    {% endif %}
                 </ul>
             </div>
         </form>
 
         <!-- Register Form -->
         <form id="register-form" action="{{ url_for('register') }}" method="POST" style="display: none; animation: fadeIn 0.3s ease;">
+            {% if portal %}
+            <input type="hidden" name="portal" value="{{ portal }}">
+            <input type="hidden" name="role" value="{{ portal }}">
+            {% endif %}
+
             <div class="form-group">
                 <label for="reg-username">Username</label>
-                <input type="text" id="reg-username" name="username" class="form-control" required>
+                <input type="text" id="reg-username" name="username" class="form-control" placeholder="Choose unique username" required>
             </div>
             <div class="form-group">
                 <label for="reg-password">Password</label>
                 <div style="position: relative; display: flex; align-items: center;">
-                    <input type="password" id="reg-password" name="password" class="form-control" required style="padding-right: 2.5rem;">
+                    <input type="password" id="reg-password" name="password" class="form-control" placeholder="Create strong password" required style="padding-right: 2.5rem;">
                     <button type="button" onclick="togglePasswordVisibility('reg-password', this)" style="position: absolute; right: 1rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; padding: 0;">
                         <i class="ph-bold ph-eye" style="font-size: 1.2rem;"></i>
                     </button>
@@ -64,26 +112,32 @@
             </div>
             <div class="form-group">
                 <label for="reg-name">Full Name / Business Name</label>
-                <input type="text" id="reg-name" name="name" class="form-control" required>
+                <input type="text" id="reg-name" name="name" class="form-control" placeholder="e.g. Dr. John Watson or City Clinic" required>
             </div>
+            
             <div class="form-group">
                 <label for="reg-role">Account Type</label>
-                <select id="reg-role" name="role" class="form-control" style="background-color: #12131e; color: white;" required>
+                {% if portal %}
+                <input type="text" class="form-control" value="{{ portal.title() }} (Locked to this Portal)" readonly style="background: rgba(0,0,0,0.04); cursor: not-allowed; opacity: 0.85;">
+                {% else %}
+                <select id="reg-role" name="role" class="form-control" required>
                     <option value="patient">Patient (Medi-Tracker & Broadcaster)</option>
                     <option value="doctor">Doctor (Digital Prescription Creator)</option>
                     <option value="pharmacy">Pharmacy (Stock Management & Quote Bidder)</option>
                 </select>
+                {% endif %}
             </div>
+
             <div class="form-group">
                 <label for="reg-contact">Contact Number / Email</label>
-                <input type="text" id="reg-contact" name="contact" class="form-control" required>
+                <input type="text" id="reg-contact" name="contact" class="form-control" placeholder="phone or email address" required>
             </div>
             <div class="form-group" style="margin-bottom: 2rem;">
                 <label for="reg-location">Location (City/Town)</label>
-                <input type="text" id="reg-location" name="location" class="form-control" required>
+                <input type="text" id="reg-location" name="location" class="form-control" placeholder="e.g. London, New York" required>
             </div>
             <button type="submit" class="btn btn-secondary" style="width: 100%; padding: 0.9rem;">
-                <i class="ph-bold ph-user-plus"></i> Create Account
+                <i class="ph-bold ph-user-plus"></i> Register {{ portal.title() if portal else '' }} Account
             </button>
             <div style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem; color: var(--text-secondary);">
                 Already have an account? <a href="#" onclick="switchAuth('login'); event.preventDefault();">Log in here</a>.
@@ -117,40 +171,8 @@
     document.addEventListener("DOMContentLoaded", function() {
         const urlParams = new URLSearchParams(window.location.search);
         const action = urlParams.get('action');
-        const role = urlParams.get('role');
-        
         if (action === 'register') {
             switchAuth('register');
-        }
-        
-        if (role) {
-            // Auto-select role dropdown in registration
-            const roleSelect = document.getElementById('reg-role');
-            if (roleSelect) {
-                roleSelect.value = role;
-            }
-            
-            // Show custom portal welcome message inside form
-            const welcomeText = document.createElement('div');
-            welcomeText.style.textAlign = 'center';
-            welcomeText.style.marginBottom = '1.5rem';
-            welcomeText.style.fontSize = '0.9rem';
-            welcomeText.style.fontWeight = '600';
-            welcomeText.style.textTransform = 'uppercase';
-            welcomeText.style.letterSpacing = '0.05em';
-            
-            if (role === 'doctor') {
-                welcomeText.innerHTML = '<span style="color: var(--primary);"><i class="ph-bold ph-stethoscope"></i> Practitioner Portal</span>';
-            } else if (role === 'patient') {
-                welcomeText.innerHTML = '<span style="color: var(--secondary);"><i class="ph-bold ph-user"></i> Patient Personal Space</span>';
-            } else if (role === 'pharmacy') {
-                welcomeText.innerHTML = '<span style="color: var(--accent);"><i class="ph-bold ph-first-aid"></i> Pharmacy Network Portal</span>';
-            }
-            
-            const cardElement = document.querySelector('.card');
-            if (cardElement) {
-                cardElement.insertBefore(welcomeText, cardElement.children[1]);
-            }
         }
     });
 

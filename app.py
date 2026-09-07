@@ -75,12 +75,16 @@ def role_required(role):
         def decorated_function(*args, **kwargs):
             user_id = session.get('user_id')
             if not user_id:
-                return redirect(url_for('login'))
+                flash(f'Please log in to access the {role.title()} Portal.', 'danger')
+                return redirect(url_for('login', portal=role))
             user = User.query.get(user_id)
-            if not user or user.role != role:
+            if not user:
                 session.clear()
-                flash('Unauthorized access.', 'danger')
-                return redirect(url_for('index'))
+                flash('Session expired. Please log in again.', 'danger')
+                return redirect(url_for('login', portal=role))
+            if user.role != role:
+                flash(f'Access Denied: Your account is registered as a {user.role.title()}. You cannot access the {role.title()} Portal.', 'danger')
+                return redirect(url_for(user.role + '_dashboard'))
             return f(*args, **kwargs)
         return decorated_function
     return decorator
@@ -89,21 +93,56 @@ def role_required(role):
 def index():
     return render_template('index.html')
 
+@app.route('/portal/<string:role_name>')
+def portal_gateway(role_name):
+    valid_roles = {'doctor', 'patient', 'pharmacy'}
+    role_name = role_name.lower().strip()
+    if role_name not in valid_roles:
+        flash('Invalid portal specified.', 'warning')
+        return redirect(url_for('index'))
+        
+    user_id = session.get('user_id')
+    if user_id:
+        user = User.query.get(user_id)
+        if user:
+            if user.role == role_name:
+                return redirect(url_for(user.role + '_dashboard'))
+            else:
+                flash(f'Access Denied: You are currently logged in as a {user.role.title()}. You cannot access the {role_name.title()} Portal.', 'danger')
+                return redirect(url_for(user.role + '_dashboard'))
+        else:
+            session.clear()
+            
+    return redirect(url_for('login', portal=role_name))
+
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    portal = request.args.get('portal') or request.args.get('role') or request.form.get('portal') or request.form.get('role')
+    if portal:
+        portal = portal.strip().lower()
+        if portal not in {'doctor', 'patient', 'pharmacy'}:
+            portal = None
+
     if 'user_id' in session:
         user = User.query.get(session['user_id'])
         if user:
+            if portal and user.role != portal:
+                flash(f'Access Denied: You are currently logged in as a {user.role.title()}. You cannot access the {portal.title()} Portal.', 'danger')
             return redirect(url_for(user.role + '_dashboard'))
         else:
             session.clear()
         
     if request.method == 'POST':
-        username = request.form['username']
+        username = request.form['username'].strip()
         password = request.form['password']
         
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
+            # Check portal role match if a specific portal was requested
+            if portal and user.role != portal:
+                flash(f'Access Denied: Your account is registered as a {user.role.title()}. Please access via the {user.role.title()} Portal.', 'danger')
+                return redirect(url_for('login', portal=portal))
+                
             session['user_id'] = user.id
             session['role'] = user.role
             flash(f'Welcome back, {user.name}!', 'success')
@@ -111,28 +150,35 @@ def login():
         else:
             flash('Invalid username or password.', 'danger')
             
-    return render_template('login.html')
+    return render_template('login.html', portal=portal)
 
 @app.route('/register', methods=['POST'])
 def register():
-    username = request.form['username']
+    portal = request.form.get('portal', '').strip().lower()
+    username = request.form['username'].strip()
     password = request.form['password']
-    name = request.form['name']
-    role = request.form['role']
-    contact = request.form['contact']
+    name = request.form['name'].strip()
+    role = request.form['role'].strip().lower()
+    contact = request.form['contact'].strip()
     location = request.form.get('location', '').strip()
+    
+    # If registered from a specific portal, lock role to that portal
+    if portal in {'doctor', 'patient', 'pharmacy'}:
+        role = portal
+    elif role not in {'doctor', 'patient', 'pharmacy'}:
+        role = 'patient'
     
     if User.query.filter_by(username=username).first():
         flash('Username already exists.', 'danger')
-        return redirect(url_for('login'))
+        return redirect(url_for('login', action='register', portal=portal if portal else None))
         
     user = User(username=username, name=name, role=role, contact=contact, location=location)
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
     
-    flash('Registration successful! Please log in.', 'success')
-    return redirect(url_for('login'))
+    flash(f'Registration successful! Please log in to your {role.title()} portal.', 'success')
+    return redirect(url_for('login', portal=role))
 
 @app.route('/logout')
 def logout():

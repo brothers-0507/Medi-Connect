@@ -2,14 +2,17 @@
 
 :root {
     --bg-dark: #f8fafc;
-    --card-bg: rgba(255, 255, 255, 0.85);
+    --card-bg: rgba(255, 255, 255, 0.90);
     --card-border: rgba(13, 148, 136, 0.12);
+    --card-border-hover: rgba(13, 148, 136, 0.28);
     --text-primary: #0f172a;
     --text-secondary: #475569;
     --primary: #0d9488;
     --primary-hover: #0f766e;
+    --primary-shadow: rgba(13, 148, 136, 0.2);
     --secondary: #10b981;
     --secondary-hover: #059669;
+    --secondary-shadow: rgba(16, 185, 129, 0.2);
     --accent: #0284c7;
     --danger: #ef4444;
     --danger-bg: rgba(239, 68, 68, 0.08);
@@ -17,8 +20,120 @@
     --warning-bg: rgba(245, 158, 11, 0.08);
     --success: #10b981;
     --success-bg: rgba(16, 185, 129, 0.08);
+    --user-badge-bg: rgba(13, 148, 136, 0.06);
+    --user-badge-border: rgba(13, 148, 136, 0.15);
     --font-sans: 'Outfit', sans-serif;
     --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ==========================================================================
+   ROLE-BASED MEDICAL THEMING SYSTEM
+   Automatically styles the application according to clinical persona context
+   ========================================================================== */
+
+/* 🩺 Doctor Portal: Clinical Sky Blue & Slate (Diagnostic Authority) */
+body[data-role="doctor"],
+[data-theme="clinical"],
+body[data-theme="clinical"] {
+    --primary: #0284c7;
+    --primary-hover: #0369a1;
+    --primary-shadow: rgba(2, 132, 199, 0.25);
+    --secondary: #0ea5e9;
+    --secondary-hover: #0284c7;
+    --secondary-shadow: rgba(14, 165, 233, 0.25);
+    --accent: #38bdf8;
+    --card-border: rgba(2, 132, 199, 0.14);
+    --card-border-hover: rgba(2, 132, 199, 0.32);
+    --user-badge-bg: rgba(2, 132, 199, 0.08);
+    --user-badge-border: rgba(2, 132, 199, 0.22);
+}
+
+/* 👤 Patient Portal: Therapeutic Nordic Teal & Sage (Wellness & Reassurance) */
+body[data-role="patient"],
+[data-theme="vital"],
+body[data-theme="vital"] {
+    --primary: #0d9488;
+    --primary-hover: #0f766e;
+    --primary-shadow: rgba(13, 148, 136, 0.25);
+    --secondary: #10b981;
+    --secondary-hover: #059669;
+    --secondary-shadow: rgba(16, 185, 129, 0.25);
+    --accent: #14b8a6;
+    --card-border: rgba(13, 148, 136, 0.14);
+    --card-border-hover: rgba(13, 148, 136, 0.3);
+    --user-badge-bg: rgba(13, 148, 136, 0.08);
+    --user-badge-border: rgba(13, 148, 136, 0.2);
+}
+
+/* 💊 Pharmacy Portal: Precision Indigo & Violet (Fulfillment & High Contrast) */
+body[data-role="pharmacy"],
+[data-theme="precision"],
+body[data-theme="precision"] {
+    --primary: #6366f1;
+    --primary-hover: #4f46e5;
+    --primary-shadow: rgba(99, 102, 241, 0.25);
+    --secondary: #06b6d4;
+    --secondary-hover: #0891b2;
+    --secondary-shadow: rgba(6, 182, 212, 0.25);
+    --accent: #8b5cf6;
+    --card-border: rgba(99, 102, 241, 0.15);
+    --card-border-hover: rgba(99, 102, 241, 0.35);
+    --user-badge-bg: rgba(99, 102, 241, 0.08);
+    --user-badge-border: rgba(99, 102, 241, 0.22);
+}
+
+/* 🌙 Clinical Night Mode (Prevents glare during night shifts & bedside rounds) */
+[data-theme="dark"],
+body[data-theme="dark"] {
+    --bg-dark: #0b1329;
+    --card-bg: rgba(15, 23, 42, 0.9);
+    --card-border: rgba(51, 65, 85, 0.65);
+    --card-border-hover: rgba(56, 189, 248, 0.45);
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --primary: #38bdf8;
+    --primary-hover: #0ea5e9;
+    --primary-shadow: rgba(56, 189, 248, 0.35);
+    --secondary: #34d399;
+    --secondary-hover: #10b981;
+    --secondary-shadow: rgba(52, 211, 153, 0.35);
+    --accent: #818cf8;
+    --user-badge-bg: rgba(56, 189, 248, 0.12);
+    --user-badge-border: rgba(56, 189, 248, 0.3);
+    --danger-bg: rgba(239, 68, 68, 0.2);
+    --warning-bg: rgba(245, 158, 11, 0.2);
+    --success-bg: rgba(16, 185, 129, 0.2);
+}
+
+[data-theme="dark"] header {
+    background: rgba(11, 19, 41, 0.9);
+    border-bottom: 1px solid rgba(51, 65, 85, 0.6);
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .btn-outline {
+    background: #0f172a;
+    color: #f8fafc;
+    border-color: rgba(51, 65, 85, 0.8);
+}
+
+[data-theme="dark"] .btn-outline:hover {
+    background: #1e293b;
+    border-color: var(--primary);
+}
+
+[data-theme="dark"] table th {
+    background: rgba(15, 23, 42, 0.95);
+    color: #f8fafc;
+}
+
+[data-theme="dark"] .card-title {
+    border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Tabular numbers for clinical safety across records and vitals */
+table, .stat-number, .badge, input[type="number"], .font-mono, td, th {
+    font-variant-numeric: tabular-nums;
 }
 
 * {
@@ -126,11 +241,11 @@ header {
 }
 
 .user-badge {
-    background: rgba(13, 148, 136, 0.05);
+    background: var(--user-badge-bg, rgba(13, 148, 136, 0.05));
     padding: 0.4rem 1rem;
     border-radius: 50px;
     font-size: 0.85rem;
-    border: 1px solid rgba(13, 148, 136, 0.1);
+    border: 1px solid var(--user-badge-border, rgba(13, 148, 136, 0.1));
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -181,7 +296,7 @@ main {
 }
 
 .card:hover {
-    border-color: rgba(13, 148, 136, 0.25);
+    border-color: var(--card-border-hover, rgba(13, 148, 136, 0.25));
     box-shadow: 0 10px 25px -4px rgba(148, 163, 184, 0.15);
 }
 
@@ -225,7 +340,7 @@ main {
 .btn-primary:hover {
     background: var(--primary-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
+    box-shadow: 0 4px 12px var(--primary-shadow, rgba(13, 148, 136, 0.2));
 }
 
 .btn-secondary {
@@ -236,7 +351,7 @@ main {
 .btn-secondary:hover {
     background: var(--secondary-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    box-shadow: 0 4px 12px var(--secondary-shadow, rgba(16, 185, 129, 0.2));
 }
 
 .btn-outline {
@@ -247,7 +362,7 @@ main {
 
 .btn-outline:hover {
     background: #f8fafc;
-    border-color: rgba(13, 148, 136, 0.3);
+    border-color: var(--primary);
 }
 
 .btn-outline.btn-primary {
@@ -303,7 +418,7 @@ main {
 .form-control:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
+    box-shadow: 0 0 0 3px var(--primary-shadow, rgba(13, 148, 136, 0.12));
 }
 
 .form-row {

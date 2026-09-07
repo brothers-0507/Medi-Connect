@@ -7,8 +7,17 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- Phosphor Icons for modern slick icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        // Apply persisted medical theme immediately to eliminate visual flash
+        (function() {
+            var theme = localStorage.getItem('mediconnect_theme');
+            if (theme && theme !== 'auto') {
+                document.documentElement.setAttribute('data-theme', theme);
+            }
+        })();
+    </script>
 </head>
-<body>
+<body data-role="{{ current_user.role if current_user else 'guest' }}">
     <header class="no-print">
         <div class="nav-container">
             <a href="{{ url_for('index') }}" class="logo">

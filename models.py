@@ -15,11 +15,14 @@ class User(db.Model):
     name = db.Column(db.String(120), nullable=False)
     contact = db.Column(db.String(50), nullable=True)
     location = db.Column(db.String(100), nullable=True)
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+    address = db.Column(db.String(255), nullable=True)
     
     # Relationships
     prescriptions_written = db.relationship('Prescription', back_populates='doctor', foreign_keys='Prescription.doctor_id')
     prescriptions_received = db.relationship('Prescription', back_populates='patient', foreign_keys='Prescription.patient_id')
-    broadcasts = db.relationship('Broadcast', back_populates='patient')
+    broadcasts = db.relationship('Broadcast', back_populates='patient', foreign_keys='Broadcast.patient_id')
     offers = db.relationship('PharmacyOffer', back_populates='pharmacy')
     schedules = db.relationship('MedicationSchedule', back_populates='patient')
     inventory = db.relationship('InventoryItem', back_populates='pharmacy')
@@ -71,11 +74,15 @@ class Broadcast(db.Model):
     prescription_id = db.Column(db.Integer, db.ForeignKey('prescriptions.id'), nullable=False)
     patient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     status = db.Column(db.String(20), default='active')      # 'active', 'completed'
+    target_pharmacy_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    patient_lat = db.Column(db.Float, nullable=True)
+    patient_lng = db.Column(db.Float, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
     prescription = db.relationship('Prescription', back_populates='broadcasts')
-    patient = db.relationship('User', back_populates='broadcasts')
+    patient = db.relationship('User', back_populates='broadcasts', foreign_keys=[patient_id])
+    target_pharmacy = db.relationship('User', foreign_keys=[target_pharmacy_id])
     offers = db.relationship('PharmacyOffer', back_populates='broadcast', cascade='all, delete-orphan')
 
 class PharmacyOffer(db.Model):

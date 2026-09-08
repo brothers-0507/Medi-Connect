@@ -1,5 +1,6 @@
 import io
 import base64
+import math
 from datetime import datetime, date, timedelta
 import qrcode
 from flask import Flask, render_template, redirect, url_for, request, flash, session, jsonify
@@ -9,6 +10,21 @@ from models import db, User, Prescription, PrescriptionItem, Broadcast, Pharmacy
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
+
+# Helper function to calculate great-circle distance (Haversine formula) in km
+def calculate_distance(lat1, lon1, lat2, lon2):
+    if None in (lat1, lon1, lat2, lon2):
+        return None
+    try:
+        lat1, lon1, lat2, lon2 = map(math.radians, [float(lat1), float(lon1), float(lat2), float(lon2)])
+        dlat = lat2 - lat1 
+        dlon = lon2 - lon1 
+        a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+        c = 2 * math.asin(math.sqrt(a)) 
+        r = 6371.0 # Earth radius in kilometers
+        return round(c * r, 2)
+    except Exception:
+        return None
 
 # Helper function to generate QR Code as base64 string
 def generate_qr_base64(data):
@@ -29,14 +45,31 @@ with app.app_context():
         doc.set_password('password')
         db.session.add(doc)
         
-        pat = User(username='patient', name='John Doe', role='patient', contact='555-0199', location='London')
+        pat = User(username='patient', name='John Doe', role='patient', contact='555-0199', location='London',
+                   latitude=51.5050, longitude=-0.1250, address='10 Downing St, London')
         pat.set_password('password')
         db.session.add(pat)
         
-        ph = User(username='pharmacy', name='City Central Pharmacy', role='pharmacy', contact='info@citycentral.com', location='London')
+        ph = User(username='pharmacy', name='City Central Pharmacy', role='pharmacy', contact='info@citycentral.com', location='London',
+                  latitude=51.5074, longitude=-0.1278, address='45 Central Way, London')
         ph.set_password('password')
         db.session.add(ph)
+
+        ph2 = User(username='st_mary_pharmacy', name='St. Mary Care Pharmacy', role='pharmacy', contact='info@stmaryrx.com', location='London',
+                   latitude=51.5180, longitude=-0.1420, address='88 Marylebone High St, London')
+        ph2.set_password('password')
+        db.session.add(ph2)
         
+        db.session.commit()
+
+        # Seed initial inventory for testing
+        today = date.today()
+        db.session.add(InventoryItem(pharmacy_id=ph.id, medicine_name='Amoxicillin', stock_level=50, price=14.50, batch_number='AMX-001', expiry_date=today + timedelta(days=365)))
+        db.session.add(InventoryItem(pharmacy_id=ph.id, medicine_name='Paracetamol', stock_level=120, price=4.20, batch_number='PAR-002', expiry_date=today + timedelta(days=400)))
+        db.session.add(InventoryItem(pharmacy_id=ph.id, medicine_name='Ibuprofen', stock_level=30, price=6.00, batch_number='IBU-003', expiry_date=today + timedelta(days=300)))
+        
+        db.session.add(InventoryItem(pharmacy_id=ph2.id, medicine_name='Amoxicillin', stock_level=25, price=13.80, batch_number='AMX-101', expiry_date=today + timedelta(days=280)))
+        db.session.add(InventoryItem(pharmacy_id=ph2.id, medicine_name='Cetirizine', stock_level=80, price=5.50, batch_number='CET-201', expiry_date=today + timedelta(days=500)))
         db.session.commit()
 
 # Context processor to make current_user globally available in templates
@@ -649,6 +682,9 @@ def refill_stock(schedule_id):
 def create_broadcast():
     patient_id = session['user_id']
     rx_id = request.form['prescription_id']
+    target_pharmacy_id = request.form.get('target_pharmacy_id')
+    patient_lat = request.form.get('latitude')
+    patient_lng = request.form.get('longitude')
     
     # Verify owner
     rx = Prescription.query.filter_by(id=rx_id, patient_id=patient_id).first()
@@ -662,12 +698,151 @@ def create_broadcast():
         flash('This prescription is already actively broadcasted.', 'info')
         return redirect(url_for('patient_dashboard'))
         
-    bc = Broadcast(prescription_id=rx_id, patient_id=patient_id)
+    bc = Broadcast(
+        prescription_id=rx_id, 
+        patient_id=patient_id,
+        target_pharmacy_id=int(target_pharmacy_id) if target_pharmacy_id else None,
+        patient_lat=float(patient_lat) if patient_lat else None,
+        patient_lng=float(patient_lng) if patient_lng else None
+    )
     db.session.add(bc)
     db.session.commit()
     
     flash('Prescription broadcasted to verified local pharmacies! Awaiting estimates.', 'success')
     return redirect(url_for('patient_dashboard'))
+
+@app.route('/api/prescription/<int:rx_id>/find-pharmacies', methods=['POST'])
+@login_required
+@role_required('patient')
+def find_nearest_pharmacies(rx_id):
+    patient_id = session['user_id']
+    patient = User.query.get(patient_id)
+    rx = Prescription.query.filter_by(id=rx_id, patient_id=patient_id).first()
+    if not rx:
+        return jsonify({'success': False, 'message': 'Prescription not found or unauthorized'}), 404
+        
+    data = request.get_json(silent=True) or {}
+    patient_lat = data.get('latitude')
+    patient_lng = data.get('longitude')
+    
+    if patient_lat is None or patient_lng is None:
+        patient_lat = patient.latitude or 51.5050
+        patient_lng = patient.longitude or -0.1250
+    else:
+        patient_lat = float(patient_lat)
+        patient_lng = float(patient_lng)
+        
+    pharmacies = User.query.filter_by(role='pharmacy').all()
+    results = []
+    today = date.today()
+    
+    for ph in pharmacies:
+        dist = calculate_distance(patient_lat, patient_lng, ph.latitude, ph.longitude)
+        
+        matching_items = []
+        missing_items = []
+        total_estimated_price = 0.0
+        
+        for rx_item in rx.items:
+            med_name_clean = rx_item.medicine_name.strip().lower()
+            
+            inv_matches = InventoryItem.query.filter(
+                InventoryItem.pharmacy_id == ph.id,
+                db.func.lower(InventoryItem.medicine_name) == med_name_clean,
+                InventoryItem.stock_level > 0,
+                InventoryItem.expiry_date >= today
+            ).all()
+            
+            if inv_matches:
+                best_match = inv_matches[0]
+                matching_items.append({
+                    'medicine_name': rx_item.medicine_name,
+                    'dosage': rx_item.dosage,
+                    'stock_level': best_match.stock_level,
+                    'price': best_match.price
+                })
+                total_estimated_price += best_match.price
+            else:
+                missing_items.append(rx_item.medicine_name)
+                
+        total_items_count = len(rx.items)
+        if len(matching_items) == total_items_count and total_items_count > 0:
+            stock_status = 'available'
+            status_text = 'All Medicines in Stock'
+            status_rank = 1
+        elif len(matching_items) > 0:
+            stock_status = 'partial'
+            status_text = f'{len(matching_items)} of {total_items_count} in Stock'
+            status_rank = 2
+        else:
+            stock_status = 'unavailable'
+            status_text = 'Currently Out of Stock'
+            status_rank = 3
+            
+        results.append({
+            'pharmacy_id': ph.id,
+            'name': ph.name,
+            'contact': ph.contact or 'Available upon order',
+            'address': ph.address or ph.location or 'Local Pharmacy',
+            'location': ph.location or 'Local',
+            'distance_km': dist if dist is not None else 999.0,
+            'distance_text': f"{dist} km away" if dist is not None else "Nearby",
+            'stock_status': stock_status,
+            'status_text': status_text,
+            'status_rank': status_rank,
+            'matching_items': matching_items,
+            'missing_items': missing_items,
+            'estimated_price': round(total_estimated_price, 2)
+        })
+        
+    results.sort(key=lambda x: (x['status_rank'], x['distance_km']))
+    
+    return jsonify({
+        'success': True,
+        'prescription_id': rx.id,
+        'prescription_uuid': rx.uuid,
+        'patient_coords': {'latitude': patient_lat, 'longitude': patient_lng},
+        'pharmacies': results
+    })
+
+@app.route('/api/broadcast/target-nearest', methods=['POST'])
+@login_required
+@role_required('patient')
+def broadcast_target_nearest():
+    patient_id = session['user_id']
+    data = request.get_json(silent=True) or request.form
+    rx_id = data.get('prescription_id')
+    target_pharmacy_id = data.get('pharmacy_id')
+    patient_lat = data.get('latitude')
+    patient_lng = data.get('longitude')
+    
+    rx = Prescription.query.filter_by(id=rx_id, patient_id=patient_id).first()
+    if not rx:
+        return jsonify({'success': False, 'message': 'Prescription not found'}), 404
+        
+    target_id_val = int(target_pharmacy_id) if target_pharmacy_id else None
+    
+    existing = Broadcast.query.filter_by(prescription_id=rx_id, patient_id=patient_id, status='active').first()
+    if existing:
+        if target_id_val and existing.target_pharmacy_id != target_id_val:
+            existing.target_pharmacy_id = target_id_val
+            db.session.commit()
+            return jsonify({'success': True, 'message': 'Broadcast target updated to selected pharmacy!'})
+        return jsonify({'success': True, 'message': 'This prescription is already actively broadcasted.'})
+        
+    bc = Broadcast(
+        prescription_id=rx_id,
+        patient_id=patient_id,
+        target_pharmacy_id=target_id_val,
+        patient_lat=float(patient_lat) if patient_lat else None,
+        patient_lng=float(patient_lng) if patient_lng else None,
+        status='active'
+    )
+    db.session.add(bc)
+    db.session.commit()
+    
+    msg = "Broadcast sent to selected in-stock pharmacy!" if target_id_val else "Broadcast sent to nearest in-stock pharmacies!"
+    return jsonify({'success': True, 'message': msg, 'broadcast_id': bc.id})
 
 # ----------------- PHARMACY PORTAL -----------------
 
@@ -686,9 +861,11 @@ def pharmacy_dashboard():
     
     all_broadcasts = Broadcast.query.filter_by(status='active').order_by(Broadcast.created_at.desc()).all()
     
-    # Filter by matching location (city name match)
+    # Filter by matching location or target pharmacy
     broadcasts = []
     for bc in all_broadcasts:
+        if bc.target_pharmacy_id and bc.target_pharmacy_id != pharmacy_id:
+            continue
         patient_user = bc.patient
         patient_loc = (patient_user.location or "").strip().lower() if patient_user else ""
         if not pharmacy_loc or not patient_loc or pharmacy_loc == patient_loc:

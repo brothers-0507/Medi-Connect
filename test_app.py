@@ -519,5 +519,101 @@ class MediConnectTestCase(unittest.TestCase):
         data = response.get_json()
         self.assertFalse(data['found'])
 
+    def test_find_nearest_pharmacies_and_stock(self):
+        # Create a prescription with Amoxicillin for test_patient
+        with app.app_context():
+            rx = Prescription(
+                doctor_id=self.doc_id,
+                patient_id=self.pat_id,
+                patient_name='Patient Test',
+                patient_contact='555-9988'
+            )
+            db.session.add(rx)
+            db.session.commit()
+            
+            rx_item = PrescriptionItem(
+                prescription_id=rx.id,
+                medicine_name='Amoxicillin',
+                dosage='500mg',
+                frequency='3x daily',
+                duration='7 days'
+            )
+            db.session.add(rx_item)
+            
+            # Seed pharmacy inventory
+            # Pharmacy 1 has Amoxicillin in stock
+            inv1 = InventoryItem(
+                pharmacy_id=self.ph_id,
+                medicine_name='Amoxicillin',
+                stock_level=50,
+                price=15.00,
+                batch_number='TEST-AMX',
+                expiry_date=date.today() + timedelta(days=100)
+            )
+            db.session.add(inv1)
+            
+            # Set coordinates for pharmacy 1
+            ph1_user = User.query.get(self.ph_id)
+            ph1_user.latitude = 51.5074
+            ph1_user.longitude = -0.1278
+            ph1_user.address = 'Central Pharmacy, London'
+            
+            # Set coordinates for pharmacy 2 (further away and out of stock)
+            ph2_user = User.query.get(self.ph_2_id)
+            ph2_user.latitude = 51.5500
+            ph2_user.longitude = -0.1500
+            ph2_user.address = 'North Pharmacy, London'
+            
+            db.session.commit()
+            rx_id = rx.id
+
+        self.login_as('test_patient')
+        # Query nearest pharmacies passing patient coordinates near London center
+        response = self.app.post(f'/api/prescription/{rx_id}/find-pharmacies', json=dict(
+            latitude=51.5050,
+            longitude=-0.1250
+        ))
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data['success'])
+        self.assertEqual(len(data['pharmacies']), 2)
+        
+        # First pharmacy should be in stock and closer
+        first_ph = data['pharmacies'][0]
+        self.assertEqual(first_ph['pharmacy_id'], self.ph_id)
+        self.assertEqual(first_ph['stock_status'], 'available')
+        self.assertEqual(first_ph['estimated_price'], 15.00)
+        self.assertLess(first_ph['distance_km'], 2.0)
+
+    def test_broadcast_target_nearest(self):
+        with app.app_context():
+            rx = Prescription(
+                doctor_id=self.doc_id,
+                patient_id=self.pat_id,
+                patient_name='Patient Test'
+            )
+            db.session.add(rx)
+            db.session.commit()
+            rx_id = rx.id
+
+        self.login_as('test_patient')
+        # Target broadcast to pharmacy 1
+        response = self.app.post('/api/broadcast/target-nearest', json=dict(
+            prescription_id=rx_id,
+            pharmacy_id=self.ph_id,
+            latitude=51.5050,
+            longitude=-0.1250
+        ))
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data['success'])
+        
+        # Verify broadcast in DB
+        with app.app_context():
+            bc = Broadcast.query.filter_by(prescription_id=rx_id).first()
+            self.assertIsNotNone(bc)
+            self.assertEqual(bc.target_pharmacy_id, self.ph_id)
+            self.assertAlmostEqual(bc.patient_lat, 51.5050)
+
 if __name__ == '__main__':
     unittest.main()

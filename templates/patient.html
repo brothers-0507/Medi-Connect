@@ -232,11 +232,9 @@
                                 </button>
                             </form>
                             
-                            <form action="{{ url_for('create_broadcast', prescription_id=rx.id) }}" method="POST" style="margin: 0;">
-                                <button type="submit" class="btn btn-primary btn-sm">
-                                    <i class="ph ph-broadcast"></i> Broadcast
-                                </button>
-                            </form>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="openNearestPharmacyModal({{ rx.id }}, '{{ rx.uuid[:8] }}')">
+                                <i class="ph-bold ph-map-pin"></i> Find Nearest In-Stock Pharmacy
+                            </button>
                         </div>
                     </div>
                 {% endfor %}
@@ -324,6 +322,40 @@
                 <p style="font-size: 0.85rem; margin-top: 0.5rem;">Go to "My Prescriptions" and click "Broadcast" on any prescription to request pharmacy estimates.</p>
             </div>
         {% endif %}
+    </div>
+</div>
+
+<!-- Modal for Nearest In-Stock Pharmacy Discovery -->
+<div id="nearest-pharmacy-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
+    <div class="card" style="max-width: 680px; width: 100%; max-height: 90vh; overflow-y: auto; position: relative; padding: 2rem; border-color: var(--primary); box-shadow: 0 10px 40px rgba(0,0,0,0.25);">
+        <button type="button" onclick="closePharmacyModal()" style="position: absolute; top: 1.25rem; right: 1.25rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.5rem;">
+            <i class="ph-bold ph-x"></i>
+        </button>
+        
+        <h2 class="card-title" style="margin-bottom: 0.5rem;">
+            <span><i class="ph-bold ph-map-pin card-title-icon"></i> Nearest In-Stock Pharmacies</span>
+        </h2>
+        
+        <div id="geo-status-bar" style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem; padding: 0.65rem 0.85rem; background: rgba(13, 148, 136, 0.06); border-radius: 8px; border: 1px solid var(--card-border);">
+            <i class="ph-bold ph-crosshair" style="color: var(--primary);"></i>
+            <span id="geo-status-text">Detecting your location via GPS...</span>
+        </div>
+
+        <div id="pharmacy-results-container" style="display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Loading Spinner -->
+            <div id="pharmacy-loading" style="text-align: center; padding: 2.5rem 1rem;">
+                <i class="ph-bold ph-spinner ph-spin" style="font-size: 2.5rem; color: var(--primary); margin-bottom: 1rem;"></i>
+                <p style="color: var(--text-secondary); font-weight: 500;">Scanning real-time inventory at local pharmacies near you...</p>
+            </div>
+            
+            <div id="pharmacy-list" style="display: none; flex-direction: column; gap: 1rem;"></div>
+        </div>
+
+        <div id="broadcast-all-footer" style="display: none; margin-top: 1.5rem; border-top: 1px solid var(--card-border); padding-top: 1rem; text-align: center;">
+            <button type="button" class="btn btn-secondary" id="btn-broadcast-all" style="width: 100%;">
+                <i class="ph-bold ph-broadcast"></i> Broadcast to All In-Stock Pharmacies in Range
+            </button>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -414,6 +446,176 @@
             card.style.display = 'none';
             btn.innerHTML = '<i class="ph-bold ph-plus-circle"></i> Add Custom Medication';
         }
+    }
+
+    // Nearest In-Stock Pharmacy Discovery
+    let currentRxIdForDiscovery = null;
+    let currentPatientCoords = null;
+
+    function openNearestPharmacyModal(rxId, rxCode) {
+        currentRxIdForDiscovery = rxId;
+        const modal = document.getElementById('nearest-pharmacy-modal');
+        const statusText = document.getElementById('geo-status-text');
+        const loading = document.getElementById('pharmacy-loading');
+        const list = document.getElementById('pharmacy-list');
+        const footer = document.getElementById('broadcast-all-footer');
+
+        modal.style.display = 'flex';
+        loading.style.display = 'block';
+        list.style.display = 'none';
+        list.innerHTML = '';
+        footer.style.display = 'none';
+        statusText.innerHTML = 'Analyzing your current location via device GPS...';
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    currentPatientCoords = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude
+                    };
+                    statusText.innerHTML = `📍 GPS Location locked: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+                    fetchPharmacies(rxId, currentPatientCoords);
+                },
+                function(error) {
+                    statusText.innerHTML = '📍 GPS permission declined or unavailable. Using your registered city location (London).';
+                    currentPatientCoords = null;
+                    fetchPharmacies(rxId, null);
+                },
+                { timeout: 6000 }
+            );
+        } else {
+            statusText.innerHTML = '📍 Geolocation not supported by browser. Using registered city location.';
+            fetchPharmacies(rxId, null);
+        }
+    }
+
+    function closePharmacyModal() {
+        document.getElementById('nearest-pharmacy-modal').style.display = 'none';
+    }
+
+    function fetchPharmacies(rxId, coords) {
+        fetch(`/api/prescription/${rxId}/find-pharmacies`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(coords || {})
+        })
+        .then(res => res.json())
+        .then(data => {
+            const loading = document.getElementById('pharmacy-loading');
+            const list = document.getElementById('pharmacy-list');
+            const footer = document.getElementById('broadcast-all-footer');
+            
+            loading.style.display = 'none';
+            list.style.display = 'flex';
+            
+            if (!data.success || !data.pharmacies || data.pharmacies.length === 0) {
+                list.innerHTML = `
+                    <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary);">
+                        <i class="ph-bold ph-storefront" style="font-size: 2.5rem; margin-bottom: 0.5rem; display: block; color: var(--card-border);"></i>
+                        <p>No registered pharmacies found in this region.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let hasInStock = false;
+            let html = '';
+
+            data.pharmacies.forEach(ph => {
+                if (ph.stock_status === 'available') hasInStock = true;
+
+                let badgeHtml = '';
+                if (ph.stock_status === 'available') {
+                    badgeHtml = `<span class="badge badge-success" style="font-size: 0.75rem;"><i class="ph-bold ph-check-circle"></i> In Stock (${ph.matching_items.length} items)</span>`;
+                } else if (ph.stock_status === 'partial') {
+                    badgeHtml = `<span class="badge badge-warning" style="font-size: 0.75rem;"><i class="ph-bold ph-warning-circle"></i> Partial (${ph.status_text})</span>`;
+                } else {
+                    badgeHtml = `<span class="badge badge-danger" style="font-size: 0.75rem;"><i class="ph-bold ph-x-circle"></i> Out of Stock</span>`;
+                }
+
+                let medsHtml = '';
+                if (ph.matching_items.length > 0) {
+                    medsHtml += '<div style="font-size: 0.8rem; margin-top: 0.4rem; color: var(--text-secondary);">';
+                    medsHtml += '<strong style="color: var(--secondary);">In Stock:</strong> ' + ph.matching_items.map(m => `${m.medicine_name} ($${m.price.toFixed(2)})`).join(', ');
+                    medsHtml += '</div>';
+                }
+                if (ph.missing_items.length > 0) {
+                    medsHtml += '<div style="font-size: 0.8rem; margin-top: 0.2rem; color: var(--danger);">';
+                    medsHtml += '<strong>Missing:</strong> ' + ph.missing_items.join(', ');
+                    medsHtml += '</div>';
+                }
+
+                html += `
+                    <div style="background: var(--card-bg); border: 1.5px solid ${ph.stock_status === 'available' ? 'var(--secondary)' : 'var(--card-border)'}; border-radius: 10px; padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 240px;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
+                                <h4 style="margin: 0; font-size: 1.05rem; color: var(--text-primary); font-weight: 600;">${ph.name}</h4>
+                                ${badgeHtml}
+                            </div>
+                            <div style="display: flex; gap: 0.75rem; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.25rem; flex-wrap: wrap;">
+                                <span><i class="ph-bold ph-map-pin" style="color: var(--primary);"></i> <strong>${ph.distance_text}</strong> &bull; ${ph.address}</span>
+                                <span><i class="ph-bold ph-phone" style="color: var(--text-secondary);"></i> ${ph.contact}</span>
+                            </div>
+                            ${medsHtml}
+                            ${ph.estimated_price > 0 ? `<div style="font-size: 0.85rem; font-weight: 600; color: var(--secondary); margin-top: 0.35rem;">Total Est. Cost: $${ph.estimated_price.toFixed(2)}</div>` : ''}
+                        </div>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem; min-width: 140px;">
+                            <button type="button" class="btn ${ph.stock_status === 'available' ? 'btn-primary' : 'btn-outline'} btn-sm" onclick="targetBroadcast(${rxId}, ${ph.pharmacy_id}, '${ph.name.replace(/'/g, "\\'")}')">
+                                <i class="ph-bold ph-paper-plane-tilt"></i> Request Quote
+                            </button>
+                            <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(ph.name + ' ' + ph.address)}" target="_blank" class="btn btn-outline btn-sm" style="font-size: 0.75rem;">
+                                <i class="ph-bold ph-navigation-arrow"></i> Directions
+                            </a>
+                        </div>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = html;
+
+            if (hasInStock) {
+                footer.style.display = 'block';
+                document.getElementById('btn-broadcast-all').onclick = function() {
+                    targetBroadcast(rxId, null, 'all in-stock pharmacies');
+                };
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            const loading = document.getElementById('pharmacy-loading');
+            loading.innerHTML = '<p style="color: var(--danger);">Failed to query local pharmacies. Please try again.</p>';
+        });
+    }
+
+    function targetBroadcast(rxId, pharmacyId, pharmacyName) {
+        const payload = {
+            prescription_id: rxId,
+            pharmacy_id: pharmacyId,
+            latitude: currentPatientCoords ? currentPatientCoords.latitude : null,
+            longitude: currentPatientCoords ? currentPatientCoords.longitude : null
+        };
+
+        fetch('/api/broadcast/target-nearest', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message || `Broadcast sent to ${pharmacyName}!`);
+                closePharmacyModal();
+                window.location.reload();
+            } else {
+                alert(data.message || 'Error sending broadcast.');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Network error while broadcasting request.');
+        });
     }
 </script>
 {% endblock %}

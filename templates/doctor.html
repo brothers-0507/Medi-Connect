@@ -18,23 +18,31 @@
                     
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="patient_username">Patient Registered Username (Required for Auto-Linking)</label>
-                            <input type="text" id="patient_username" name="patient_username" class="form-control" required>
+                            <label for="patient_username">Patient Registered Username (Auto-Fills Details)</label>
+                            <input type="text" id="patient_username" name="patient_username" class="form-control" list="patient-list" placeholder="Enter patient username..." autocomplete="off" required>
+                            {% if patients %}
+                            <datalist id="patient-list">
+                                {% for p in patients %}
+                                    <option value="{{ p.username }}">{{ p.name }} ({{ p.username }})</option>
+                                {% endfor %}
+                            </datalist>
+                            {% endif %}
+                            <div id="patient-lookup-status" style="font-size: 0.8rem; margin-top: 0.35rem; min-height: 1.2rem;"></div>
                         </div>
                         <div class="form-group">
                             <label for="patient_name">Patient Full Name</label>
-                            <input type="text" id="patient_name" name="patient_name" class="form-control" required>
+                            <input type="text" id="patient_name" name="patient_name" class="form-control" placeholder="Auto-fills from username" required>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label for="patient_age">Age</label>
-                            <input type="number" id="patient_age" name="patient_age" class="form-control" min="0" max="150">
+                            <input type="number" id="patient_age" name="patient_age" class="form-control" min="0" max="150" placeholder="e.g. 32">
                         </div>
                         <div class="form-group">
                             <label for="patient_contact">Contact (Phone/Email)</label>
-                            <input type="text" id="patient_contact" name="patient_contact" class="form-control" required>
+                            <input type="text" id="patient_contact" name="patient_contact" class="form-control" placeholder="Auto-fills from username" required>
                         </div>
                     </div>
                 </div>
@@ -204,6 +212,58 @@
         } else {
             btn.innerHTML = `<i class="ph-bold ph-caret-down"></i> View Older Prescriptions (${items.length})`;
         }
+    }
+
+    // Autofill patient details when typing or selecting username
+    const usernameInput = document.getElementById('patient_username');
+    const nameInput = document.getElementById('patient_name');
+    const ageInput = document.getElementById('patient_age');
+    const contactInput = document.getElementById('patient_contact');
+    const statusDiv = document.getElementById('patient-lookup-status');
+
+    let lookupTimer = null;
+    function checkPatientUsername() {
+        const username = usernameInput.value.trim();
+        if (!username) {
+            statusDiv.innerHTML = '';
+            return;
+        }
+        fetch(`/api/patient/lookup?username=${encodeURIComponent(username)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.found) {
+                    nameInput.value = data.name;
+                    contactInput.value = data.contact;
+                    if (data.age) {
+                        ageInput.value = data.age;
+                    }
+                    statusDiv.innerHTML = `<span style="color: var(--secondary); font-weight: 600;"><i class="ph-bold ph-check-circle"></i> Registered Patient Found: ${data.name} (Details Autofilled)</span>`;
+                    
+                    // Subtle highlight animation
+                    [nameInput, contactInput, ageInput].forEach(inp => {
+                        inp.style.transition = 'background-color 0.4s, border-color 0.4s';
+                        inp.style.backgroundColor = 'rgba(16, 185, 129, 0.08)';
+                        inp.style.borderColor = 'var(--secondary)';
+                        setTimeout(() => {
+                            inp.style.backgroundColor = '';
+                            inp.style.borderColor = '';
+                        }, 900);
+                    });
+                } else {
+                    statusDiv.innerHTML = `<span style="color: var(--danger); font-weight: 550;"><i class="ph-bold ph-warning-circle"></i> Patient username not found in database</span>`;
+                }
+            })
+            .catch(() => {
+                statusDiv.innerHTML = '';
+            });
+    }
+
+    if (usernameInput) {
+        usernameInput.addEventListener('input', () => {
+            clearTimeout(lookupTimer);
+            lookupTimer = setTimeout(checkPatientUsername, 250);
+        });
+        usernameInput.addEventListener('change', checkPatientUsername);
     }
 </script>
 {% endblock %}

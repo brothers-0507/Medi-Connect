@@ -503,5 +503,21 @@ class MediConnectTestCase(unittest.TestCase):
         self.assertIn(b'Access Denied', response.data)
         self.assertIn(b'Dr. Test', response.data)
 
+    def test_patient_lookup_autofill(self):
+        # Doctor looking up existing patient
+        self.login_as('test_doctor')
+        response = self.app.get('/api/patient/lookup?username=test_patient')
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertTrue(data['found'])
+        self.assertEqual(data['name'], 'Patient Test')
+        self.assertEqual(data['contact'], '555-9988')
+
+        # Looking up non-existent username
+        response = self.app.get('/api/patient/lookup?username=nonexistent_user')
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertFalse(data['found'])
+
 if __name__ == '__main__':
     unittest.main()

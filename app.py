@@ -253,7 +253,29 @@ def update_password():
 def doctor_dashboard():
     doctor_id = session['user_id']
     prescriptions = Prescription.query.filter_by(doctor_id=doctor_id).order_by(Prescription.created_at.desc()).all()
-    return render_template('doctor.html', prescriptions=prescriptions)
+    patients = User.query.filter_by(role='patient').order_by(User.name.asc()).all()
+    return render_template('doctor.html', prescriptions=prescriptions, patients=patients)
+
+@app.route('/api/patient/lookup')
+@login_required
+@role_required('doctor')
+def lookup_patient():
+    username = request.args.get('username', '').strip()
+    if not username:
+        return jsonify({'found': False})
+    pat = User.query.filter_by(username=username, role='patient').first()
+    if not pat:
+        return jsonify({'found': False})
+    
+    last_rx = Prescription.query.filter_by(patient_id=pat.id).order_by(Prescription.created_at.desc()).first()
+    age = last_rx.patient_age if last_rx and last_rx.patient_age else ''
+    
+    return jsonify({
+        'found': True,
+        'name': pat.name,
+        'contact': pat.contact or '',
+        'age': age
+    })
 
 @app.route('/prescription/create', methods=['POST'])
 @login_required

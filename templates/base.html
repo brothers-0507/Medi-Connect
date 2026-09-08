@@ -8,11 +8,13 @@
     <!-- Phosphor Icons for modern slick icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script>
-        // Apply persisted medical theme immediately to eliminate visual flash
+        // Apply persisted clinical theme immediately to eliminate visual flash
         (function() {
             var theme = localStorage.getItem('mediconnect_theme');
-            if (theme && theme !== 'auto') {
-                document.documentElement.setAttribute('data-theme', theme);
+            if (theme === 'dark') {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'light');
             }
         })();
     </script>

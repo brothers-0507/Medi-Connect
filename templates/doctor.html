@@ -41,33 +41,43 @@
 
                 <!-- Medications -->
                 <div style="margin-bottom: 2rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.85rem;">
                         <h3 style="font-size: 1rem; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">Medications</h3>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="addMedicationRow()">
                             <i class="ph-bold ph-plus"></i> Add Medicine
                         </button>
                     </div>
                     
+                    <!-- Medications Column Labels -->
+                    <div class="medication-column-labels" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 2fr 38px; gap: 0.75rem; margin-bottom: 0.4rem; padding: 0 0.1rem;">
+                        <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin: 0;">Medicine Name</label>
+                        <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin: 0;">Dosage</label>
+                        <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin: 0;">Frequency</label>
+                        <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin: 0;">Duration</label>
+                        <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin: 0;">Instructions / Notes</label>
+                        <span></span>
+                    </div>
+
                     <div id="medications-container">
                         <!-- Default Row -->
                         <div class="prescription-item-row" id="med-row-0">
                             <div>
-                                <input type="text" name="med_name[]" class="form-control" required>
+                                <input type="text" name="med_name[]" class="form-control" placeholder="e.g. Amoxicillin" required>
                             </div>
                             <div>
-                                <input type="text" name="med_dosage[]" class="form-control" required>
+                                <input type="text" name="med_dosage[]" class="form-control" placeholder="e.g. 500mg" required>
                             </div>
                             <div>
-                                <input type="text" name="med_frequency[]" class="form-control" required>
+                                <input type="text" name="med_frequency[]" class="form-control" placeholder="e.g. Twice daily" required>
                             </div>
                             <div>
-                                <input type="text" name="med_duration[]" class="form-control" required>
+                                <input type="text" name="med_duration[]" class="form-control" placeholder="e.g. 7 days" required>
                             </div>
                             <div>
-                                <input type="text" name="med_instructions[]" class="form-control">
+                                <input type="text" name="med_instructions[]" class="form-control" placeholder="e.g. After meals">
                             </div>
                             <div>
-                                <button type="button" class="btn btn-danger btn-sm" onclick="removeMedicationRow('med-row-0')" style="padding: 0.55rem;"><i class="ph-bold ph-trash"></i></button>
+                                <button type="button" class="btn btn-danger btn-sm" onclick="removeMedicationRow('med-row-0')" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;"><i class="ph-bold ph-trash"></i></button>
                             </div>
                         </div>
                     </div>
@@ -143,22 +153,22 @@
         row.id = newId;
         row.innerHTML = `
             <div>
-                <input type="text" name="med_name[]" class="form-control" required>
+                <input type="text" name="med_name[]" class="form-control" placeholder="e.g. Amoxicillin" required>
             </div>
             <div>
-                <input type="text" name="med_dosage[]" class="form-control" required>
+                <input type="text" name="med_dosage[]" class="form-control" placeholder="e.g. 500mg" required>
             </div>
             <div>
-                <input type="text" name="med_frequency[]" class="form-control" required>
+                <input type="text" name="med_frequency[]" class="form-control" placeholder="e.g. Twice daily" required>
             </div>
             <div>
-                <input type="text" name="med_duration[]" class="form-control" required>
+                <input type="text" name="med_duration[]" class="form-control" placeholder="e.g. 7 days" required>
             </div>
             <div>
-                <input type="text" name="med_instructions[]" class="form-control">
+                <input type="text" name="med_instructions[]" class="form-control" placeholder="e.g. After meals">
             </div>
             <div>
-                <button type="button" class="btn btn-danger btn-sm" onclick="removeMedicationRow('${newId}')" style="padding: 0.55rem;"><i class="ph-bold ph-trash"></i></button>
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeMedicationRow('${newId}')" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;"><i class="ph-bold ph-trash"></i></button>
             </div>
         `;
         

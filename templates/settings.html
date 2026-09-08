@@ -87,41 +87,18 @@
                 <span><i class="ph-bold ph-palette card-title-icon"></i> Appearance & UI Theme</span>
             </h2>
             <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.25rem;">
-                Customize MediConnect's visual identity or let it adapt automatically to your clinical role.
+                Choose between Light and Dark display modes.
             </p>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem;">
-                <button type="button" class="theme-select-btn btn btn-outline btn-sm" onclick="setAppTheme('auto')" id="theme-btn-auto" style="justify-content: flex-start; text-align: left; padding: 0.75rem;">
-                    <i class="ph-bold ph-sparkle" style="color: var(--primary);"></i>
-                    <div>
-                        <div style="font-weight: 600; font-size: 0.85rem;">Role Auto</div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Doctor/Pt/Rx</div>
-                    </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <button type="button" class="theme-select-btn btn btn-outline" onclick="setAppTheme('light')" id="theme-btn-light" style="justify-content: center; gap: 0.5rem; padding: 0.85rem;">
+                    <i class="ph-bold ph-sun" style="color: #f59e0b; font-size: 1.25rem;"></i>
+                    <span style="font-weight: 600;">Light Mode</span>
                 </button>
-                <button type="button" class="theme-select-btn btn btn-outline btn-sm" onclick="setAppTheme('clinical')" id="theme-btn-clinical" style="justify-content: flex-start; text-align: left; padding: 0.75rem;">
-                    <i class="ph-bold ph-first-aid" style="color: #0284c7;"></i>
-                    <div>
-                        <div style="font-weight: 600; font-size: 0.85rem;">Clinical Trust</div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Ocean Blue</div>
-                    </div>
-                </button>
-                <button type="button" class="theme-select-btn btn btn-outline btn-sm" onclick="setAppTheme('vital')" id="theme-btn-vital" style="justify-content: flex-start; text-align: left; padding: 0.75rem;">
-                    <i class="ph-bold ph-heartbeat" style="color: #0d9488;"></i>
-                    <div>
-                        <div style="font-weight: 600; font-size: 0.85rem;">Vital Care</div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Nordic Teal</div>
-                    </div>
-                </button>
-                <button type="button" class="theme-select-btn btn btn-outline btn-sm" onclick="setAppTheme('precision')" id="theme-btn-precision" style="justify-content: flex-start; text-align: left; padding: 0.75rem;">
-                    <i class="ph-bold ph-shield-check" style="color: #6366f1;"></i>
-                    <div>
-                        <div style="font-weight: 600; font-size: 0.85rem;">Precision</div>
-                        <div style="font-size: 0.75rem; color: var(--text-secondary);">Indigo & Cyan</div>
-                    </div>
+                <button type="button" class="theme-select-btn btn btn-outline" onclick="setAppTheme('dark')" id="theme-btn-dark" style="justify-content: center; gap: 0.5rem; padding: 0.85rem;">
+                    <i class="ph-bold ph-moon-stars" style="color: #0d9488; font-size: 1.25rem;"></i>
+                    <span style="font-weight: 600;">Dark Mode</span>
                 </button>
             </div>
-            <button type="button" class="theme-select-btn btn btn-outline btn-sm" onclick="setAppTheme('dark')" id="theme-btn-dark" style="width: 100%; justify-content: center; padding: 0.65rem;">
-                <i class="ph-bold ph-moon-stars"></i> Clinical Night Mode (Dark)
-            </button>
         </div>
 
         <!-- Account Info Badge -->
@@ -140,26 +117,28 @@
 
 <script>
 function setAppTheme(theme) {
-    if (theme === 'auto') {
-        localStorage.removeItem('mediconnect_theme');
-        document.documentElement.removeAttribute('data-theme');
+    if (theme === 'dark') {
+        localStorage.setItem('mediconnect_theme', 'dark');
+        document.documentElement.setAttribute('data-theme', 'dark');
     } else {
-        localStorage.setItem('mediconnect_theme', theme);
-        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('mediconnect_theme', 'light');
+        document.documentElement.setAttribute('data-theme', 'light');
     }
     updateThemeButtons();
 }
 
 function updateThemeButtons() {
-    var current = localStorage.getItem('mediconnect_theme') || 'auto';
+    var current = localStorage.getItem('mediconnect_theme') || 'light';
     document.querySelectorAll('.theme-select-btn').forEach(function(btn) {
-        btn.style.borderColor = 'rgba(0, 0, 0, 0.08)';
+        btn.style.borderColor = 'var(--card-border)';
         btn.style.boxShadow = 'none';
+        btn.style.background = '';
     });
     var activeBtn = document.getElementById('theme-btn-' + current);
     if (activeBtn) {
         activeBtn.style.borderColor = 'var(--primary)';
-        activeBtn.style.boxShadow = '0 0 0 2px var(--primary-shadow)';
+        activeBtn.style.boxShadow = '0 0 0 2px var(--primary-shadow, rgba(13, 148, 136, 0.25))';
+        activeBtn.style.background = 'rgba(13, 148, 136, 0.06)';
     }
 }
 document.addEventListener('DOMContentLoaded', updateThemeButtons);

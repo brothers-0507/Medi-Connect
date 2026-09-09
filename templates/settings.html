@@ -4,8 +4,8 @@
 
 {% block content %}
 <div class="hero-section" style="margin-bottom: 3rem; animation: fadeIn 0.4s ease;">
-    <a href="{{ url_for('index') }}" class="btn btn-outline btn-sm" style="margin-bottom: 1.5rem;">
-        <i class="ph-bold ph-arrow-left"></i> Back to Dashboard
+    <a href="{{ url_for(current_user.role + '_dashboard') if current_user and current_user.role else url_for('index') }}" class="btn btn-outline btn-sm" style="margin-bottom: 1.5rem;">
+        <i class="ph-bold ph-arrow-left"></i> My Dashboard
     </a>
     <h1 style="font-size: 2.2rem; font-weight: 700; color: var(--text-primary);">
         <i class="ph-bold ph-gear" style="color: var(--secondary);"></i> Account Settings
@@ -23,7 +23,7 @@
                 <span><i class="ph-bold ph-user-gear card-title-icon"></i> Edit Profile Details</span>
             </h2>
             
-            <form action="{{ url_for('update_settings') }}" method="POST">
+            <form action="{{ url_for('update_settings') }}" method="POST" id="settings-profile-form" onsubmit="syncDoctorBadgesBeforeSubmit()">
                 <div class="form-group">
                     <label for="profile-name">Full Name / Business Name</label>
                     <input type="text" id="profile-name" name="name" class="form-control" value="{{ current_user.name }}" required>
@@ -41,8 +41,31 @@
 
                 <div class="form-group">
                     <label for="profile-location">Location (City/Town)</label>
-                    <input type="text" id="profile-location" name="location" class="form-control" value="{{ current_user.location or '' }}" placeholder="e.g. London, New York">
+                    <input type="text" id="profile-location" name="location" class="form-control" value="{{ current_user.location or '' }}" placeholder="e.g. Bengaluru, Mumbai, Chennai">
                 </div>
+
+                {% if current_user.role == 'doctor' %}
+                <div class="form-group" style="margin-top: 1.5rem; border-top: 1px solid var(--card-border); padding-top: 1.25rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                        <label style="font-weight: 600; font-size: 0.92rem; margin-bottom: 0; display: flex; align-items: center; gap: 0.45rem;">
+                            <i class="ph-bold ph-identification-badge" style="color: var(--primary);"></i>
+                            Clinical Credentials & Banner Badges (Bio)
+                        </label>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="addDoctorBadgeRow('', '')" style="font-size: 0.78rem; padding: 0.25rem 0.6rem; border-radius: 6px;">
+                            <i class="ph-bold ph-plus"></i> Add Badge
+                        </button>
+                    </div>
+                    <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.85rem; line-height: 1.4;">
+                        These icons and editable labels appear on your doctor banner and prescriptions. You can modify the text, remove items, or add new badges.
+                    </p>
+
+                    <div id="doctor-badges-list" style="display: flex; flex-direction: column; gap: 0.65rem;">
+                        <!-- Dynamically populated via renderDoctorBadges -->
+                    </div>
+
+                    <input type="hidden" name="doctor_badges_json" id="doctor-badges-json">
+                </div>
+                {% endif %}
 
                 <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem; padding: 0.85rem;">
                     <i class="ph-bold ph-floppy-disk"></i> Save Profile Details
@@ -125,6 +148,7 @@ function setAppTheme(theme) {
         document.documentElement.setAttribute('data-theme', 'light');
     }
     updateThemeButtons();
+    if (typeof updateThemeIcon === 'function') updateThemeIcon();
 }
 
 function updateThemeButtons() {
@@ -141,6 +165,114 @@ function updateThemeButtons() {
         activeBtn.style.background = 'rgba(13, 148, 136, 0.06)';
     }
 }
-document.addEventListener('DOMContentLoaded', updateThemeButtons);
+document.addEventListener('DOMContentLoaded', function() {
+    updateThemeButtons();
+    
+    // Initialize doctor credential badges if in doctor settings
+    {% if current_user.role == 'doctor' %}
+    const initialBadges = {{ (current_user.get_doctor_badges() if current_user.role == 'doctor' else [])|tojson }};
+    renderDoctorBadges(initialBadges);
+    {% endif %}
+});
+
+// --- Doctor Badges (Bio) Functions ---
+function renderDoctorBadges(badges) {
+    const container = document.getElementById('doctor-badges-list');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    if (!badges || badges.length === 0) {
+        container.innerHTML = '<div id="no-badges-msg" style="font-size: 0.82rem; color: var(--text-secondary); font-style: italic; padding: 0.5rem;">No badges configured. Click "+ Add Badge" above to create one.</div>';
+        return;
+    }
+    
+    badges.forEach(function(b) {
+        addDoctorBadgeRow(b.icon, b.text);
+    });
+}
+
+function addDoctorBadgeRow(icon, text) {
+    const container = document.getElementById('doctor-badges-list');
+    if (!container) return;
+    
+    const noMsg = document.getElementById('no-badges-msg');
+    if (noMsg) noMsg.remove();
+
+    const currentIcon = icon || 'ph-identification-badge';
+    const currentText = text || '';
+
+    const row = document.createElement('div');
+    row.className = 'doctor-badge-row';
+    row.style.cssText = 'display: flex; align-items: center; gap: 0.5rem; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 8px; padding: 0.45rem 0.65rem; transition: var(--transition);';
+
+    let iconColor = 'var(--primary)';
+    if (currentIcon.includes('stethoscope')) iconColor = 'var(--secondary)';
+    else if (currentIcon.includes('hospital')) iconColor = 'var(--accent)';
+    else if (currentIcon.includes('certificate')) iconColor = 'var(--warning)';
+
+    row.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.35rem; width: 145px; flex-shrink: 0;">
+            <i class="ph-bold ${currentIcon} badge-row-icon" style="font-size: 1.15rem; color: ${iconColor};"></i>
+            <select class="form-control badge-icon-select" onchange="handleBadgeIconChange(this)" style="padding: 0.3rem 0.4rem; font-size: 0.78rem; height: 32px; border-radius: 6px;">
+                <option value="ph-identification-badge" ${currentIcon === 'ph-identification-badge' ? 'selected' : ''}>🪪 Reg No</option>
+                <option value="ph-stethoscope" ${currentIcon === 'ph-stethoscope' ? 'selected' : ''}>🩺 Department</option>
+                <option value="ph-hospital" ${currentIcon === 'ph-hospital' ? 'selected' : ''}>🏥 Workplace</option>
+                <option value="ph-graduation-cap" ${currentIcon === 'ph-graduation-cap' ? 'selected' : ''}>🎓 Degree</option>
+                <option value="ph-certificate" ${currentIcon === 'ph-certificate' ? 'selected' : ''}>⭐ Credential</option>
+                <option value="ph-map-pin" ${currentIcon === 'ph-map-pin' ? 'selected' : ''}>📍 Location</option>
+                <option value="ph-first-aid" ${currentIcon === 'ph-first-aid' ? 'selected' : ''}>🩹 Care</option>
+            </select>
+        </div>
+        <input type="text" class="form-control badge-text-input" value="${currentText.replace(/"/g, '&quot;')}" placeholder="e.g. Reg No: KMC-84920 or Department" style="flex: 1; padding: 0.35rem 0.65rem; font-size: 0.85rem; height: 32px;" required>
+        <button type="button" class="btn btn-outline btn-sm" onclick="removeDoctorBadgeRow(this)" title="Remove Badge" style="padding: 0.35rem 0.55rem; color: var(--danger); border-color: rgba(239, 68, 68, 0.25); height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px;">
+            <i class="ph-bold ph-trash"></i>
+        </button>
+    `;
+
+    container.appendChild(row);
+}
+
+function handleBadgeIconChange(selectElem) {
+    const iconElem = selectElem.parentElement.querySelector('.badge-row-icon');
+    if (iconElem) {
+        iconElem.className = 'ph-bold ' + selectElem.value + ' badge-row-icon';
+        if (selectElem.value.includes('stethoscope')) iconElem.style.color = 'var(--secondary)';
+        else if (selectElem.value.includes('hospital')) iconElem.style.color = 'var(--accent)';
+        else if (selectElem.value.includes('certificate')) iconElem.style.color = 'var(--warning)';
+        else iconElem.style.color = 'var(--primary)';
+    }
+}
+
+function removeDoctorBadgeRow(btn) {
+    const row = btn.closest('.doctor-badge-row');
+    if (row) {
+        row.remove();
+        const container = document.getElementById('doctor-badges-list');
+        if (container && container.children.length === 0) {
+            container.innerHTML = '<div id="no-badges-msg" style="font-size: 0.82rem; color: var(--text-secondary); font-style: italic; padding: 0.5rem;">No badges configured. Click "+ Add Badge" above to create one.</div>';
+        }
+    }
+}
+
+function syncDoctorBadgesBeforeSubmit() {
+    const container = document.getElementById('doctor-badges-list');
+    if (!container) return;
+    const rows = container.querySelectorAll('.doctor-badge-row');
+    const badges = [];
+    rows.forEach(function(r) {
+        const select = r.querySelector('.badge-icon-select');
+        const input = r.querySelector('.badge-text-input');
+        if (select && input && input.value.trim()) {
+            badges.push({
+                icon: select.value,
+                text: input.value.trim()
+            });
+        }
+    });
+    const hiddenJson = document.getElementById('doctor-badges-json');
+    if (hiddenJson) {
+        hiddenJson.value = JSON.stringify(badges);
+    }
+}
 </script>
 {% endblock %}

@@ -18,6 +18,7 @@ class User(db.Model):
     latitude = db.Column(db.Float, nullable=True)
     longitude = db.Column(db.Float, nullable=True)
     address = db.Column(db.String(255), nullable=True)
+    bio = db.Column(db.Text, nullable=True)
     
     # Relationships
     prescriptions_written = db.relationship('Prescription', back_populates='doctor', foreign_keys='Prescription.doctor_id')
@@ -32,6 +33,90 @@ class User(db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def get_doctor_badges(self):
+        """Returns list of active credential badges for doctor banner."""
+        default_badges = [
+            {"id": "reg_no", "icon": "ph-identification-badge", "color": "var(--primary)", "label": "Reg No", "text": "Reg No: KMC-84920"},
+            {"id": "department", "icon": "ph-stethoscope", "color": "var(--secondary)", "label": "Department", "text": "Internal Medicine & Cardiology"},
+            {"id": "workplace", "icon": "ph-hospital", "color": "var(--accent)", "label": "Workplace", "text": "Fortis Care, Bengaluru"}
+        ]
+        if not self.bio:
+            return default_badges
+        try:
+            import json
+            data = json.loads(self.bio)
+            if isinstance(data, list):
+                result = []
+                for item in data:
+                    if isinstance(item, dict) and item.get('text', '').strip():
+                        icon = item.get('icon', 'ph-identification-badge')
+                        color = item.get('color')
+                        if not color:
+                            if 'identification' in icon:
+                                color = 'var(--primary)'
+                            elif 'stethoscope' in icon:
+                                color = 'var(--secondary)'
+                            elif 'hospital' in icon:
+                                color = 'var(--accent)'
+                            elif 'graduation' in icon:
+                                color = 'var(--primary)'
+                            elif 'certificate' in icon or 'award' in icon:
+                                color = 'var(--warning)'
+                            else:
+                                color = 'var(--primary)'
+                        result.append({
+                            "id": item.get('id', 'custom'),
+                            "icon": icon,
+                            "color": color,
+                            "label": item.get('label', 'Badge'),
+                            "text": item.get('text', '').strip()
+                        })
+                return result
+            elif isinstance(data, dict):
+                result = []
+                if data.get('reg_no'):
+                    text = data['reg_no'] if 'Reg' in data['reg_no'] else f"Reg No: {data['reg_no']}"
+                    result.append({"id": "reg_no", "icon": "ph-identification-badge", "color": "var(--primary)", "label": "Reg No", "text": text})
+                if data.get('department'):
+                    result.append({"id": "department", "icon": "ph-stethoscope", "color": "var(--secondary)", "label": "Department", "text": data['department']})
+                if data.get('workplace'):
+                    result.append({"id": "workplace", "icon": "ph-hospital", "color": "var(--accent)", "label": "Workplace", "text": data['workplace']})
+                return result
+        except Exception:
+            if self.bio.strip():
+                return [{"id": "custom", "icon": "ph-identification-badge", "color": "var(--primary)", "label": "Bio", "text": self.bio.strip()}]
+        return default_badges
+
+    def set_doctor_badges(self, badges):
+        """Serializes list of badge dictionaries into JSON for bio field."""
+        import json
+        clean_badges = []
+        for b in badges:
+            if isinstance(b, dict) and b.get('text', '').strip():
+                icon = b.get('icon', 'ph-identification-badge')
+                color = b.get('color')
+                if not color:
+                    if 'identification' in icon:
+                        color = 'var(--primary)'
+                    elif 'stethoscope' in icon:
+                        color = 'var(--secondary)'
+                    elif 'hospital' in icon:
+                        color = 'var(--accent)'
+                    elif 'graduation' in icon:
+                        color = 'var(--primary)'
+                    elif 'certificate' in icon:
+                        color = 'var(--warning)'
+                    else:
+                        color = 'var(--primary)'
+                clean_badges.append({
+                    "id": b.get('id', 'custom'),
+                    "icon": icon,
+                    "color": color,
+                    "label": b.get('label', 'Badge'),
+                    "text": b.get('text', '').strip()
+                })
+        self.bio = json.dumps(clean_badges)
 
 class Prescription(db.Model):
     __tablename__ = 'prescriptions'

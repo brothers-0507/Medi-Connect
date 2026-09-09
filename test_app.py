@@ -615,5 +615,57 @@ class MediConnectTestCase(unittest.TestCase):
             self.assertEqual(bc.target_pharmacy_id, self.ph_id)
             self.assertAlmostEqual(bc.patient_lat, 51.5050)
 
+    def test_doctor_bio_update_and_dashboard(self):
+        # 1. Update via POST /api/doctor/bio
+        self.login_as('test_doctor')
+        res = self.app.post('/api/doctor/bio', json=dict(bio='MD General Medicine, AIIMS New Delhi'))
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['bio'], 'MD General Medicine, AIIMS New Delhi')
+
+        # Verify bio shows up on doctor dashboard
+        dash_res = self.app.get('/dashboard/doctor')
+        self.assertEqual(dash_res.status_code, 200)
+        self.assertIn(b'MD General Medicine, AIIMS New Delhi', dash_res.data)
+        # Ensure "Lookup Patient" button is removed
+        self.assertNotIn(b'Lookup Patient', dash_res.data)
+        # Ensure KPI grid cards were removed
+        self.assertNotIn(b'Prescriptions Issued', dash_res.data)
+
+        # 2. Update via /settings/update form
+        settings_res = self.app.post('/settings/update', data=dict(
+            name='Dr. Test',
+            username='test_doctor',
+            contact='doc@test.com',
+            bio='Senior Consultant Physician, Apollo Hospitals Bangalore'
+        ), follow_redirects=True)
+        self.assertEqual(settings_res.status_code, 200)
+        with app.app_context():
+            user = db.session.get(User, self.doc_id)
+            self.assertEqual(user.bio, 'Senior Consultant Physician, Apollo Hospitals Bangalore')
+
+        # 3. Update badges with add/remove via doctor_badges_json in /settings/update
+        import json
+        custom_badges = [
+            {"icon": "ph-identification-badge", "text": "Reg No: DEL-99881"},
+            {"icon": "ph-stethoscope", "text": "Cardiology Specialist"}
+        ]
+        settings_res2 = self.app.post('/settings/update', data=dict(
+            name='Dr. Test',
+            username='test_doctor',
+            contact='doc@test.com',
+            doctor_badges_json=json.dumps(custom_badges)
+        ), follow_redirects=True)
+        self.assertEqual(settings_res2.status_code, 200)
+        
+        # Verify custom badges on doctor dashboard
+        dash_res2 = self.app.get('/dashboard/doctor')
+        self.assertEqual(dash_res2.status_code, 200)
+        self.assertIn(b'Reg No: DEL-99881', dash_res2.data)
+        self.assertIn(b'Cardiology Specialist', dash_res2.data)
+        # Workplace was removed in custom_badges, so ensure it does not appear
+        self.assertNotIn(b'Fortis Care, Bengaluru', dash_res2.data)
+
 if __name__ == '__main__':
     unittest.main()

@@ -20,6 +20,87 @@
         </p>
     </div>
 </div>
+
+<!-- Clinical Context Banner -->
+<div class="clinical-banner no-print">
+    <div class="clinical-banner-left">
+        <div class="clinical-avatar">
+            {{ current_user.name[0] if current_user.name else 'P' }}
+        </div>
+        <div class="clinical-info">
+            <h1>
+                {{ current_user.name }}
+                <span class="badge badge-success" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; text-transform: none;">
+                    <span class="live-pulse"></span> Licensed Pharmacy Dispenser
+                </span>
+            </h1>
+            <div class="clinical-meta-pills">
+                <span class="clinical-meta-pill">
+                    <i class="ph-bold ph-identification-badge" style="color: var(--primary);"></i> Drug Lic: DL-KA-09412
+                </span>
+                <span class="clinical-meta-pill">
+                    <i class="ph-bold ph-map-pin" style="color: var(--accent);"></i> {{ current_user.location or 'Bengaluru, Karnataka' }}
+                </span>
+                <span class="clinical-meta-pill" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08);">
+                    <i class="ph-bold ph-check-circle" style="color: var(--secondary);"></i> Active & Ready for Dispensation
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="clinical-banner-right">
+        <button class="btn btn-outline btn-sm" onclick="openTab(event, 'checkout-tab'); startScanner();">
+            <i class="ph-bold ph-qr-code"></i> Scan Rx QR
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="openTab(event, 'inventory-tab'); document.getElementById('medicine_name').focus();">
+            <i class="ph-bold ph-plus-circle"></i> Add Stock Item
+        </button>
+    </div>
+</div>
+
+<!-- KPI Metric Tiles -->
+<div class="kpi-grid no-print">
+    <div class="kpi-card">
+        <div class="kpi-icon-box kpi-icon-teal">
+            <i class="ph-bold ph-pill"></i>
+        </div>
+        <div class="kpi-content">
+            <span class="kpi-value">{{ total_skus }}</span>
+            <span class="kpi-label">Stock SKUs</span>
+            <span class="kpi-subtext">Active pharmaceutical inventory</span>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon-box {% if low_stock_count > 0 %}kpi-icon-amber{% else %}kpi-icon-green{% endif %}">
+            <i class="ph-bold ph-warning-circle"></i>
+        </div>
+        <div class="kpi-content">
+            <span class="kpi-value">{{ low_stock_count }}</span>
+            <span class="kpi-label">Low Stock (&le;10)</span>
+            <span class="kpi-subtext">Items approaching depletion</span>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon-box {% if out_of_stock_count > 0 %}kpi-icon-rose{% else %}kpi-icon-blue{% endif %}">
+            <i class="ph-bold ph-x-circle"></i>
+        </div>
+        <div class="kpi-content">
+            <span class="kpi-value">{{ out_of_stock_count }}</span>
+            <span class="kpi-label">Out of Stock</span>
+            <span class="kpi-subtext">Zero units available</span>
+        </div>
+    </div>
+    <div class="kpi-card">
+        <div class="kpi-icon-box kpi-icon-blue">
+            <i class="ph-bold ph-broadcast"></i>
+        </div>
+        <div class="kpi-content">
+            <span class="kpi-value">{{ total_broadcasts }}</span>
+            <span class="kpi-label">Broadcast Requests</span>
+            <span class="kpi-subtext">Nearby patient prescriptions</span>
+        </div>
+    </div>
+</div>
+
 <div class="tabs">
     <button class="tab-btn active" onclick="openTab(event, 'inventory-tab')">
         <i class="ph-bold ph-pill"></i> Stock Inventory
@@ -41,6 +122,45 @@
                 <h2 class="card-title">
                     <span><i class="ph-bold ph-list-bullets card-title-icon"></i> Current Inventory</span>
                 </h2>
+
+                {% if out_of_stock_count > 0 or expiring_soon_count > 0 %}
+                    <div class="critical-reorder-banner no-print">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <i class="ph-bold ph-warning-octagon" style="color: var(--danger); font-size: 1.4rem;"></i>
+                            <div>
+                                <strong style="color: var(--text-primary);">Inventory Attention Needed:</strong>
+                                <span style="font-size: 0.85rem; color: var(--text-secondary);">
+                                    {{ out_of_stock_count }} item(s) out of stock and {{ expiring_soon_count }} item(s) approaching expiry.
+                                </span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="filterByChip('out')">
+                            <i class="ph-bold ph-eye"></i> View Out-of-Stock
+                        </button>
+                    </div>
+                {% endif %}
+
+                <!-- Live Toolbar with Search & Filter Chips -->
+                <div class="inventory-toolbar no-print">
+                    <div class="search-input-group">
+                        <i class="ph-bold ph-magnifying-glass"></i>
+                        <input type="text" id="inv-search-input" class="form-control" placeholder="Search medicine name, batch number..." oninput="filterInventory()">
+                    </div>
+                    <div class="filter-chips">
+                        <button type="button" class="filter-chip active" id="chip-all" onclick="filterByChip('all')">
+                            All SKUs ({{ total_skus }})
+                        </button>
+                        <button type="button" class="filter-chip" id="chip-low" onclick="filterByChip('low')">
+                            ⚠️ Low Stock ({{ low_stock_count }})
+                        </button>
+                        <button type="button" class="filter-chip" id="chip-out" onclick="filterByChip('out')">
+                            🔴 Out of Stock ({{ out_of_stock_count }})
+                        </button>
+                        <button type="button" class="filter-chip" id="chip-expiring" onclick="filterByChip('expiring')">
+                            ⏳ Expiring Soon ({{ expiring_soon_count }})
+                        </button>
+                    </div>
+                </div>
                 
                 {% if inventory %}
                     <table>
@@ -48,16 +168,16 @@
                             <tr>
                                 <th>Medicine</th>
                                 <th>Stock Qty</th>
-                                <th>Unit Price</th>
+                                <th>Unit Price (₹)</th>
                                 <th>Batch No.</th>
                                 <th>Expiry Date</th>
                                 <th>Status</th>
                                 <th class="no-print">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="inventory-tbody">
                             {% for item in inventory %}
-                                <tr class="{% if item.is_expiring_soon %}expiring-row{% elif item.stock_level == 0 %}low-stock-row{% endif %}" id="inv-row-{{ item.id }}">
+                                <tr class="inv-data-row {% if item.is_expiring_soon %}expiring-row{% elif item.stock_level == 0 %}low-stock-row{% endif %}" id="inv-row-{{ item.id }}" data-name="{{ item.medicine_name|lower }}" data-batch="{{ item.batch_number|lower }}" data-stock="{{ item.stock_level }}" data-expiring="{{ 1 if item.is_expiring_soon else 0 }}">
                                     <form action="{{ url_for('update_inventory', item_id=item.id) }}" method="POST" style="margin:0;">
                                         <td><strong>{{ item.medicine_name }}</strong></td>
                                         <td>
@@ -74,7 +194,7 @@
                                         </td>
                                         <td>
                                             {% if item.stock_level == 0 %}
-                                                <span class="badge badge-danger">Out of Stock</span>
+                                                 <span class="badge badge-danger">Out of Stock</span>
                                             {% elif item.is_expiring_soon %}
                                                 <span class="badge badge-danger">Expiring Soon</span>
                                             {% elif item.stock_level <= 10 %}
@@ -124,7 +244,7 @@
                             <input type="number" id="stock_level" name="stock_level" class="form-control" min="0" required>
                         </div>
                         <div class="form-group">
-                            <label for="price">Unit Price ($)</label>
+                            <label for="price">Unit Price (₹)</label>
                             <input type="number" step="0.01" id="price" name="price" class="form-control" min="0" required>
                         </div>
                     </div>
@@ -196,7 +316,7 @@
                             {% if info.offered %}
                                 <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem; margin-bottom: 1rem;">
                                     <h4 style="font-size: 0.9rem; margin: 0; color: var(--text-secondary);"><i class="ph ph-check-circle"></i> Offered Previously</h4>
-                                    <span class="badge badge-info">${{ "%.2f"|format(info.offered.estimated_price) }}</span>
+                                    <span class="badge badge-info">₹{{ "%.2f"|format(info.offered.estimated_price) }}</span>
                                 </div>
                             {% endif %}
                             
@@ -205,7 +325,7 @@
                                 
                                 <div class="form-row">
                                     <div class="form-group">
-                                        <label for="price-{{ info.broadcast.id }}">Total Price Estimate ($)</label>
+                                        <label for="price-{{ info.broadcast.id }}">Total Price Estimate (₹)</label>
                                         <input type="number" step="0.01" id="price-{{ info.broadcast.id }}" name="price" class="form-control" value="{% if info.offered %}{{ info.offered.estimated_price }}{% else %}{{ info.estimated_price }}{% endif %}" min="0" required>
                                     </div>
                                     
@@ -474,6 +594,48 @@
             resultDiv.style.display = 'block';
             resultDiv.className = 'alert alert-danger';
             resultDiv.innerHTML = `<i class="ph-bold ph-warning-octagon"></i> An error occurred during checkout.`;
+        });
+    }
+
+    // Live Inventory Search & Chip Filter
+    let currentChipFilter = 'all';
+
+    function filterByChip(chipType) {
+        currentChipFilter = chipType;
+        document.querySelectorAll('.filter-chips .filter-chip').forEach(btn => btn.classList.remove('active'));
+        const activeBtn = document.getElementById(`chip-${chipType}`);
+        if (activeBtn) activeBtn.classList.add('active');
+        filterInventory();
+    }
+
+    function filterInventory() {
+        const query = (document.getElementById('inv-search-input').value || '').toLowerCase().trim();
+        const rows = document.querySelectorAll('.inv-data-row');
+
+        rows.forEach(row => {
+            const name = (row.getAttribute('data-name') || '').toLowerCase();
+            const batch = (row.getAttribute('data-batch') || '').toLowerCase();
+            const stock = parseInt(row.getAttribute('data-stock') || '0', 10);
+            const expiring = row.getAttribute('data-expiring') === '1';
+
+            // Check chip filter
+            let matchesChip = true;
+            if (currentChipFilter === 'low') {
+                matchesChip = stock > 0 && stock <= 10;
+            } else if (currentChipFilter === 'out') {
+                matchesChip = stock === 0;
+            } else if (currentChipFilter === 'expiring') {
+                matchesChip = expiring;
+            }
+
+            // Check text query
+            const matchesQuery = !query || name.includes(query) || batch.includes(query);
+
+            if (matchesChip && matchesQuery) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
         });
     }
 </script>

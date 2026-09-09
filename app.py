@@ -41,35 +41,41 @@ with app.app_context():
     db.create_all()
     # Pre-populate demo accounts for easy access and testing
     if not User.query.filter_by(username='doctor').first():
-        doc = User(username='doctor', name='Dr. Sarah Jenkins', role='doctor', contact='doctor@mediconnect.com')
+        doc = User(username='doctor', name='Dr. Rajesh Sharma', role='doctor', contact='+91 98450 12345', location='Bengaluru, Karnataka',
+                   latitude=12.9716, longitude=77.5946, address='Fortis Hospital, Cunningham Road, Bengaluru, Karnataka 560052')
         doc.set_password('password')
         db.session.add(doc)
         
-        pat = User(username='patient', name='John Doe', role='patient', contact='555-0199', location='London',
-                   latitude=51.5050, longitude=-0.1250, address='10 Downing St, London')
+        pat = User(username='patient', name='Rahul Verma', role='patient', contact='+91 98765 43210', location='Bengaluru, Karnataka',
+                   latitude=12.9784, longitude=77.6408, address='12th Main Road, HAL 2nd Stage, Indiranagar, Bengaluru, Karnataka 560038')
         pat.set_password('password')
         db.session.add(pat)
         
-        ph = User(username='pharmacy', name='City Central Pharmacy', role='pharmacy', contact='info@citycentral.com', location='London',
-                  latitude=51.5074, longitude=-0.1278, address='45 Central Way, London')
+        ph = User(username='pharmacy', name='Apollo Pharmacy Indiranagar', role='pharmacy', contact='+91 99887 76655', location='Bengaluru, Karnataka',
+                  latitude=12.9720, longitude=77.6380, address='100ft Road, Indiranagar, Bengaluru, Karnataka 560038')
         ph.set_password('password')
         db.session.add(ph)
 
-        ph2 = User(username='st_mary_pharmacy', name='St. Mary Care Pharmacy', role='pharmacy', contact='info@stmaryrx.com', location='London',
-                   latitude=51.5180, longitude=-0.1420, address='88 Marylebone High St, London')
+        ph2 = User(username='st_mary_pharmacy', name='MedPlus Pharmacy Koramangala', role='pharmacy', contact='+91 99887 11223', location='Bengaluru, Karnataka',
+                   latitude=12.9352, longitude=77.6245, address='80ft Road, 4th Block, Koramangala, Bengaluru, Karnataka 560034')
         ph2.set_password('password')
         db.session.add(ph2)
         
         db.session.commit()
 
-        # Seed initial inventory for testing
+        # Seed initial inventory with standard Indian pharmaceutical medicines and INR pricing
         today = date.today()
-        db.session.add(InventoryItem(pharmacy_id=ph.id, medicine_name='Amoxicillin', stock_level=50, price=14.50, batch_number='AMX-001', expiry_date=today + timedelta(days=365)))
-        db.session.add(InventoryItem(pharmacy_id=ph.id, medicine_name='Paracetamol', stock_level=120, price=4.20, batch_number='PAR-002', expiry_date=today + timedelta(days=400)))
-        db.session.add(InventoryItem(pharmacy_id=ph.id, medicine_name='Ibuprofen', stock_level=30, price=6.00, batch_number='IBU-003', expiry_date=today + timedelta(days=300)))
+        db.session.add(InventoryItem(pharmacy_id=ph.id, medicine_name='Augmentin 625', stock_level=60, price=185.00, batch_number='AUG-401', expiry_date=today + timedelta(days=365)))
+        db.session.add(InventoryItem(pharmacy_id=ph.id, medicine_name='Dolo 650', stock_level=150, price=32.50, batch_number='DOL-102', expiry_date=today + timedelta(days=400)))
+        db.session.add(InventoryItem(pharmacy_id=ph.id, medicine_name='Pan-D', stock_level=45, price=145.00, batch_number='PAN-303', expiry_date=today + timedelta(days=300)))
+        db.session.add(InventoryItem(pharmacy_id=ph.id, medicine_name='Azithral 500', stock_level=25, price=125.00, batch_number='AZI-501', expiry_date=today + timedelta(days=250)))
+        db.session.add(InventoryItem(pharmacy_id=ph.id, medicine_name='Cetirizine 10mg', stock_level=90, price=38.00, batch_number='CET-201', expiry_date=today + timedelta(days=500)))
+        db.session.add(InventoryItem(pharmacy_id=ph.id, medicine_name='Telma 40', stock_level=5, price=95.00, batch_number='TEL-105', expiry_date=today + timedelta(days=180)))
         
-        db.session.add(InventoryItem(pharmacy_id=ph2.id, medicine_name='Amoxicillin', stock_level=25, price=13.80, batch_number='AMX-101', expiry_date=today + timedelta(days=280)))
-        db.session.add(InventoryItem(pharmacy_id=ph2.id, medicine_name='Cetirizine', stock_level=80, price=5.50, batch_number='CET-201', expiry_date=today + timedelta(days=500)))
+        db.session.add(InventoryItem(pharmacy_id=ph2.id, medicine_name='Augmentin 625', stock_level=30, price=178.00, batch_number='AUG-901', expiry_date=today + timedelta(days=280)))
+        db.session.add(InventoryItem(pharmacy_id=ph2.id, medicine_name='Dolo 650', stock_level=120, price=30.00, batch_number='DOL-802', expiry_date=today + timedelta(days=450)))
+        db.session.add(InventoryItem(pharmacy_id=ph2.id, medicine_name='Telma 40', stock_level=40, price=92.00, batch_number='TEL-701', expiry_date=today + timedelta(days=320)))
+        db.session.add(InventoryItem(pharmacy_id=ph2.id, medicine_name='Montair-LC', stock_level=55, price=165.00, batch_number='MON-601', expiry_date=today + timedelta(days=365)))
         db.session.commit()
 
 # Context processor to make current_user globally available in templates
@@ -249,10 +255,60 @@ def update_settings():
     user.username = username
     user.contact = contact
     user.location = location
+    
+    if user.role == 'doctor':
+        if 'doctor_badges_json' in request.form and request.form['doctor_badges_json'].strip():
+            try:
+                import json
+                badges_data = json.loads(request.form['doctor_badges_json'])
+                if isinstance(badges_data, list):
+                    user.set_doctor_badges(badges_data)
+            except Exception:
+                if 'bio' in request.form:
+                    user.bio = request.form['bio'].strip()
+        elif 'bio' in request.form:
+            user.bio = request.form['bio'].strip()
+    elif 'bio' in request.form:
+        user.bio = request.form['bio'].strip()
+
     db.session.commit()
     
     flash('Profile details updated successfully!', 'success')
     return redirect(url_for('settings'))
+
+@app.route('/api/doctor/bio', methods=['POST'])
+@login_required
+@role_required('doctor')
+def update_doctor_bio():
+    doctor_id = session['user_id']
+    user = User.query.get(doctor_id)
+    if request.is_json:
+        data = request.get_json() or {}
+        if 'badges' in data and isinstance(data['badges'], list):
+            user.set_doctor_badges(data['badges'])
+        elif 'bio' in data:
+            raw = data['bio']
+            if isinstance(raw, list):
+                user.set_doctor_badges(raw)
+            else:
+                user.bio = str(raw).strip()
+        db.session.commit()
+        return jsonify({'success': True, 'badges': user.get_doctor_badges(), 'bio': user.bio, 'message': 'Doctor credentials updated successfully'})
+
+    if 'doctor_badges_json' in request.form and request.form['doctor_badges_json'].strip():
+        try:
+            import json
+            badges_data = json.loads(request.form['doctor_badges_json'])
+            if isinstance(badges_data, list):
+                user.set_doctor_badges(badges_data)
+        except Exception:
+            pass
+    elif 'bio' in request.form:
+        user.bio = request.form['bio'].strip()
+        
+    db.session.commit()
+    flash('Doctor professional credentials updated successfully!', 'success')
+    return redirect(url_for('doctor_dashboard'))
 
 @app.route('/settings/password', methods=['POST'])
 @login_required
@@ -287,7 +343,22 @@ def doctor_dashboard():
     doctor_id = session['user_id']
     prescriptions = Prescription.query.filter_by(doctor_id=doctor_id).order_by(Prescription.created_at.desc()).all()
     patients = User.query.filter_by(role='patient').order_by(User.name.asc()).all()
-    return render_template('doctor.html', prescriptions=prescriptions, patients=patients)
+    
+    # KPI Stats
+    total_rx = len(prescriptions)
+    active_rx = len([p for p in prescriptions if not p.is_claimed])
+    dispensed_rx = len([p for p in prescriptions if p.is_claimed])
+    total_patients = len(patients)
+    
+    return render_template(
+        'doctor.html', 
+        prescriptions=prescriptions, 
+        patients=patients,
+        total_rx=total_rx,
+        active_rx=active_rx,
+        dispensed_rx=dispensed_rx,
+        total_patients=total_patients
+    )
 
 @app.route('/api/patient/lookup')
 @login_required
@@ -302,12 +373,16 @@ def lookup_patient():
     
     last_rx = Prescription.query.filter_by(patient_id=pat.id).order_by(Prescription.created_at.desc()).first()
     age = last_rx.patient_age if last_rx and last_rx.patient_age else ''
+    prev_rx_count = Prescription.query.filter_by(patient_id=pat.id).count()
     
     return jsonify({
         'found': True,
         'name': pat.name,
         'contact': pat.contact or '',
-        'age': age
+        'age': age,
+        'location': pat.location or 'Bengaluru, Karnataka',
+        'prev_rx_count': prev_rx_count,
+        'last_rx_date': last_rx.created_at.strftime('%d %b %Y') if last_rx else 'First Consultation'
     })
 
 @app.route('/prescription/create', methods=['POST'])
@@ -421,6 +496,22 @@ def patient_dashboard():
                 'total_needed': len(times)
             })
 
+    # Calculate KPI Stats & upcoming dose
+    total_doses_today = sum(c['total_needed'] for c in checklist)
+    doses_taken_today = sum(c['logged_count'] for c in checklist)
+    adherence_pct = round((doses_taken_today / total_doses_today * 100) if total_doses_today > 0 else 100)
+    
+    next_dose_info = "All doses completed today" if total_doses_today > 0 and doses_taken_today >= total_doses_today else None
+    if not next_dose_info and checklist:
+        for c in checklist:
+            if c['logged_count'] < c['total_needed']:
+                next_idx = c['logged_count']
+                time_str = c['times'][next_idx] if next_idx < len(c['times']) else "Soon"
+                next_dose_info = f"{c['schedule'].medicine_name} at {time_str}"
+                break
+    if not next_dose_info:
+        next_dose_info = "No pending doses"
+
     return render_template(
         'patient.html', 
         prescriptions=prescriptions,
@@ -428,7 +519,15 @@ def patient_dashboard():
         schedules=schedules,
         refill_alerts=refill_alerts,
         broadcasts=broadcasts,
-        checklist=checklist
+        checklist=checklist,
+        total_doses_today=total_doses_today,
+        doses_taken_today=doses_taken_today,
+        adherence_pct=adherence_pct,
+        next_dose_info=next_dose_info,
+        total_prescriptions=len(prescriptions),
+        active_schedules_count=len(schedules),
+        low_stock_count=len(refill_alerts),
+        broadcasts_count=len(broadcasts)
     )
 
 @app.route('/prescription/claim', methods=['POST'])
@@ -726,8 +825,8 @@ def find_nearest_pharmacies(rx_id):
     patient_lng = data.get('longitude')
     
     if patient_lat is None or patient_lng is None:
-        patient_lat = patient.latitude or 51.5050
-        patient_lng = patient.longitude or -0.1250
+        patient_lat = patient.latitude or 12.9784
+        patient_lng = patient.longitude or 77.6408
     else:
         patient_lat = float(patient_lat)
         patient_lng = float(patient_lng)
@@ -902,10 +1001,22 @@ def pharmacy_dashboard():
             'missing_meds': missing_meds
         })
         
+    # KPI Stats
+    low_stock_count = len([i for i in inventory if 0 < i.stock_level <= 10])
+    out_of_stock_count = len([i for i in inventory if i.stock_level == 0])
+    expiring_soon_count = len([i for i in inventory if i.is_expiring_soon])
+    total_broadcasts = len(active_broadcasts_info)
+    total_skus = len(inventory)
+        
     return render_template(
         'pharmacy.html', 
         inventory=inventory, 
-        broadcasts_info=active_broadcasts_info
+        broadcasts_info=active_broadcasts_info,
+        low_stock_count=low_stock_count,
+        out_of_stock_count=out_of_stock_count,
+        expiring_soon_count=expiring_soon_count,
+        total_broadcasts=total_broadcasts,
+        total_skus=total_skus
     )
 
 @app.route('/inventory/add', methods=['POST'])

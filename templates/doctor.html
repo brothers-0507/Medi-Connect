@@ -3,6 +3,38 @@
 {% block title %}Doctor Dashboard - MediConnect{% endblock %}
 
 {% block content %}
+<!-- Clinical Banner -->
+<div class="clinical-banner no-print">
+    <div class="clinical-banner-left">
+        <div class="clinical-avatar">
+            {{ current_user.name[4] if current_user.name|length > 4 else 'D' }}
+        </div>
+        <div class="clinical-info">
+            <h1>
+                {{ current_user.name }}
+                <span class="badge badge-success" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; text-transform: none;">
+                    <span class="live-pulse"></span> Verified Clinician
+                </span>
+            </h1>
+            <div class="clinical-meta-pills" id="doctor-badges-display" style="margin-top: 0.5rem;">
+                {% for badge in current_user.get_doctor_badges() %}
+                    <span class="clinical-meta-pill">
+                        <i class="ph-bold {{ badge.icon }}" style="color: {{ badge.color or 'var(--primary)' }};"></i> {{ badge.text }}
+                    </span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="clinical-banner-right">
+        <a href="{{ url_for('settings') }}" class="btn btn-outline btn-sm" title="Edit Doctor Credentials & Badges">
+            <i class="ph-bold ph-pencil-simple"></i> Edit Credentials
+        </a>
+        <button type="button" class="btn btn-primary btn-sm" onclick="document.getElementById('prescription-form').scrollIntoView({behavior: 'smooth'})">
+            <i class="ph-bold ph-plus-circle"></i> New Prescription
+        </button>
+    </div>
+</div>
+
 <div class="grid-container">
     <!-- Left Column: Create Digital Prescription -->
     <div>
@@ -28,6 +60,27 @@
                             </datalist>
                             {% endif %}
                             <div id="patient-lookup-status" style="font-size: 0.8rem; margin-top: 0.35rem; min-height: 1.2rem;"></div>
+                            
+                            <!-- Patient Quick Clinical Card -->
+                            <div id="patient-preview-card" class="patient-preview-card" style="display: none;">
+                                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                    <div class="kpi-icon-box kpi-icon-teal" style="width: 38px; height: 38px; font-size: 1.1rem;">
+                                        <i class="ph-bold ph-user-circle"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary);" id="prev-card-name">Patient Profile</div>
+                                        <div style="font-size: 0.78rem; color: var(--text-secondary);" id="prev-card-meta">Age &bull; Location</div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                    <span class="badge badge-success" style="font-size: 0.7rem; text-transform: none;">
+                                        <i class="ph-bold ph-shield-check"></i> NKDA (No Allergies)
+                                    </span>
+                                    <span class="badge badge-info" style="font-size: 0.7rem; text-transform: none;" id="prev-card-rx">
+                                        0 Prior Visits
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="patient_name">Patient Full Name</label>
@@ -53,6 +106,28 @@
                         <h3 style="font-size: 1rem; color: var(--secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">Medications</h3>
                         <button type="button" class="btn btn-secondary btn-sm" onclick="addMedicationRow()">
                             <i class="ph-bold ph-plus"></i> Add Medicine
+                        </button>
+                    </div>
+
+                    <!-- Fast-Fill 1-Click Clinical Rx Presets -->
+                    <div class="rx-presets-bar">
+                        <span class="rx-presets-label">
+                            <i class="ph-bold ph-lightning"></i> 1-Click Rx Presets:
+                        </span>
+                        <button type="button" class="preset-chip" onclick="applyRxPreset('fever')">
+                            🌡️ Cold & Fever (Dolo 650)
+                        </button>
+                        <button type="button" class="preset-chip" onclick="applyRxPreset('antibiotic')">
+                            💊 Antibiotic (Augmentin 625 Duo)
+                        </button>
+                        <button type="button" class="preset-chip" onclick="applyRxPreset('gerd')">
+                            🔥 Acidity / GERD (Pan-D)
+                        </button>
+                        <button type="button" class="preset-chip" onclick="applyRxPreset('allergy')">
+                            🤧 Allergy (Montair-LC)
+                        </button>
+                        <button type="button" class="preset-chip" onclick="applyRxPreset('bp')">
+                            ❤️ Hypertension (Telma 40)
                         </button>
                     </div>
                     
@@ -110,11 +185,19 @@
             <h2 class="card-title">
                 <span><i class="ph-bold ph-clock-counter-clockwise card-title-icon"></i> Issued History</span>
             </h2>
+
+            <!-- Prescription Search -->
+            <div class="inventory-toolbar" style="margin-bottom: 1rem;">
+                <div class="search-input-group">
+                    <i class="ph-bold ph-magnifying-glass"></i>
+                    <input type="text" id="doc-rx-search" class="form-control" placeholder="Search by patient, code, or date..." oninput="filterDoctorRx()">
+                </div>
+            </div>
             
             {% if prescriptions %}
-                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div id="doc-rx-list" style="display: flex; flex-direction: column; gap: 1rem;">
                     {% for rx in prescriptions %}
-                        <div class="rx-history-item {% if loop.index > 5 %}rx-older-item{% endif %}" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem; transition: var(--transition); {% if loop.index > 5 %}display: none;{% endif %}">
+                        <div class="rx-history-item {% if loop.index > 5 %}rx-older-item{% endif %}" data-search="{{ rx.patient_name|lower }} {{ rx.uuid|lower }} {{ rx.created_at.strftime('%d %b %Y')|lower }}" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem; transition: var(--transition); {% if loop.index > 5 %}display: none;{% endif %}">
                             <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
                                 <div style="font-weight: 600; font-size: 1.05rem;">{{ rx.patient_name }}</div>
                                 <span class="badge badge-info">{{ rx.created_at.strftime('%d %b %Y') }}</span>
@@ -220,12 +303,17 @@
     const ageInput = document.getElementById('patient_age');
     const contactInput = document.getElementById('patient_contact');
     const statusDiv = document.getElementById('patient-lookup-status');
+    const previewCard = document.getElementById('patient-preview-card');
+    const prevCardName = document.getElementById('prev-card-name');
+    const prevCardMeta = document.getElementById('prev-card-meta');
+    const prevCardRx = document.getElementById('prev-card-rx');
 
     let lookupTimer = null;
     function checkPatientUsername() {
         const username = usernameInput.value.trim();
         if (!username) {
             statusDiv.innerHTML = '';
+            if (previewCard) previewCard.style.display = 'none';
             return;
         }
         fetch(`/api/patient/lookup?username=${encodeURIComponent(username)}`)
@@ -239,7 +327,14 @@
                     }
                     statusDiv.innerHTML = `<span style="color: var(--secondary); font-weight: 600;"><i class="ph-bold ph-check-circle"></i> Registered Patient Found: ${data.name} (Details Autofilled)</span>`;
                     
-                    // Subtle highlight animation
+                    if (previewCard) {
+                        previewCard.style.display = 'flex';
+                        prevCardName.innerText = data.name;
+                        prevCardMeta.innerText = `${data.age ? data.age + ' yrs • ' : ''}${data.location || 'India'} • ${data.contact || ''}`;
+                        prevCardRx.innerText = `${data.prev_rx_count || 0} Prior Consultations (Last: ${data.last_rx_date || 'N/A'})`;
+                    }
+
+                    // Highlight animation
                     [nameInput, contactInput, ageInput].forEach(inp => {
                         inp.style.transition = 'background-color 0.4s, border-color 0.4s';
                         inp.style.backgroundColor = 'rgba(16, 185, 129, 0.08)';
@@ -251,10 +346,12 @@
                     });
                 } else {
                     statusDiv.innerHTML = `<span style="color: var(--danger); font-weight: 550;"><i class="ph-bold ph-warning-circle"></i> Patient username not found in database</span>`;
+                    if (previewCard) previewCard.style.display = 'none';
                 }
             })
             .catch(() => {
                 statusDiv.innerHTML = '';
+                if (previewCard) previewCard.style.display = 'none';
             });
     }
 
@@ -264,6 +361,91 @@
             lookupTimer = setTimeout(checkPatientUsername, 250);
         });
         usernameInput.addEventListener('change', checkPatientUsername);
+    }
+
+    // 1-Click Rx Presets
+    const clinicalPresets = {
+        fever: [
+            { name: 'Dolo 650', dosage: '650mg', frequency: 'Thrice daily (TID)', duration: '3 days', instructions: 'After food for fever/body ache' },
+            { name: 'Cetirizine 10mg', dosage: '10mg', frequency: 'Once daily (HS)', duration: '5 days', instructions: 'At bedtime for cold/rhinitis' }
+        ],
+        antibiotic: [
+            { name: 'Augmentin 625 Duo', dosage: '625mg', frequency: 'Twice daily (BD)', duration: '5 days', instructions: 'With food, complete full antibiotic course' },
+            { name: 'Pan-D', dosage: '40mg', frequency: 'Once daily (OD)', duration: '5 days', instructions: 'Morning 30 mins before breakfast' }
+        ],
+        gerd: [
+            { name: 'Pan-D', dosage: '40mg', frequency: 'Once daily (OD)', duration: '14 days', instructions: 'Empty stomach in morning' },
+            { name: 'Digene Gel', dosage: '10ml', frequency: 'Thrice daily (TID)', duration: '7 days', instructions: 'After meals as needed' }
+        ],
+        allergy: [
+            { name: 'Montair-LC', dosage: '1 tablet', frequency: 'Once daily (OD)', duration: '10 days', instructions: 'At night before sleep' },
+            { name: 'Azithral 500', dosage: '500mg', frequency: 'Once daily (OD)', duration: '3 days', instructions: '1 hour before lunch' }
+        ],
+        bp: [
+            { name: 'Telma 40', dosage: '40mg', frequency: 'Once daily (OD)', duration: '30 days', instructions: 'Morning after breakfast, monitor BP regularly' }
+        ]
+    };
+
+    function applyRxPreset(key) {
+        const meds = clinicalPresets[key];
+        if (!meds || meds.length === 0) return;
+
+        const container = document.getElementById('medications-container');
+        container.innerHTML = '';
+        medRowCount = 0;
+
+        meds.forEach((med, idx) => {
+            const rowId = `med-row-${medRowCount}`;
+            const row = document.createElement('div');
+            row.className = 'prescription-item-row';
+            row.id = rowId;
+            row.innerHTML = `
+                <div>
+                    <input type="text" name="med_name[]" class="form-control" value="${med.name}" required>
+                </div>
+                <div>
+                    <input type="text" name="med_dosage[]" class="form-control" value="${med.dosage}" required>
+                </div>
+                <div>
+                    <input type="text" name="med_frequency[]" class="form-control" value="${med.frequency}" required>
+                </div>
+                <div>
+                    <input type="text" name="med_duration[]" class="form-control" value="${med.duration}" required>
+                </div>
+                <div>
+                    <input type="text" name="med_instructions[]" class="form-control" value="${med.instructions}">
+                </div>
+                <div>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="removeMedicationRow('${rowId}')" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;"><i class="ph-bold ph-trash"></i></button>
+                </div>
+            `;
+            container.appendChild(row);
+            medRowCount++;
+        });
+    }
+
+    // Prescription Filter
+    function filterDoctorRx() {
+        const query = (document.getElementById('doc-rx-search').value || '').toLowerCase().trim();
+        const items = document.querySelectorAll('#doc-rx-list .rx-history-item');
+        const toggleBtn = document.getElementById('toggle-older-rx-btn');
+
+        if (toggleBtn) {
+            toggleBtn.style.display = query ? 'none' : 'block';
+        }
+
+        items.forEach(item => {
+            const dataSearch = item.getAttribute('data-search') || '';
+            if (!query) {
+                // Return to default state (first 5 visible, rest hidden)
+                const isOlder = item.classList.contains('rx-older-item');
+                item.style.display = isOlder ? 'none' : 'block';
+            } else if (dataSearch.includes(query)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
     }
 </script>
 {% endblock %}

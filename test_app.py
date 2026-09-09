@@ -482,7 +482,7 @@ class MediConnectTestCase(unittest.TestCase):
         
         self.assertEqual(response.status_code, 200)
         self.assertIn(b'Welcome back, Dr. Test!', response.data)
-        self.assertIn(b'New Digital Prescription', response.data)
+        self.assertIn(b'New Prescription', response.data)
 
     def test_portal_gateway_routes(self):
         # Unauthenticated access redirects to portal login
@@ -495,7 +495,7 @@ class MediConnectTestCase(unittest.TestCase):
         self.login_as('test_doctor')
         response = self.app.get('/portal/doctor', follow_redirects=True)
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'New Digital Prescription', response.data)
+        self.assertIn(b'New Prescription', response.data)
 
         # Doctor attempts to access patient portal gateway
         response = self.app.get('/portal/patient', follow_redirects=True)
@@ -631,7 +631,7 @@ class MediConnectTestCase(unittest.TestCase):
         # Ensure "Lookup Patient" button is removed
         self.assertNotIn(b'Lookup Patient', dash_res.data)
         # Ensure KPI grid cards were removed
-        self.assertNotIn(b'Prescriptions Issued', dash_res.data)
+        self.assertNotIn(b'kpi-grid', dash_res.data)
 
         # 2. Update via /settings/update form
         settings_res = self.app.post('/settings/update', data=dict(
@@ -666,6 +666,84 @@ class MediConnectTestCase(unittest.TestCase):
         self.assertIn(b'Cardiology Specialist', dash_res2.data)
         # Workplace was removed in custom_badges, so ensure it does not appear
         self.assertNotIn(b'Fortis Care, Bengaluru', dash_res2.data)
+
+    def test_patient_dashboard_clean_ui(self):
+        self.login_as('test_patient')
+        res = self.app.get('/dashboard/patient')
+        self.assertEqual(res.status_code, 200)
+        # Verify clinical banner and KPIs are removed
+        self.assertNotIn(b'clinical-banner', res.data)
+        self.assertNotIn(b'Adherence Rate', res.data)
+        self.assertNotIn(b'Refill Alerts', res.data)
+        # Verify 4 daypart schedule cards are removed
+        self.assertNotIn(b'daypart-grid', res.data)
+        self.assertNotIn(b'08:00 AM &bull; With breakfast', res.data)
+        # Verify core patient features remain intact
+        self.assertIn(b"Today's Dosages", res.data)
+        self.assertIn(b'My Prescriptions', res.data)
+
+    def test_doctor_new_prescription_and_delete(self):
+        self.login_as('test_doctor')
+        
+        # 1. GET new prescription page
+        get_res = self.app.get('/doctor/prescription/new')
+        self.assertEqual(get_res.status_code, 200)
+        self.assertIn(b'Create Digital Prescription', get_res.data)
+        self.assertIn(b'Prescribed Medicines', get_res.data)
+        
+        # 2. POST to new prescription page
+        post_res = self.app.post('/doctor/prescription/new', data={
+            'patient_username': 'test_patient',
+            'patient_name': 'Patient Test',
+            'patient_age': '30',
+            'patient_contact': '9876543210',
+            'instructions': 'Drink plenty of water',
+            'med_name[]': ['Azithromycin 500mg'],
+            'med_dosage[]': ['1 Tab'],
+            'med_frequency[]': ['Once daily (OD)'],
+            'med_duration[]': ['3 days'],
+            'med_instructions[]': ['After dinner']
+        }, follow_redirects=True)
+        self.assertEqual(post_res.status_code, 200)
+        self.assertIn(b'Digital prescription created successfully!', post_res.data)
+
+        # Retrieve newly created prescription
+        with app.app_context():
+            rx = Prescription.query.filter_by(doctor_id=self.doc_id).order_by(Prescription.id.desc()).first()
+            self.assertIsNotNone(rx)
+            rx_id = rx.id
+            self.assertEqual(len(rx.items), 1)
+            self.assertEqual(rx.items[0].medicine_name, 'Azithromycin 500mg')
+
+        # 3. Doctor deletes own prescription
+        del_res = self.app.post(f'/prescription/{rx_id}/delete', follow_redirects=True)
+        self.assertEqual(del_res.status_code, 200)
+        self.assertIn(b'deleted successfully.', del_res.data)
+
+        with app.app_context():
+            deleted_rx = db.session.get(Prescription, rx_id)
+            self.assertIsNone(deleted_rx)
+            # Ensure items cascaded
+            items = PrescriptionItem.query.filter_by(prescription_id=rx_id).all()
+            self.assertEqual(len(items), 0)
+
+    def test_pharmacy_dashboard_clean_ui_and_modal(self):
+        self.login_as('test_pharmacy')
+        res = self.app.get('/dashboard/pharmacy')
+        self.assertEqual(res.status_code, 200)
+        # Verify clinical banner and KPI grid are removed
+        self.assertNotIn(b'clinical-banner', res.data)
+        self.assertNotIn(b'kpi-grid', res.data)
+        self.assertNotIn(b'Stock SKUs', res.data)
+        # Verify Scan Rx QR and Add Stock Item buttons exist
+        self.assertIn(b'Scan Rx QR', res.data)
+        self.assertIn(b'Add Stock Item', res.data)
+        # Verify modal overlay exists
+        self.assertIn(b'id="add-stock-modal"', res.data)
+        self.assertIn(b'modal_medicine_name', res.data)
+        # Verify inline form is removed and table card exists
+        self.assertNotIn(b'grid-container', res.data)
+        self.assertIn(b'Current Inventory', res.data)
 
 if __name__ == '__main__':
     unittest.main()

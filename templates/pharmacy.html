@@ -21,247 +21,201 @@
     </div>
 </div>
 
-<!-- Clinical Context Banner -->
-<div class="clinical-banner no-print">
-    <div class="clinical-banner-left">
-        <div class="clinical-avatar">
-            {{ current_user.name[0] if current_user.name else 'P' }}
-        </div>
-        <div class="clinical-info">
-            <h1>
-                {{ current_user.name }}
-                <span class="badge badge-success" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; text-transform: none;">
-                    <span class="live-pulse"></span> Licensed Pharmacy Dispenser
-                </span>
-            </h1>
-            <div class="clinical-meta-pills">
-                <span class="clinical-meta-pill">
-                    <i class="ph-bold ph-identification-badge" style="color: var(--primary);"></i> Drug Lic: DL-KA-09412
-                </span>
-                <span class="clinical-meta-pill">
-                    <i class="ph-bold ph-map-pin" style="color: var(--accent);"></i> {{ current_user.location or 'Bengaluru, Karnataka' }}
-                </span>
-                <span class="clinical-meta-pill" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08);">
-                    <i class="ph-bold ph-check-circle" style="color: var(--secondary);"></i> Active & Ready for Dispensation
-                </span>
+<!-- Add Stock Modal Overlay -->
+<div id="add-stock-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(9, 10, 15, 0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 520px; width: 92%; position: relative; padding: 2rem 2.2rem; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); border: 1px solid var(--card-border);">
+        <button type="button" onclick="closeAddStockModal()" style="position: absolute; top: 1.25rem; right: 1.25rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.5rem; transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--text-secondary)'">
+            <i class="ph-bold ph-x"></i>
+        </button>
+        <h3 style="margin-bottom: 0.5rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.6rem; font-size: 1.25rem;">
+            <i class="ph-bold ph-plus-circle" style="color: var(--accent);"></i> Add New Stock Item
+        </h3>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+            Register pharmaceutical batch details into your digital pharmacy inventory.
+        </p>
+        
+        <form action="{{ url_for('add_inventory') }}" method="POST">
+            <div class="form-group" style="margin-bottom: 1rem;">
+                <label for="modal_medicine_name" style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; display: block; color: var(--text-secondary);">Medicine Name</label>
+                <input type="text" id="modal_medicine_name" name="medicine_name" class="form-control" placeholder="e.g. Paracetamol 650mg, Amoxicillin 500mg" required>
             </div>
-        </div>
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="modal_stock_level" style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; display: block; color: var(--text-secondary);">Stock Qty (Units)</label>
+                    <input type="number" id="modal_stock_level" name="stock_level" class="form-control" min="0" placeholder="e.g. 100" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="modal_price" style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; display: block; color: var(--text-secondary);">Unit Price (₹)</label>
+                    <input type="number" step="0.01" id="modal_price" name="price" class="form-control" min="0" placeholder="e.g. 24.50" required>
+                </div>
+            </div>
+            <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="modal_batch_number" style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; display: block; color: var(--text-secondary);">Batch Number</label>
+                    <input type="text" id="modal_batch_number" name="batch_number" class="form-control" placeholder="e.g. BTH-8821" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label for="modal_expiry_date" style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; display: block; color: var(--text-secondary);">Expiration Date</label>
+                    <input type="date" id="modal_expiry_date" name="expiry_date" class="form-control" required>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeAddStockModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="ph-bold ph-check"></i> Add to Inventory
+                </button>
+            </div>
+        </form>
     </div>
-    <div class="clinical-banner-right">
+</div>
+
+<!-- Header Navigation Bar with Tabs and Core Pharmacy Actions -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;" class="no-print">
+    <div class="tabs" style="margin-bottom: 0; border-bottom: none;">
+        <button class="tab-btn active" onclick="openTab(event, 'inventory-tab')">
+            <i class="ph-bold ph-pill"></i> Stock Inventory
+        </button>
+        <button class="tab-btn" onclick="openTab(event, 'broadcasts-tab')">
+            <i class="ph-bold ph-broadcast"></i> Active Broadcast Requests
+        </button>
+        <button class="tab-btn" onclick="openTab(event, 'checkout-tab')">
+            <i class="ph-bold ph-shopping-cart-simple"></i> Quick Checkout Counter
+        </button>
+    </div>
+    <div style="display: flex; gap: 0.75rem; align-items: center;">
         <button class="btn btn-outline btn-sm" onclick="openTab(event, 'checkout-tab'); startScanner();">
             <i class="ph-bold ph-qr-code"></i> Scan Rx QR
         </button>
-        <button class="btn btn-primary btn-sm" onclick="openTab(event, 'inventory-tab'); document.getElementById('medicine_name').focus();">
+        <button class="btn btn-primary btn-sm" onclick="openAddStockModal();">
             <i class="ph-bold ph-plus-circle"></i> Add Stock Item
         </button>
     </div>
 </div>
 
-<!-- KPI Metric Tiles -->
-<div class="kpi-grid no-print">
-    <div class="kpi-card">
-        <div class="kpi-icon-box kpi-icon-teal">
-            <i class="ph-bold ph-pill"></i>
-        </div>
-        <div class="kpi-content">
-            <span class="kpi-value">{{ total_skus }}</span>
-            <span class="kpi-label">Stock SKUs</span>
-            <span class="kpi-subtext">Active pharmaceutical inventory</span>
-        </div>
-    </div>
-    <div class="kpi-card">
-        <div class="kpi-icon-box {% if low_stock_count > 0 %}kpi-icon-amber{% else %}kpi-icon-green{% endif %}">
-            <i class="ph-bold ph-warning-circle"></i>
-        </div>
-        <div class="kpi-content">
-            <span class="kpi-value">{{ low_stock_count }}</span>
-            <span class="kpi-label">Low Stock (&le;10)</span>
-            <span class="kpi-subtext">Items approaching depletion</span>
-        </div>
-    </div>
-    <div class="kpi-card">
-        <div class="kpi-icon-box {% if out_of_stock_count > 0 %}kpi-icon-rose{% else %}kpi-icon-blue{% endif %}">
-            <i class="ph-bold ph-x-circle"></i>
-        </div>
-        <div class="kpi-content">
-            <span class="kpi-value">{{ out_of_stock_count }}</span>
-            <span class="kpi-label">Out of Stock</span>
-            <span class="kpi-subtext">Zero units available</span>
-        </div>
-    </div>
-    <div class="kpi-card">
-        <div class="kpi-icon-box kpi-icon-blue">
-            <i class="ph-bold ph-broadcast"></i>
-        </div>
-        <div class="kpi-content">
-            <span class="kpi-value">{{ total_broadcasts }}</span>
-            <span class="kpi-label">Broadcast Requests</span>
-            <span class="kpi-subtext">Nearby patient prescriptions</span>
-        </div>
-    </div>
-</div>
-
-<div class="tabs">
-    <button class="tab-btn active" onclick="openTab(event, 'inventory-tab')">
-        <i class="ph-bold ph-pill"></i> Stock Inventory
-    </button>
-    <button class="tab-btn" onclick="openTab(event, 'broadcasts-tab')">
-        <i class="ph-bold ph-broadcast"></i> Active Broadcast Requests
-    </button>
-    <button class="tab-btn" onclick="openTab(event, 'checkout-tab')">
-        <i class="ph-bold ph-shopping-cart-simple"></i> Quick Checkout Counter
-    </button>
-</div>
-
 <!-- ================= TAB: STOCK INVENTORY ================= -->
 <div id="inventory-tab" class="tab-content active">
-    <div class="grid-container">
-        <!-- Stock List Table -->
-        <div>
-            <div class="card" style="width: 100%; overflow-x: auto;">
-                <h2 class="card-title">
-                    <span><i class="ph-bold ph-list-bullets card-title-icon"></i> Current Inventory</span>
-                </h2>
+    <div class="card" style="width: 100%; overflow-x: auto; padding: 1.75rem 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 1rem;">
+            <h2 class="card-title" style="margin-bottom: 0;">
+                <span><i class="ph-bold ph-list-bullets card-title-icon"></i> Current Inventory</span>
+            </h2>
+            <button type="button" class="btn btn-primary btn-sm no-print" onclick="openAddStockModal()">
+                <i class="ph-bold ph-plus-circle"></i> Add Stock Item
+            </button>
+        </div>
 
-                {% if out_of_stock_count > 0 or expiring_soon_count > 0 %}
-                    <div class="critical-reorder-banner no-print">
-                        <div style="display: flex; align-items: center; gap: 0.75rem;">
-                            <i class="ph-bold ph-warning-octagon" style="color: var(--danger); font-size: 1.4rem;"></i>
-                            <div>
-                                <strong style="color: var(--text-primary);">Inventory Attention Needed:</strong>
-                                <span style="font-size: 0.85rem; color: var(--text-secondary);">
-                                    {{ out_of_stock_count }} item(s) out of stock and {{ expiring_soon_count }} item(s) approaching expiry.
-                                </span>
-                            </div>
-                        </div>
-                        <button type="button" class="btn btn-danger btn-sm" onclick="filterByChip('out')">
-                            <i class="ph-bold ph-eye"></i> View Out-of-Stock
-                        </button>
-                    </div>
-                {% endif %}
-
-                <!-- Live Toolbar with Search & Filter Chips -->
-                <div class="inventory-toolbar no-print">
-                    <div class="search-input-group">
-                        <i class="ph-bold ph-magnifying-glass"></i>
-                        <input type="text" id="inv-search-input" class="form-control" placeholder="Search medicine name, batch number..." oninput="filterInventory()">
-                    </div>
-                    <div class="filter-chips">
-                        <button type="button" class="filter-chip active" id="chip-all" onclick="filterByChip('all')">
-                            All SKUs ({{ total_skus }})
-                        </button>
-                        <button type="button" class="filter-chip" id="chip-low" onclick="filterByChip('low')">
-                            ⚠️ Low Stock ({{ low_stock_count }})
-                        </button>
-                        <button type="button" class="filter-chip" id="chip-out" onclick="filterByChip('out')">
-                            🔴 Out of Stock ({{ out_of_stock_count }})
-                        </button>
-                        <button type="button" class="filter-chip" id="chip-expiring" onclick="filterByChip('expiring')">
-                            ⏳ Expiring Soon ({{ expiring_soon_count }})
-                        </button>
+        {% if out_of_stock_count > 0 or expiring_soon_count > 0 %}
+            <div class="critical-reorder-banner no-print" style="margin-bottom: 1.25rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i class="ph-bold ph-warning-octagon" style="color: var(--danger); font-size: 1.4rem;"></i>
+                    <div>
+                        <strong style="color: var(--text-primary);">Inventory Attention Needed:</strong>
+                        <span style="font-size: 0.85rem; color: var(--text-secondary);">
+                            {{ out_of_stock_count }} item(s) out of stock and {{ expiring_soon_count }} item(s) approaching expiry.
+                        </span>
                     </div>
                 </div>
-                
-                {% if inventory %}
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Medicine</th>
-                                <th>Stock Qty</th>
-                                <th>Unit Price (₹)</th>
-                                <th>Batch No.</th>
-                                <th>Expiry Date</th>
-                                <th>Status</th>
-                                <th class="no-print">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="inventory-tbody">
-                            {% for item in inventory %}
-                                <tr class="inv-data-row {% if item.is_expiring_soon %}expiring-row{% elif item.stock_level == 0 %}low-stock-row{% endif %}" id="inv-row-{{ item.id }}" data-name="{{ item.medicine_name|lower }}" data-batch="{{ item.batch_number|lower }}" data-stock="{{ item.stock_level }}" data-expiring="{{ 1 if item.is_expiring_soon else 0 }}">
-                                    <form action="{{ url_for('update_inventory', item_id=item.id) }}" method="POST" style="margin:0;">
-                                        <td><strong>{{ item.medicine_name }}</strong></td>
-                                        <td>
-                                            <input type="number" name="stock_level" class="form-control btn-sm" style="width: 80px;" value="{{ item.stock_level }}" min="0" required>
-                                        </td>
-                                        <td>
-                                            <input type="number" step="0.01" name="price" class="form-control btn-sm" style="width: 80px;" value="{{ "%.2f"|format(item.price) }}" min="0" required>
-                                        </td>
-                                        <td>
-                                            <input type="text" name="batch_number" class="form-control btn-sm" style="width: 100px;" value="{{ item.batch_number }}" required>
-                                        </td>
-                                        <td>
-                                            <span style="font-size: 0.9rem;">{{ item.expiry_date.strftime('%d %b %Y') }}</span>
-                                        </td>
-                                        <td>
-                                            {% if item.stock_level == 0 %}
-                                                 <span class="badge badge-danger">Out of Stock</span>
-                                            {% elif item.is_expiring_soon %}
-                                                <span class="badge badge-danger">Expiring Soon</span>
-                                            {% elif item.stock_level <= 10 %}
-                                                <span class="badge badge-warning">Low Stock</span>
-                                            {% else %}
-                                                <span class="badge badge-success">In Stock</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="no-print" style="display: flex; gap: 0.25rem;">
+                <button type="button" class="btn btn-danger btn-sm" onclick="filterByChip('out')">
+                    <i class="ph-bold ph-eye"></i> View Out-of-Stock
+                </button>
+            </div>
+        {% endif %}
+
+        <!-- Live Toolbar with Search & Filter Chips -->
+        <div class="inventory-toolbar no-print" style="margin-bottom: 1.25rem;">
+            <div class="search-input-group" style="flex: 1; min-width: 280px;">
+                <i class="ph-bold ph-magnifying-glass"></i>
+                <input type="text" id="inv-search-input" class="form-control" placeholder="Search medicine name, batch number..." oninput="filterInventory()">
+            </div>
+            <div class="filter-chips">
+                <button type="button" class="filter-chip active" id="chip-all" onclick="filterByChip('all')">
+                    All SKUs ({{ total_skus }})
+                </button>
+                <button type="button" class="filter-chip" id="chip-low" onclick="filterByChip('low')">
+                    ⚠️ Low Stock ({{ low_stock_count }})
+                </button>
+                <button type="button" class="filter-chip" id="chip-out" onclick="filterByChip('out')">
+                    🔴 Out of Stock ({{ out_of_stock_count }})
+                </button>
+                <button type="button" class="filter-chip" id="chip-expiring" onclick="filterByChip('expiring')">
+                    ⏳ Expiring Soon ({{ expiring_soon_count }})
+                </button>
+            </div>
+        </div>
+        
+        {% if inventory %}
+            <div style="width: 100%; overflow-x: auto;">
+                <table style="width: 100%; border-collapse: separate; border-spacing: 0;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 1rem 1.25rem; text-align: left; min-width: 220px;">Medicine</th>
+                            <th style="padding: 1rem 1.25rem; text-align: left; min-width: 120px;">Stock Qty</th>
+                            <th style="padding: 1rem 1.25rem; text-align: left; min-width: 140px;">Unit Price (₹)</th>
+                            <th style="padding: 1rem 1.25rem; text-align: left; min-width: 150px;">Batch No.</th>
+                            <th style="padding: 1rem 1.25rem; text-align: left; min-width: 140px;">Expiry Date</th>
+                            <th style="padding: 1rem 1.25rem; text-align: left; min-width: 130px;">Status</th>
+                            <th class="no-print" style="padding: 1rem 1.25rem; text-align: center; min-width: 110px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-tbody">
+                        {% for item in inventory %}
+                            <tr class="inv-data-row {% if item.is_expiring_soon %}expiring-row{% elif item.stock_level == 0 %}low-stock-row{% endif %}" id="inv-row-{{ item.id }}" data-name="{{ item.medicine_name|lower }}" data-batch="{{ item.batch_number|lower }}" data-stock="{{ item.stock_level }}" data-expiring="{{ 1 if item.is_expiring_soon else 0 }}">
+                                <form action="{{ url_for('update_inventory', item_id=item.id) }}" method="POST" style="margin:0;">
+                                    <td style="padding: 1rem 1.25rem;">
+                                        <div style="font-weight: 600; color: var(--text-primary); font-size: 1rem;">{{ item.medicine_name }}</div>
+                                    </td>
+                                    <td style="padding: 1rem 1.25rem;">
+                                        <input type="number" name="stock_level" class="form-control btn-sm" style="width: 100px; font-weight: 600; text-align: center;" value="{{ item.stock_level }}" min="0" required>
+                                    </td>
+                                    <td style="padding: 1rem 1.25rem;">
+                                        <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                            <span style="color: var(--text-secondary); font-weight: 600;">₹</span>
+                                            <input type="number" step="0.01" name="price" class="form-control btn-sm" style="width: 110px; font-weight: 600;" value="{{ "%.2f"|format(item.price) }}" min="0" required>
+                                        </div>
+                                    </td>
+                                    <td style="padding: 1rem 1.25rem;">
+                                        <input type="text" name="batch_number" class="form-control btn-sm" style="width: 140px; font-family: monospace; letter-spacing: 0.5px;" value="{{ item.batch_number }}" required>
+                                    </td>
+                                    <td style="padding: 1rem 1.25rem;">
+                                        <span style="font-size: 0.92rem; color: var(--text-primary); font-weight: 500;">{{ item.expiry_date.strftime('%d %b %Y') }}</span>
+                                    </td>
+                                    <td style="padding: 1rem 1.25rem;">
+                                        {% if item.stock_level == 0 %}
+                                             <span class="badge badge-danger">Out of Stock</span>
+                                        {% elif item.is_expiring_soon %}
+                                            <span class="badge badge-danger">Expiring Soon</span>
+                                        {% elif item.stock_level <= 10 %}
+                                            <span class="badge badge-warning">Low Stock</span>
+                                        {% else %}
+                                            <span class="badge badge-success">In Stock</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="no-print" style="padding: 1rem 1.25rem; text-align: center;">
+                                        <div style="display: inline-flex; gap: 0.4rem; justify-content: center;">
                                             <button type="submit" class="btn btn-secondary btn-sm" title="Save changes">
                                                 <i class="ph-bold ph-floppy-disk"></i>
                                             </button>
                                             <button type="button" class="btn btn-danger btn-sm" onclick="deleteInventoryItem({{ item.id }})" title="Delete item">
                                                 <i class="ph-bold ph-trash"></i>
                                             </button>
-                                        </td>
-                                    </form>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                {% else %}
-                    <div style="text-align: center; padding: 4rem 1rem; color: var(--text-secondary);">
-                        <i class="ph ph-pill" style="font-size: 3rem; margin-bottom: 1rem; color: var(--card-border);"></i>
-                        <p>Your inventory is empty.</p>
-                        <p style="font-size: 0.85rem; margin-top: 0.5rem;">Use the form on the right to add items to your stock list.</p>
-                    </div>
-                {% endif %}
+                                        </div>
+                                    </td>
+                                </form>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
-        </div>
-
-        <!-- Add Stock Item Form -->
-        <div>
-            <div class="card">
-                <h2 class="card-title">
-                    <span><i class="ph-bold ph-plus-circle card-title-icon"></i> Add Stock Item</span>
-                </h2>
-                
-                <form action="{{ url_for('add_inventory') }}" method="POST">
-                    <div class="form-group">
-                        <label for="medicine_name">Medicine Name</label>
-                        <input type="text" id="medicine_name" name="medicine_name" class="form-control" required>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="stock_level">Stock Qty</label>
-                            <input type="number" id="stock_level" name="stock_level" class="form-control" min="0" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="price">Unit Price (₹)</label>
-                            <input type="number" step="0.01" id="price" name="price" class="form-control" min="0" required>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="batch_number">Batch Number</label>
-                        <input type="text" id="batch_number" name="batch_number" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="expiry_date">Expiration Date</label>
-                        <input type="date" id="expiry_date" name="expiry_date" class="form-control" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 1rem;">
-                        <i class="ph ph-plus"></i> Add Item
-                    </button>
-                </form>
+        {% else %}
+            <div style="text-align: center; padding: 4.5rem 1rem; color: var(--text-secondary);">
+                <i class="ph ph-pill" style="font-size: 3.5rem; margin-bottom: 1rem; color: var(--accent); opacity: 0.6;"></i>
+                <h4 style="color: var(--text-primary); margin-bottom: 0.5rem; font-size: 1.15rem;">Your inventory is empty</h4>
+                <p style="font-size: 0.9rem; margin-bottom: 1.5rem;">Add pharmaceutical stock items to start dispensing and receiving broadcast requests.</p>
+                <button type="button" class="btn btn-primary" onclick="openAddStockModal()">
+                    <i class="ph-bold ph-plus-circle"></i> Add First Stock Item
+                </button>
             </div>
-        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -638,5 +592,39 @@
             }
         });
     }
+
+    // Modal Controls for Add Stock Overlay
+    function openAddStockModal() {
+        const modal = document.getElementById('add-stock-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                const input = document.getElementById('modal_medicine_name');
+                if (input) input.focus();
+            }, 100);
+        }
+    }
+
+    function closeAddStockModal() {
+        const modal = document.getElementById('add-stock-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    // Dismiss modal on backdrop click or Escape key
+    window.addEventListener('click', function(e) {
+        const stockModal = document.getElementById('add-stock-modal');
+        if (e.target === stockModal) {
+            closeAddStockModal();
+        }
+    });
+
+    window.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeAddStockModal();
+            stopScanner();
+        }
+    });
 </script>
 {% endblock %}

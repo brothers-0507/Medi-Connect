@@ -445,6 +445,37 @@ def create_prescription():
     flash('Digital prescription created successfully!', 'success')
     return redirect(url_for('doctor_dashboard'))
 
+@app.route('/doctor/prescription/new', methods=['GET', 'POST'])
+@app.route('/prescription/new', methods=['GET', 'POST'])
+@login_required
+@role_required('doctor')
+def new_prescription():
+    if request.method == 'POST':
+        return create_prescription()
+    patients = User.query.filter_by(role='patient').order_by(User.name.asc()).all()
+    return render_template('prescription_new.html', patients=patients)
+
+@app.route('/prescription/<int:rx_id>/delete', methods=['POST'])
+@login_required
+@role_required('doctor')
+def delete_prescription(rx_id):
+    doctor_id = session['user_id']
+    rx = Prescription.query.get_or_404(rx_id)
+    if rx.doctor_id != doctor_id:
+        if request.is_json:
+            return jsonify({'success': False, 'message': 'Unauthorized to delete this prescription'}), 403
+        flash('Unauthorized: You can only delete prescriptions you created.', 'danger')
+        return redirect(url_for('doctor_dashboard'))
+    
+    patient_name = rx.patient_name
+    db.session.delete(rx)
+    db.session.commit()
+    
+    if request.is_json:
+        return jsonify({'success': True, 'message': f'Prescription for {patient_name} deleted successfully.'})
+    flash(f'Prescription for {patient_name} deleted successfully.', 'success')
+    return redirect(url_for('doctor_dashboard'))
+
 # ----------------- PATIENT PORTAL -----------------
 
 @app.route('/dashboard/patient')

@@ -3,90 +3,7 @@
 {% block title %}Patient Dashboard - MediConnect{% endblock %}
 
 {% block content %}
-<!-- Clinical Banner -->
-<div class="clinical-banner no-print">
-    <div class="clinical-banner-left">
-        <div class="clinical-avatar">
-            {{ current_user.name[0] if current_user.name else 'P' }}
-        </div>
-        <div class="clinical-info">
-            <h1>
-                {{ current_user.name }}
-                <span class="badge badge-success" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; text-transform: none;">
-                    <span class="live-pulse"></span> Active Patient
-                </span>
-            </h1>
-            <div class="clinical-meta-pills">
-                <span class="clinical-meta-pill">
-                    <i class="ph-bold ph-identification-badge" style="color: var(--primary);"></i> ID: #MED-{{ '%04d' % current_user.id }}
-                </span>
-                <span class="clinical-meta-pill">
-                    <i class="ph-bold ph-drop" style="color: var(--danger);"></i> Blood: B+
-                </span>
-                <span class="clinical-meta-pill">
-                    <i class="ph-bold ph-map-pin" style="color: var(--accent);"></i> {{ current_user.location or 'Bengaluru, Karnataka' }}
-                </span>
-                <span class="clinical-meta-pill" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08);">
-                    <i class="ph-bold ph-clock" style="color: var(--secondary);"></i> Next: {{ next_dose_info }}
-                </span>
-            </div>
-        </div>
-    </div>
-    <div class="clinical-banner-right">
-        <button class="btn btn-outline btn-sm" onclick="openTab(event, 'prescriptions-tab')">
-            <i class="ph-bold ph-prescription"></i> Prescriptions
-        </button>
-        <button class="btn btn-primary btn-sm" onclick="openTab(event, 'broadcasts-tab')">
-            <i class="ph-bold ph-broadcast"></i> Pharmacy Quotes
-        </button>
-    </div>
-</div>
-
-<!-- KPI Metric Tiles -->
-<div class="kpi-grid no-print">
-    <div class="kpi-card">
-        <div class="kpi-icon-box kpi-icon-teal">
-            <i class="ph-bold ph-heartbeat"></i>
-        </div>
-        <div class="kpi-content">
-            <span class="kpi-value">{{ adherence_pct }}%</span>
-            <span class="kpi-label">Adherence Rate</span>
-            <span class="kpi-subtext">{{ doses_taken_today }} of {{ total_doses_today }} doses taken today</span>
-        </div>
-    </div>
-    <div class="kpi-card">
-        <div class="kpi-icon-box kpi-icon-green">
-            <i class="ph-bold ph-pill"></i>
-        </div>
-        <div class="kpi-content">
-            <span class="kpi-value">{{ active_schedules_count }}</span>
-            <span class="kpi-label">Active Regimens</span>
-            <span class="kpi-subtext">Daily medication trackers</span>
-        </div>
-    </div>
-    <div class="kpi-card">
-        <div class="kpi-icon-box kpi-icon-blue">
-            <i class="ph-bold ph-prescription"></i>
-        </div>
-        <div class="kpi-content">
-            <span class="kpi-value">{{ total_prescriptions }}</span>
-            <span class="kpi-label">Prescriptions</span>
-            <span class="kpi-subtext">Digitally verified records</span>
-        </div>
-    </div>
-    <div class="kpi-card">
-        <div class="kpi-icon-box {% if low_stock_count > 0 %}kpi-icon-rose{% else %}kpi-icon-amber{% endif %}">
-            <i class="ph-bold ph-warning-octagon"></i>
-        </div>
-        <div class="kpi-content">
-            <span class="kpi-value">{{ low_stock_count }}</span>
-            <span class="kpi-label">Refill Alerts</span>
-            <span class="kpi-subtext">{% if low_stock_count > 0 %}Stock replenishment needed{% else %}All doses adequate{% endif %}</span>
-        </div>
-    </div>
-</div>
-
-<div class="tabs">
+<div class="tabs" style="margin-top: 0.5rem;">
     <button class="tab-btn active" onclick="openTab(event, 'tracker-tab')">
         <i class="ph-bold ph-calendar"></i> Medi-Tracker
     </button>
@@ -133,54 +50,6 @@
                     <span><i class="ph-bold ph-check-square card-title-icon"></i> Today's Dosages</span>
                     <span style="font-size: 0.85rem; font-weight: normal; color: var(--text-secondary);">Click dots to log doses</span>
                 </h2>
-
-                <!-- Day-Part Schedule Overview -->
-                <div class="daypart-grid" style="margin-bottom: 1.5rem;">
-                    <div class="daypart-card">
-                        <div class="daypart-header">
-                            <span class="daypart-title">
-                                <span>🌅</span> Morning
-                            </span>
-                            <span class="daypart-count">06:00 - 11:59</span>
-                        </div>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                            Breakfast & AM routine
-                        </div>
-                    </div>
-                    <div class="daypart-card">
-                        <div class="daypart-header">
-                            <span class="daypart-title">
-                                <span>☀️</span> Afternoon
-                            </span>
-                            <span class="daypart-count">12:00 - 16:59</span>
-                        </div>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                            Post-lunch doses
-                        </div>
-                    </div>
-                    <div class="daypart-card">
-                        <div class="daypart-header">
-                            <span class="daypart-title">
-                                <span>🌆</span> Evening
-                            </span>
-                            <span class="daypart-count">17:00 - 20:59</span>
-                        </div>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                            Pre-dinner doses
-                        </div>
-                    </div>
-                    <div class="daypart-card">
-                        <div class="daypart-header">
-                            <span class="daypart-title">
-                                <span>🌙</span> Bedtime
-                            </span>
-                            <span class="daypart-count">21:00+</span>
-                        </div>
-                        <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                            Night-time medication
-                        </div>
-                    </div>
-                </div>
 
                 {% if checklist %}
                     <div style="display: flex; flex-direction: column; gap: 1rem;">

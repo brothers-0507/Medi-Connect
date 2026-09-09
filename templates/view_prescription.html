@@ -126,6 +126,14 @@
                     <i class="ph ph-printer"></i> Print / PDF
                 </button>
             </div>
+
+            {% if current_user and current_user.id == prescription.doctor_id %}
+            <form action="{{ url_for('delete_prescription', rx_id=prescription.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to permanently delete this digital prescription?');" style="margin-top: 0.75rem;">
+                <button type="submit" class="btn btn-outline" style="width: 100%; color: var(--danger); border-color: rgba(239, 68, 68, 0.4);">
+                    <i class="ph-bold ph-trash"></i> Delete Prescription
+                </button>
+            </form>
+            {% endif %}
         </div>
 
     </div>

@@ -4,6 +4,7 @@ import math
 from datetime import datetime, date, timedelta
 import qrcode
 from flask import Flask, render_template, redirect, url_for, request, flash, session, jsonify
+from sqlalchemy import func
 from config import Config
 from models import db, User, Prescription, PrescriptionItem, Broadcast, PharmacyOffer, MedicationSchedule, TrackerLog, InventoryItem
 
@@ -1148,50 +1149,166 @@ def submit_offer():
 @role_required('pharmacy')
 def checkout_sale():
     pharmacy_id = session['user_id']
-    med_name = request.form['medicine_name']
-    qty = int(request.form['quantity'])
     
-    # Find active batches
-    items = InventoryItem.query.filter_by(
-        pharmacy_id=pharmacy_id, 
-        medicine_name=med_name
-    ).order_by(InventoryItem.expiry_date).all()
+    items_to_process = []
     
-    if not items:
-        return jsonify({'success': False, 'message': 'Medicine not found in inventory.'})
+    if request.is_json:
+        data = request.get_json() or {}
+        if 'items' in data and isinstance(data['items'], list):
+            for it in data['items']:
+                if it.get('medicine_name') and it.get('quantity') is not None:
+                    items_to_process.append({
+                        'medicine_name': str(it['medicine_name']).strip(),
+                        'quantity': int(it['quantity'])
+                    })
+        elif 'medicine_name' in data and 'quantity' in data:
+            items_to_process.append({
+                'medicine_name': str(data['medicine_name']).strip(),
+                'quantity': int(data['quantity'])
+            })
+    else:
+        # Check for multi-item list from form data
+        med_names = request.form.getlist('medicine_name[]')
+        quantities = request.form.getlist('quantity[]')
         
-    total_stock = sum(i.stock_level for i in items)
-    if total_stock < qty:
-        return jsonify({'success': False, 'message': f'Insufficient stock. Only {total_stock} available.'})
+        if med_names and quantities and len(med_names) == len(quantities):
+            for name, q in zip(med_names, quantities):
+                if name.strip() and q:
+                    items_to_process.append({
+                        'medicine_name': name.strip(),
+                        'quantity': int(q)
+                    })
+        elif 'medicine_name' in request.form and 'quantity' in request.form:
+            items_to_process.append({
+                'medicine_name': request.form['medicine_name'].strip(),
+                'quantity': int(request.form['quantity'])
+            })
+            
+    if not items_to_process:
+        return jsonify({'success': False, 'message': 'No medicines provided for checkout.'}), 400
         
-    # Deduct stock across batches (FIFO/Expiry order)
-    remaining_to_deduct = qty
-    deducted_details = []
-    expiring_warnings = []
+    results = []
+    overall_expiring_warnings = []
+    overall_deducted_summaries = []
     
-    for item in items:
-        if remaining_to_deduct <= 0:
-            break
+    # Process each item
+    for req_item in items_to_process:
+        med_name = req_item['medicine_name']
+        qty = req_item['quantity']
+        
+        if qty <= 0:
+            results.append({
+                'medicine_name': med_name,
+                'quantity': qty,
+                'success': False,
+                'message': 'Quantity must be at least 1 unit.'
+            })
+            continue
             
-        if item.stock_level > 0:
-            deduct_qty = min(item.stock_level, remaining_to_deduct)
-            item.stock_level -= deduct_qty
-            remaining_to_deduct -= deduct_qty
-            deducted_details.append(f"{deduct_qty} from batch {item.batch_number}")
+        # Find active batches: exact match first, then case-insensitive / partial
+        items = InventoryItem.query.filter_by(
+            pharmacy_id=pharmacy_id, 
+            medicine_name=med_name
+        ).order_by(InventoryItem.expiry_date.asc()).all()
+        
+        if not items:
+            items = InventoryItem.query.filter(
+                InventoryItem.pharmacy_id == pharmacy_id,
+                func.lower(InventoryItem.medicine_name) == func.lower(med_name)
+            ).order_by(InventoryItem.expiry_date.asc()).all()
             
-            # Check for expiring warning
-            if item.is_expiring_soon:
-                expiring_warnings.append(f"Batch {item.batch_number} (expiring {item.expiry_date})")
+        if not items:
+            items = InventoryItem.query.filter(
+                InventoryItem.pharmacy_id == pharmacy_id,
+                InventoryItem.medicine_name.ilike(f"%{med_name}%")
+            ).order_by(InventoryItem.expiry_date.asc()).all()
+            
+        if not items:
+            results.append({
+                'medicine_name': med_name,
+                'quantity': qty,
+                'success': False,
+                'message': f"Medicine '{med_name}' not found in inventory."
+            })
+            continue
+            
+        total_stock = sum(i.stock_level for i in items)
+        if total_stock < qty:
+            results.append({
+                'medicine_name': med_name,
+                'quantity': qty,
+                'success': False,
+                'message': f"Insufficient stock for '{med_name}'. Only {total_stock} available."
+            })
+            continue
+            
+        # Deduct stock across batches (FIFO/Expiry order)
+        remaining_to_deduct = qty
+        deducted_details = []
+        expiring_warnings = []
+        
+        for item in items:
+            if remaining_to_deduct <= 0:
+                break
                 
+            if item.stock_level > 0:
+                deduct_qty = min(item.stock_level, remaining_to_deduct)
+                item.stock_level -= deduct_qty
+                remaining_to_deduct -= deduct_qty
+                deducted_details.append(f"{deduct_qty} from batch {item.batch_number}")
+                
+                if item.is_expiring_soon:
+                    expiring_warnings.append(f"Batch {item.batch_number} (expiring {item.expiry_date})")
+                    overall_expiring_warnings.append(f"Batch {item.batch_number} (expiring {item.expiry_date})")
+                    
+        overall_deducted_summaries.append(f"{qty}x {med_name} ({', '.join(deducted_details)})")
+        results.append({
+            'medicine_name': med_name,
+            'quantity': qty,
+            'success': True,
+            'deducted_details': deducted_details,
+            'expiring_warnings': expiring_warnings
+        })
+        
     db.session.commit()
     
-    warn_msg = ""
-    if expiring_warnings:
-        warn_msg = f" Note: Sold stock contains batches near expiration: {', '.join(expiring_warnings)}"
+    # Check if a prescription UUID was provided to mark as claimed
+    rx_uuid = request.form.get('prescription_uuid') or ((request.get_json() or {}).get('prescription_uuid') if request.is_json else None)
+    if rx_uuid:
+        rx = Prescription.query.filter_by(uuid=rx_uuid).first()
+        if rx:
+            rx.is_claimed = True
+            db.session.commit()
+            
+    successful_results = [r for r in results if r['success']]
+    if not successful_results:
+        first_err = results[0]['message'] if results else 'Checkout failed.'
+        return jsonify({'success': False, 'message': first_err, 'results': results})
         
+    warn_msg = ""
+    if overall_expiring_warnings:
+        warn_msg = f" Note: Sold stock contains batches near expiration: {', '.join(overall_expiring_warnings)}"
+        
+    # For single item compatibility with existing test:
+    if len(items_to_process) == 1:
+        res = results[0]
+        if res['success']:
+            return jsonify({
+                'success': True,
+                'message': f"Checkout completed successfully: Deducted {', '.join(res['deducted_details'])}.{warn_msg}",
+                'results': results
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': res['message'],
+                'results': results
+            })
+            
     return jsonify({
         'success': True,
-        'message': f"Checkout completed successfully: Deducted {', '.join(deducted_details)}.{warn_msg}"
+        'message': f"Checkout completed successfully for {len(successful_results)} medicine(s): {'; '.join(overall_deducted_summaries)}.{warn_msg}",
+        'results': results
     })
 
 # ----------------- PUBLIC VIEWING & SECURE ACCESS -----------------
@@ -1215,10 +1332,55 @@ def prescription_api(rx_uuid):
     if not rx:
         return jsonify({'success': False, 'message': 'Prescription not found'}), 404
         
-    items = [{'medicine_name': item.medicine_name, 'dosage': item.dosage} for item in rx.items]
+    items = [{
+        'id': item.id,
+        'medicine_name': item.medicine_name, 
+        'dosage': item.dosage,
+        'frequency': item.frequency,
+        'duration': item.duration,
+        'instructions': item.instructions or ''
+    } for item in rx.items]
+
+    # If the requesting user is a pharmacy, check stock availability for each item
+    pharmacy_id = session.get('user_id')
+    user = User.query.get(pharmacy_id) if pharmacy_id else None
+    
+    if user and user.role == 'pharmacy':
+        for it in items:
+            med_name = it['medicine_name']
+            stock_items = InventoryItem.query.filter(
+                InventoryItem.pharmacy_id == pharmacy_id,
+                func.lower(InventoryItem.medicine_name) == func.lower(med_name)
+            ).order_by(InventoryItem.expiry_date.asc()).all()
+            
+            if not stock_items:
+                stock_items = InventoryItem.query.filter(
+                    InventoryItem.pharmacy_id == pharmacy_id,
+                    InventoryItem.medicine_name.ilike(f"%{med_name}%")
+                ).order_by(InventoryItem.expiry_date.asc()).all()
+                
+            total_stock = sum(s.stock_level for s in stock_items)
+            it['in_stock'] = total_stock > 0
+            it['available_stock'] = total_stock
+            it['unit_price'] = stock_items[0].price if stock_items else 0.0
+            it['batches'] = [{
+                'batch_number': s.batch_number,
+                'stock_level': s.stock_level,
+                'price': s.price,
+                'expiry_date': s.expiry_date.strftime('%d %b %Y'),
+                'is_expiring_soon': s.is_expiring_soon
+            } for s in stock_items if s.stock_level > 0]
+            
     return jsonify({
         'success': True,
+        'prescription_id': rx.id,
+        'uuid': rx.uuid,
         'patient_name': rx.patient_name,
+        'patient_age': rx.patient_age,
+        'patient_contact': rx.patient_contact,
+        'instructions': rx.instructions or '',
+        'created_at': rx.created_at.strftime('%d %b %Y, %I:%M %p') if rx.created_at else '',
+        'is_claimed': rx.is_claimed,
         'items': items
     })
 

@@ -745,5 +745,131 @@ class MediConnectTestCase(unittest.TestCase):
         self.assertNotIn(b'grid-container', res.data)
         self.assertIn(b'Current Inventory', res.data)
 
+    def test_pharmacy_multi_item_checkout(self):
+        self.login_as('test_pharmacy')
+        # Add stock for 2 items
+        with app.app_context():
+            i1 = InventoryItem(
+                pharmacy_id=self.ph_id,
+                medicine_name='MultiMed Alpha',
+                stock_level=50,
+                price=15.00,
+                batch_number='BT-A1',
+                expiry_date=date.today() + timedelta(days=200)
+            )
+            i2 = InventoryItem(
+                pharmacy_id=self.ph_id,
+                medicine_name='MultiMed Beta',
+                stock_level=30,
+                price=25.00,
+                batch_number='BT-B1',
+                expiry_date=date.today() + timedelta(days=300)
+            )
+            db.session.add_all([i1, i2])
+            db.session.commit()
+
+        # Multi-item checkout via JSON
+        res = self.app.post('/checkout', json={
+            'items': [
+                {'medicine_name': 'MultiMed Alpha', 'quantity': 10},
+                {'medicine_name': 'MultiMed Beta', 'quantity': 5}
+            ]
+        })
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data['success'])
+        self.assertIn('Checkout completed successfully for 2 medicine(s)', data['message'])
+        self.assertEqual(len(data['results']), 2)
+
+        # Verify DB stock deducted
+        with app.app_context():
+            item1 = InventoryItem.query.filter_by(pharmacy_id=self.ph_id, medicine_name='MultiMed Alpha').first()
+            item2 = InventoryItem.query.filter_by(pharmacy_id=self.ph_id, medicine_name='MultiMed Beta').first()
+            self.assertEqual(item1.stock_level, 40)
+            self.assertEqual(item2.stock_level, 25)
+
+    def test_prescription_api_full_item_details_and_inventory_match(self):
+        # Create multi-item prescription
+        with app.app_context():
+            rx = Prescription(
+                doctor_id=self.doc_id,
+                patient_id=self.pat_id,
+                patient_name='Jane Doe',
+                patient_age=35,
+                patient_contact='9876543210',
+                instructions='Take after breakfast and dinner'
+            )
+            it1 = PrescriptionItem(
+                prescription=rx,
+                medicine_name='Amoxicillin 500mg',
+                dosage='1 Capsule',
+                frequency='TID (Three times daily)',
+                duration='5 days',
+                instructions='After meals'
+            )
+            it2 = PrescriptionItem(
+                prescription=rx,
+                medicine_name='Paracetamol 650mg',
+                dosage='1 Tablet',
+                frequency='SOS / As needed',
+                duration='3 days',
+                instructions='During fever'
+            )
+            db.session.add_all([rx, it1, it2])
+            db.session.commit()
+            rx_uuid = rx.uuid
+
+            # Add matching stock for Amoxicillin in pharmacy inventory
+            inv = InventoryItem(
+                pharmacy_id=self.ph_id,
+                medicine_name='Amoxicillin 500mg',
+                stock_level=80,
+                price=12.50,
+                batch_number='AMX-01',
+                expiry_date=date.today() + timedelta(days=180)
+            )
+            db.session.add(inv)
+            db.session.commit()
+
+        # Call prescription API as pharmacy
+        self.login_as('test_pharmacy')
+        res = self.app.get(f'/prescription/api/{rx_uuid}')
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data['success'])
+        self.assertEqual(data['patient_name'], 'Jane Doe')
+        self.assertEqual(len(data['items']), 2)
+        
+        # Verify complete details and inventory match
+        amx_item = next(i for i in data['items'] if 'Amoxicillin' in i['medicine_name'])
+        self.assertEqual(amx_item['dosage'], '1 Capsule')
+        self.assertEqual(amx_item['frequency'], 'TID (Three times daily)')
+        self.assertTrue(amx_item['in_stock'])
+        self.assertEqual(amx_item['available_stock'], 80)
+        self.assertEqual(amx_item['unit_price'], 12.50)
+
+        pcm_item = next(i for i in data['items'] if 'Paracetamol' in i['medicine_name'])
+        self.assertFalse(pcm_item['in_stock'])
+        self.assertEqual(pcm_item['available_stock'], 0)
+
+    def test_pharmacy_dashboard_navigation_and_slots(self):
+        self.login_as('test_pharmacy')
+        res = self.app.get('/dashboard/pharmacy')
+        self.assertEqual(res.status_code, 200)
+        # Verify fixed pharmacy navigation toolbar (no slidebars)
+        self.assertIn(b'class="pharmacy-nav-toolbar no-print"', res.data)
+        self.assertIn(b'id="tab-btn-inventory"', res.data)
+        self.assertIn(b'id="tab-btn-broadcasts"', res.data)
+        self.assertIn(b'id="tab-btn-checkout"', res.data)
+        self.assertIn(b'switchPharmacyTab(\'inventory-tab\')', res.data)
+        self.assertIn(b'switchPharmacyTab(\'broadcasts-tab\')', res.data)
+        self.assertIn(b'switchPharmacyTab(\'checkout-tab\')', res.data)
+        # Verify multi-medicine dispensing counter & slots container
+        self.assertIn(b'Multi-Medicine Dispensing Counter', res.data)
+        self.assertIn(b'id="checkout-slots-container"', res.data)
+        self.assertIn(b'id="scanned-rx-card"', res.data)
+        self.assertIn(b'Add Another Medicine Slot', res.data)
+        self.assertIn(b'Complete Sale & Deduct All Medicines', res.data)
+
 if __name__ == '__main__':
     unittest.main()

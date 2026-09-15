@@ -500,6 +500,155 @@ textarea.form-control {
     animation: fadeIn 0.3s ease;
 }
 
+/* Pharmacy Fixed Navigation Toolbar (No Slidebars/Scrollbars) */
+.pharmacy-nav-toolbar {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 0.75rem 1.25rem;
+    margin-bottom: 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+    overflow: visible !important;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    position: relative;
+    z-index: 10;
+}
+
+.pharmacy-tabs-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    overflow: visible !important;
+}
+
+.pharmacy-tab-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+    font-weight: 550;
+    font-size: 0.92rem;
+    padding: 0.6rem 1.15rem;
+    border-radius: 10px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    position: relative;
+}
+
+.pharmacy-tab-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--card-border);
+}
+
+.pharmacy-tab-btn.active {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, var(--accent) 0%, #a78bfa 100%) !important;
+    border-color: transparent !important;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+}
+
+.pharmacy-tab-badge {
+    background: rgba(255, 255, 255, 0.25);
+    color: inherit;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.15rem 0.5rem;
+    border-radius: 9999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pharmacy-tab-btn:not(.active) .pharmacy-tab-badge {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .pharmacy-tab-btn:not(.active) .pharmacy-tab-badge {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary);
+}
+
+/* Multi-Medicine Prescription Checkout Slots */
+.checkout-slots-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    margin-bottom: 1.75rem;
+}
+
+.checkout-slot-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    position: relative;
+    transition: all 0.25s ease;
+    animation: fadeIn 0.3s ease;
+}
+
+.checkout-slot-card:hover {
+    border-color: rgba(99, 102, 241, 0.35);
+}
+
+.checkout-slot-card.in-stock {
+    border-left: 4px solid var(--secondary);
+}
+
+.checkout-slot-card.out-of-stock {
+    border-left: 4px solid var(--danger);
+    background: rgba(239, 68, 68, 0.03);
+}
+
+.checkout-slot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px dashed var(--card-border);
+}
+
+.checkout-slot-title {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 1.05rem;
+    font-weight: 650;
+    color: var(--text-primary);
+}
+
+.checkout-slot-grid {
+    display: grid;
+    grid-template-columns: 2fr 1.3fr 1fr 1fr auto;
+    gap: 1rem;
+    align-items: center;
+}
+
+@media (max-width: 900px) {
+    .checkout-slot-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+@media (max-width: 580px) {
+    .checkout-slot-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Tables & Lists */
 table {
     width: 100%;

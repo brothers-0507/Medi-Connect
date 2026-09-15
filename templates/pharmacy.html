@@ -69,28 +69,37 @@
     </div>
 </div>
 
-<!-- Header Navigation Bar with Tabs and Core Pharmacy Actions -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;" class="no-print">
-    <div class="tabs" style="margin-bottom: 0; border-bottom: none;">
-        <button class="tab-btn active" onclick="openTab(event, 'inventory-tab')">
+<!-- Fixed Navigation Bar with Tabs and Core Pharmacy Actions (No Slidebars/Scrollbars) -->
+<div class="pharmacy-nav-toolbar no-print">
+    <div class="pharmacy-tabs-group">
+        <button type="button" class="pharmacy-tab-btn active" id="tab-btn-inventory" onclick="switchPharmacyTab('inventory-tab')">
             <i class="ph-bold ph-pill"></i> Stock Inventory
+            <span class="pharmacy-tab-badge" id="badge-total-skus">{{ total_skus }}</span>
         </button>
-        <button class="tab-btn" onclick="openTab(event, 'broadcasts-tab')">
+        <button type="button" class="pharmacy-tab-btn" id="tab-btn-broadcasts" onclick="switchPharmacyTab('broadcasts-tab')">
             <i class="ph-bold ph-broadcast"></i> Active Broadcast Requests
+            <span class="pharmacy-tab-badge" id="badge-broadcasts">{{ broadcasts_info|length }}</span>
         </button>
-        <button class="tab-btn" onclick="openTab(event, 'checkout-tab')">
+        <button type="button" class="pharmacy-tab-btn" id="tab-btn-checkout" onclick="switchPharmacyTab('checkout-tab')">
             <i class="ph-bold ph-shopping-cart-simple"></i> Quick Checkout Counter
         </button>
     </div>
-    <div style="display: flex; gap: 0.75rem; align-items: center;">
-        <button class="btn btn-outline btn-sm" onclick="openTab(event, 'checkout-tab'); startScanner();">
+    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+        <button type="button" class="btn btn-outline btn-sm" onclick="switchPharmacyTab('checkout-tab'); startScanner();" style="display: inline-flex; align-items: center; gap: 0.4rem;">
             <i class="ph-bold ph-qr-code"></i> Scan Rx QR
         </button>
-        <button class="btn btn-primary btn-sm" onclick="openAddStockModal();">
+        <button type="button" class="btn btn-primary btn-sm" onclick="openAddStockModal();" style="display: inline-flex; align-items: center; gap: 0.4rem;">
             <i class="ph-bold ph-plus-circle"></i> Add Stock Item
         </button>
     </div>
 </div>
+
+<!-- Shared Inventory Datalist for Slot Autocomplete -->
+<datalist id="inventory-datalist">
+    {% for item in inventory %}
+        <option value="{{ item.medicine_name }}">{{ item.medicine_name }} (Stock: {{ item.stock_level }}, ₹{{ "%.2f"|format(item.price) }})</option>
+    {% endfor %}
+</datalist>
 
 <!-- ================= TAB: STOCK INVENTORY ================= -->
 <div id="inventory-tab" class="tab-content active">
@@ -318,53 +327,101 @@
 
 <!-- ================= TAB: QUICK CHECKOUT ================= -->
 <div id="checkout-tab" class="tab-content">
-    <div class="card" style="max-width: 600px; margin: 0 auto;">
-        <h2 class="card-title">
-            <span><i class="ph-bold ph-shopping-cart-simple card-title-icon"></i> Fast Sale Checkout</span>
-        </h2>
-        
-        <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; background: rgba(20, 184, 166, 0.05); border: 1px dashed var(--card-border); border-radius: 12px; padding: 1rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <i class="ph-bold ph-qr-code" style="font-size: 2rem; color: var(--accent);"></i>
-                <div>
-                    <strong style="color: var(--text-primary); font-size: 0.95rem;">Webcam QR Scanner</strong>
-                    <div style="font-size: 0.8rem; color: var(--text-secondary);">Scan a patient's mobile prescription QR code directly.</div>
-                </div>
+    <div class="card" style="max-width: 980px; margin: 0 auto; padding: 2rem 2.25rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--card-border); padding-bottom: 1rem;">
+            <div>
+                <h2 class="card-title" style="margin-bottom: 0.25rem;">
+                    <span><i class="ph-bold ph-shopping-cart-simple card-title-icon" style="color: var(--accent);"></i> Multi-Medicine Dispensing Counter</span>
+                </h2>
+                <p style="color: var(--text-secondary); font-size: 0.88rem; margin: 0;">
+                    Scan digital prescriptions or add medicine slots. Every prescribed medicine is allocated an equal slot for FIFO stock validation and checkout.
+                </p>
             </div>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="startScanner()" style="box-shadow: 0 4px 15px rgba(20, 184, 166, 0.3);">
-                <i class="ph-bold ph-camera"></i> Scan QR Code
+            <button type="button" class="btn btn-secondary btn-sm" onclick="startScanner()" style="box-shadow: 0 4px 15px rgba(20, 184, 166, 0.25); display: inline-flex; align-items: center; gap: 0.45rem;">
+                <i class="ph-bold ph-camera"></i> Scan Patient Rx QR
             </button>
         </div>
-        
-        <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
-            Quickly deduct medicine stock on sale checkout. This tool automatically manages FIFO (First-In, First-Out) expiration batches and alerts you if expiring items are being sold.
-        </p>
-        
-        <form id="checkout-form" onsubmit="submitCheckout(event)">
-            <div class="form-group">
-                <label for="checkout_medicine_name">Medicine Name</label>
-                <input type="text" id="checkout_medicine_name" name="medicine_name" class="form-control" required>
-                <!-- Quick list helper for demo -->
-                <div style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                    {% for item in inventory %}
-                        <button type="button" class="btn btn-outline btn-sm" onclick="selectCheckoutMed('{{ item.medicine_name }}')" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
-                            {{ item.medicine_name }}
-                        </button>
-                    {% endfor %}
+
+        <!-- Scanned Prescription Metadata Card (Revealed upon QR scan) -->
+        <div id="scanned-rx-card" style="display: none; background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 12px; padding: 1.25rem; margin-bottom: 1.75rem; animation: fadeIn 0.3s ease;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem;">
+                        <span class="badge badge-success" style="font-size: 0.75rem; text-transform: none;">
+                            <i class="ph-bold ph-check-circle"></i> Digital Prescription Scanned
+                        </span>
+                        <span style="font-family: monospace; font-size: 0.85rem; color: var(--text-secondary);" id="scanned-rx-code"></span>
+                    </div>
+                    <h3 style="font-size: 1.2rem; color: var(--text-primary); margin: 0 0 0.35rem 0;" id="scanned-rx-patient"></h3>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);" id="scanned-rx-meta"></div>
+                    <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.35rem; font-style: italic;" id="scanned-rx-notes"></div>
+                </div>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <a href="#" id="scanned-rx-link" target="_blank" class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                        <i class="ph-bold ph-eye"></i> View Full Sheet
+                    </a>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="clearScannedPrescription()" title="Clear scanned prescription" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
+                        <i class="ph-bold ph-x"></i> Clear
+                    </button>
                 </div>
             </div>
-            
-            <div class="form-group" style="margin-bottom: 2rem;">
-                <label for="checkout_quantity">Quantity (Number of units sold)</label>
-                <input type="number" id="checkout_quantity" name="quantity" class="form-control" value="10" min="1" required>
+        </div>
+
+        <!-- Checkout Header Toolbar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="font-weight: 650; font-size: 1rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                <i class="ph-bold ph-pill" style="color: var(--primary);"></i>
+                Prescribed Medicine Slots (<span id="slots-count">1</span>)
             </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="addManualCheckoutSlot()" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <i class="ph-bold ph-plus"></i> Add Another Medicine Slot
+                </button>
+            </div>
+        </div>
+
+        <!-- Checkout Form with Equal Slots -->
+        <form id="multi-checkout-form" onsubmit="submitAllSlotsCheckout(event)">
+            <input type="hidden" id="checkout-prescription-uuid" name="prescription_uuid" value="">
             
-            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.9rem;">
-                <i class="ph-bold ph-barcode"></i> Complete Sale & Deduct Inventory
-            </button>
+            <div id="checkout-slots-container" class="checkout-slots-wrapper">
+                <!-- Slots will be rendered here; Slot 1 is generated by JS on load -->
+            </div>
+
+            <!-- Global Result Notification Area -->
+            <div id="checkout-result" style="margin-bottom: 1.5rem; display: none;"></div>
+
+            <!-- Footer Action Controls -->
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--card-border); padding-top: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                    Batches deducted automatically in FIFO order (oldest expiration batches first).
+                </div>
+                <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="resetCheckoutSlots()">
+                        Reset All Slots
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="btn-submit-all-checkout" style="padding: 0.7rem 1.8rem; font-weight: 650; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3); display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <i class="ph-bold ph-barcode"></i> Complete Sale & Deduct All Medicines
+                    </button>
+                </div>
+            </div>
         </form>
-        
-        <div id="checkout-result" style="margin-top: 1.5rem; display: none;"></div>
+
+        <!-- Quick Inventory Helper Section -->
+        <div style="margin-top: 2rem; border-top: 1px dashed var(--card-border); padding-top: 1.25rem;">
+            <div style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.6rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                Quick Add In-Stock Items to Checkout:
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                {% for item in inventory %}
+                    {% if item.stock_level > 0 %}
+                        <button type="button" class="btn btn-outline btn-sm" onclick="quickAddInventoryToSlot('{{ item.medicine_name|replace("'", "\\'") }}', {{ item.stock_level }}, {{ item.price }})" style="padding: 0.3rem 0.65rem; font-size: 0.8rem; border-radius: 9999px;">
+                            + {{ item.medicine_name }} <span style="opacity: 0.7; font-size: 0.72rem;">(Stock: {{ item.stock_level }})</span>
+                        </button>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
@@ -418,39 +475,314 @@
         }
     }
 
+    // Embedded Pharmacy Inventory Cache for Instant Offline-Resilient Lookup
+    const clientInventory = [
+        {% for item in inventory %}
+        {
+            id: {{ item.id }},
+            name: {{ item.medicine_name|tojson }},
+            stock: {{ item.stock_level }},
+            price: {{ item.price }},
+            batch: {{ item.batch_number|tojson }},
+            expiry: {{ item.expiry_date.strftime('%d %b %Y')|tojson }},
+            is_expiring_soon: {{ 'true' if item.is_expiring_soon else 'false' }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    let slotCounter = 0;
+
+    function getStockInfoForMedicine(medName) {
+        if (!medName) return { totalStock: null, unitPrice: 0, batches: [] };
+        const cleanName = medName.toLowerCase().trim();
+        const matches = clientInventory.filter(it => 
+            it.name.toLowerCase().trim() === cleanName ||
+            it.name.toLowerCase().includes(cleanName) ||
+            cleanName.includes(it.name.toLowerCase())
+        );
+        const totalStock = matches.reduce((sum, it) => sum + it.stock, 0);
+        const unitPrice = matches.length > 0 ? matches[0].price : 0;
+        return { totalStock, unitPrice, matches };
+    }
+
+    function createSlotHTML(slotIndex, medData) {
+        const medName = medData.medicine_name || '';
+        const dosage = medData.dosage || '';
+        const frequency = medData.frequency || '';
+        const duration = medData.duration || '';
+        const instructions = medData.instructions || '';
+        const qty = medData.quantity || 10;
+        
+        let availableStock = medData.available_stock !== undefined ? medData.available_stock : null;
+        let unitPrice = medData.unit_price || 0;
+        
+        if (availableStock === null && medName) {
+            const stockCheck = getStockInfoForMedicine(medName);
+            availableStock = stockCheck.totalStock;
+            if (!unitPrice) unitPrice = stockCheck.unitPrice;
+        }
+
+        let stockBadgeHTML = '';
+        if (availableStock !== null) {
+            if (availableStock > 0) {
+                stockBadgeHTML = `<span class="badge badge-success" style="font-size: 0.75rem;"><i class="ph-bold ph-check"></i> In Stock (${availableStock} units)</span>`;
+            } else {
+                stockBadgeHTML = `<span class="badge badge-danger" style="font-size: 0.75rem;"><i class="ph-bold ph-warning"></i> Out of Stock</span>`;
+            }
+        }
+
+        let clinicalPills = '';
+        if (dosage || frequency || duration || instructions) {
+            clinicalPills = `
+                <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; margin-top: 0.4rem; font-size: 0.78rem; color: var(--text-secondary);">
+                    ${dosage ? `<span style="background: rgba(255,255,255,0.05); padding: 0.15rem 0.45rem; border-radius: 4px; border: 1px solid var(--card-border);">Dosage: <strong style="color: var(--text-primary);">${dosage}</strong></span>` : ''}
+                    ${frequency ? `<span style="background: rgba(255,255,255,0.05); padding: 0.15rem 0.45rem; border-radius: 4px; border: 1px solid var(--card-border);">Frequency: <strong style="color: var(--text-primary);">${frequency}</strong></span>` : ''}
+                    ${duration ? `<span style="background: rgba(255,255,255,0.05); padding: 0.15rem 0.45rem; border-radius: 4px; border: 1px solid var(--card-border);">Duration: <strong style="color: var(--text-primary);">${duration}</strong></span>` : ''}
+                    ${instructions ? `<span style="background: rgba(255,255,255,0.05); padding: 0.15rem 0.45rem; border-radius: 4px; border: 1px solid var(--card-border);">Advice: <em>${instructions}</em></span>` : ''}
+                </div>
+            `;
+        }
+
+        return `
+            <div class="checkout-slot-card ${availableStock === 0 ? 'out-of-stock' : 'in-stock'}" id="slot-card-${slotIndex}">
+                <div class="checkout-slot-header">
+                    <div>
+                        <div class="checkout-slot-title">
+                            <span class="badge badge-primary" style="font-size: 0.75rem; padding: 0.2rem 0.55rem;">Prescribed Slot #${slotIndex}</span>
+                            <span style="color: var(--text-primary); font-weight: 700;">${medName || 'Medicine Item'}</span>
+                            <span id="slot-badge-${slotIndex}">${stockBadgeHTML}</span>
+                        </div>
+                        ${clinicalPills}
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="deductSingleSlot(${slotIndex})" title="Deduct only this medicine item" style="font-size: 0.8rem; padding: 0.35rem 0.75rem; color: var(--primary); border-color: rgba(2, 132, 199, 0.3); display: inline-flex; align-items: center; gap: 0.3rem;">
+                            <i class="ph-bold ph-check"></i> Deduct Item
+                        </button>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="removeSlot(${slotIndex})" title="Remove this medicine slot" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3); padding: 0.35rem 0.55rem;">
+                            <i class="ph-bold ph-trash"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="checkout-slot-grid">
+                    <div>
+                        <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">Medicine Name</label>
+                        <input type="text" name="medicine_name[]" id="slot-med-name-${slotIndex}" class="form-control" value="${medName}" placeholder="e.g. Paracetamol 650mg" list="inventory-datalist" oninput="onSlotMedNameChange(${slotIndex})" onchange="onSlotMedNameChange(${slotIndex})" required>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">Available Inventory (FIFO)</label>
+                        <div id="slot-stock-info-${slotIndex}" style="font-size: 0.82rem; font-weight: 600; padding: 0.55rem 0.75rem; background: rgba(255,255,255,0.03); border-radius: 8px; border: 1px solid var(--card-border); color: ${availableStock === 0 ? 'var(--danger)' : 'var(--text-primary)'};">
+                            ${availableStock !== null ? `${availableStock} units in stock` : 'Select or type medicine'}
+                        </div>
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">Quantity to Deduct</label>
+                        <input type="number" name="quantity[]" id="slot-qty-${slotIndex}" class="form-control" value="${qty}" min="1" required style="font-weight: 650; text-align: center;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">Unit Price</label>
+                        <div id="slot-price-${slotIndex}" style="font-size: 0.95rem; font-weight: 650; color: var(--text-primary); padding: 0.55rem 0;">
+                            ${unitPrice ? `₹${unitPrice.toFixed(2)}` : '₹--'}
+                        </div>
+                    </div>
+                    <div style="text-align: right; min-width: 90px;">
+                        <div id="slot-status-indicator-${slotIndex}" style="font-size: 0.8rem; font-weight: 600;"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function addManualCheckoutSlot(initialData = {}) {
+        slotCounter++;
+        const container = document.getElementById('checkout-slots-container');
+        if (!container) return;
+        
+        container.insertAdjacentHTML('beforeend', createSlotHTML(slotCounter, initialData));
+        updateSlotsCount();
+        
+        // Scroll newly added slot into view if added manually
+        if (!initialData.medicine_name) {
+            const newSlot = document.getElementById(`slot-card-${slotCounter}`);
+            if (newSlot) newSlot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    function removeSlot(slotIndex) {
+        const slot = document.getElementById(`slot-card-${slotIndex}`);
+        if (!slot) return;
+        
+        const container = document.getElementById('checkout-slots-container');
+        if (container.children.length <= 1) {
+            // Keep at least one slot
+            slot.remove();
+            addManualCheckoutSlot();
+        } else {
+            slot.style.transition = 'all 0.3s ease';
+            slot.style.opacity = '0';
+            slot.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                slot.remove();
+                updateSlotsCount();
+            }, 300);
+        }
+    }
+
+    function updateSlotsCount() {
+        const container = document.getElementById('checkout-slots-container');
+        const badge = document.getElementById('slots-count');
+        if (container && badge) {
+            badge.textContent = container.children.length.toString();
+        }
+    }
+
+    function onSlotMedNameChange(slotIndex) {
+        const nameInput = document.getElementById(`slot-med-name-${slotIndex}`);
+        const stockDiv = document.getElementById(`slot-stock-info-${slotIndex}`);
+        const priceDiv = document.getElementById(`slot-price-${slotIndex}`);
+        const badgeSpan = document.getElementById(`slot-badge-${slotIndex}`);
+        const card = document.getElementById(`slot-card-${slotIndex}`);
+        
+        if (!nameInput || !stockDiv) return;
+        const val = (nameInput.value || '').trim();
+        const info = getStockInfoForMedicine(val);
+        
+        if (info.totalStock !== null) {
+            stockDiv.textContent = `${info.totalStock} units in stock`;
+            priceDiv.textContent = info.unitPrice ? `₹${info.unitPrice.toFixed(2)}` : '₹--';
+            
+            if (info.totalStock > 0) {
+                stockDiv.style.color = 'var(--text-primary)';
+                if (badgeSpan) badgeSpan.innerHTML = `<span class="badge badge-success" style="font-size: 0.75rem;"><i class="ph-bold ph-check"></i> In Stock (${info.totalStock} units)</span>`;
+                if (card) {
+                    card.classList.remove('out-of-stock');
+                    card.classList.add('in-stock');
+                }
+            } else {
+                stockDiv.style.color = 'var(--danger)';
+                if (badgeSpan) badgeSpan.innerHTML = `<span class="badge badge-danger" style="font-size: 0.75rem;"><i class="ph-bold ph-warning"></i> Out of Stock</span>`;
+                if (card) {
+                    card.classList.remove('in-stock');
+                    card.classList.add('out-of-stock');
+                }
+            }
+        } else {
+            stockDiv.textContent = 'Medicine not found in inventory';
+            stockDiv.style.color = 'var(--danger)';
+            if (badgeSpan) badgeSpan.innerHTML = `<span class="badge badge-danger" style="font-size: 0.75rem;">Not in Inventory</span>`;
+            if (priceDiv) priceDiv.textContent = '₹--';
+            if (card) {
+                card.classList.remove('in-stock');
+                card.classList.add('out-of-stock');
+            }
+        }
+    }
+
+    function quickAddInventoryToSlot(medName, stock, price) {
+        // Look for an empty slot or add a new one
+        const container = document.getElementById('checkout-slots-container');
+        const emptySlots = container.querySelectorAll('.checkout-slot-card');
+        let filled = false;
+        
+        emptySlots.forEach(slot => {
+            const input = slot.querySelector('input[name="medicine_name[]"]');
+            if (input && !input.value.trim() && !filled) {
+                input.value = medName;
+                const slotId = slot.id.replace('slot-card-', '');
+                onSlotMedNameChange(slotId);
+                filled = true;
+            }
+        });
+
+        if (!filled) {
+            addManualCheckoutSlot({
+                medicine_name: medName,
+                available_stock: stock,
+                unit_price: price,
+                quantity: 10
+            });
+        }
+        
+        switchPharmacyTab('checkout-tab');
+    }
+
+    function resetCheckoutSlots() {
+        const container = document.getElementById('checkout-slots-container');
+        container.innerHTML = '';
+        slotCounter = 0;
+        addManualCheckoutSlot();
+        const resultDiv = document.getElementById('checkout-result');
+        if (resultDiv) resultDiv.style.display = 'none';
+    }
+
+    function clearScannedPrescription() {
+        document.getElementById('scanned-rx-card').style.display = 'none';
+        document.getElementById('checkout-prescription-uuid').value = '';
+        resetCheckoutSlots();
+    }
+
     function fetchPrescriptionDetails(uuid) {
         fetch(`/prescription/api/${uuid}`)
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
-                    if (data.items.length > 0) {
-                        document.getElementById('checkout_medicine_name').value = data.items[0].medicine_name;
-                        
-                        const resultDiv = document.getElementById('checkout-result');
-                        resultDiv.style.display = 'block';
-                        resultDiv.className = 'alert alert-success';
-                        
-                        let medList = data.items.map(i => `${i.medicine_name} (${i.dosage})`).join(', ');
-                        resultDiv.innerHTML = `
-                            <div style="display: flex; flex-direction: column; gap: 0.75rem; width: 100%;">
-                                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                    <i class="ph-bold ph-check-circle" style="font-size: 1.5rem; color: var(--success); flex-shrink: 0;"></i>
-                                    <div>
-                                        <strong>Prescription QR Code Scanned!</strong>
-                                        <div style="font-size: 0.85rem; margin-top: 0.25rem;">
-                                            Patient: <strong>${data.patient_name}</strong> | Medications: <strong>${medList}</strong>. 
-                                            Stock checkout loaded for <strong>${data.items[0].medicine_name}</strong>.
-                                        </div>
-                                    </div>
-                                </div>
-                                <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.75rem; display: flex;">
-                                    <a href="/prescription/view/${uuid}" target="_blank" class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.4rem 0.8rem; font-size: 0.8rem; border-color: var(--secondary); color: var(--secondary);">
-                                        <i class="ph-bold ph-eye"></i> View Full Prescription Sheet
-                                    </a>
-                                </div>
-                            </div>
-                        `;
+                    document.getElementById('checkout-prescription-uuid').value = uuid;
+                    
+                    const rxCard = document.getElementById('scanned-rx-card');
+                    rxCard.style.display = 'block';
+                    document.getElementById('scanned-rx-code').textContent = `Prescription #${uuid.substring(0, 8)}`;
+                    document.getElementById('scanned-rx-patient').textContent = `Patient: ${data.patient_name}`;
+                    document.getElementById('scanned-rx-meta').innerHTML = `
+                        Age: <strong>${data.patient_age || 'N/A'}</strong> &bull; Contact: <strong>${data.patient_contact || 'N/A'}</strong> &bull; Prescribed Medicines: <strong>${data.items.length} detected</strong>
+                    `;
+                    if (data.instructions) {
+                        document.getElementById('scanned-rx-notes').textContent = `Doctor Advice: "${data.instructions}"`;
+                    } else {
+                        document.getElementById('scanned-rx-notes').textContent = '';
                     }
+                    document.getElementById('scanned-rx-link').href = `/prescription/view/${uuid}`;
+
+                    // Load EVERY prescribed medicine into an equal slot!
+                    const container = document.getElementById('checkout-slots-container');
+                    container.innerHTML = '';
+                    slotCounter = 0;
+
+                    data.items.forEach(item => {
+                        slotCounter++;
+                        let defQty = 10;
+                        if (item.duration && item.duration.includes('day')) {
+                            const days = parseInt(item.duration, 10);
+                            if (!isNaN(days)) {
+                                let freqMultiplier = 2;
+                                if (item.frequency) {
+                                    const f = item.frequency.toLowerCase();
+                                    if (f.includes('od') || f.includes('once')) freqMultiplier = 1;
+                                    else if (f.includes('bd') || f.includes('twice')) freqMultiplier = 2;
+                                    else if (f.includes('tid') || f.includes('three') || f.includes('tds')) freqMultiplier = 3;
+                                    else if (f.includes('qid') || f.includes('four')) freqMultiplier = 4;
+                                }
+                                defQty = Math.max(1, days * freqMultiplier);
+                            }
+                        }
+                        item.quantity = defQty;
+                        container.insertAdjacentHTML('beforeend', createSlotHTML(slotCounter, item));
+                    });
+
+                    updateSlotsCount();
+                    switchPharmacyTab('checkout-tab');
+
+                    const resultDiv = document.getElementById('checkout-result');
+                    resultDiv.style.display = 'block';
+                    resultDiv.className = 'alert alert-info';
+                    resultDiv.innerHTML = `
+                        <i class="ph-bold ph-check-circle" style="font-size: 1.4rem;"></i>
+                        <div>
+                            <strong>${data.items.length} Prescribed Medicine(s) Detected!</strong>
+                            <div style="font-size: 0.85rem; margin-top: 0.25rem;">
+                                Every item from patient <strong>${data.patient_name}</strong>'s prescription has been allocated an equal slot below. Verify inventory and complete checkout.
+                            </div>
+                        </div>
+                    `;
                 } else {
                     alert(data.message || "Failed to load prescription.");
                 }
@@ -459,23 +791,179 @@
                 alert("Error loading prescription details: " + err);
             });
     }
-    // Tab switching logic
-    function openTab(evt, tabName) {
-        let i, tabcontent, tablinks;
-        tabcontent = document.getElementsByClassName("tab-content");
-        for (i = 0; i < tabcontent.length; i++) {
-            tabcontent[i].classList.remove("active");
+
+    // Submit single slot checkout
+    function deductSingleSlot(slotIndex) {
+        const medNameInput = document.getElementById(`slot-med-name-${slotIndex}`);
+        const qtyInput = document.getElementById(`slot-qty-${slotIndex}`);
+        const statusSpan = document.getElementById(`slot-status-indicator-${slotIndex}`);
+        const resultDiv = document.getElementById('checkout-result');
+        
+        if (!medNameInput || !qtyInput) return;
+        const medName = medNameInput.value.trim();
+        const qty = parseInt(qtyInput.value, 10);
+
+        if (!medName) {
+            alert("Please enter a medicine name for this slot.");
+            return;
         }
-        tablinks = document.getElementsByClassName("tab-btn");
-        for (i = 0; i < tablinks.length; i++) {
-            tablinks[i].classList.remove("active");
+        if (!qty || qty <= 0) {
+            alert("Please specify a quantity of at least 1 unit.");
+            return;
         }
-        document.getElementById(tabName).classList.add("active");
-        evt.currentTarget.classList.add("active");
+
+        const formData = new FormData();
+        formData.append('medicine_name', medName);
+        formData.append('quantity', qty);
+        
+        const rxUuid = document.getElementById('checkout-prescription-uuid').value;
+        if (rxUuid) formData.append('prescription_uuid', rxUuid);
+
+        if (statusSpan) statusSpan.innerHTML = '<i class="ph-bold ph-spinner ph-spin" style="color: var(--primary);"></i> Deducting...';
+
+        fetch('/checkout', {
+            method: 'POST',
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            resultDiv.style.display = 'block';
+            if (data.success) {
+                resultDiv.className = 'alert alert-success';
+                resultDiv.innerHTML = `<i class="ph-bold ph-check-circle" style="font-size: 1.4rem;"></i> <div><strong>${medName}:</strong> ${data.message}</div>`;
+                if (statusSpan) statusSpan.innerHTML = '<span style="color: var(--secondary); font-weight: 700;"><i class="ph-bold ph-check-circle"></i> Deducted</span>';
+                
+                // Update client cache and live stock display
+                const match = clientInventory.find(i => i.name.toLowerCase() === medName.toLowerCase());
+                if (match) {
+                    match.stock = Math.max(0, match.stock - qty);
+                    onSlotMedNameChange(slotIndex);
+                }
+            } else {
+                resultDiv.className = 'alert alert-danger';
+                resultDiv.innerHTML = `<i class="ph-bold ph-warning-octagon" style="font-size: 1.4rem;"></i> <div><strong>${medName}:</strong> ${data.message}</div>`;
+                if (statusSpan) statusSpan.innerHTML = '<span style="color: var(--danger);"><i class="ph-bold ph-x-circle"></i> Failed</span>';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'alert alert-danger';
+            resultDiv.innerHTML = `<i class="ph-bold ph-warning-octagon"></i> An error occurred while deducting item.`;
+            if (statusSpan) statusSpan.innerHTML = '';
+        });
     }
 
-    // Set default value for adding stock item expiry (today + 1 year)
+    // Submit all slots batch checkout
+    function submitAllSlotsCheckout(e) {
+        e.preventDefault();
+        const form = document.getElementById('multi-checkout-form');
+        const submitBtn = document.getElementById('btn-submit-all-checkout');
+        const resultDiv = document.getElementById('checkout-result');
+
+        const medNameInputs = form.querySelectorAll('input[name="medicine_name[]"]');
+        const qtyInputs = form.querySelectorAll('input[name="quantity[]"]');
+
+        const items = [];
+        for (let i = 0; i < medNameInputs.length; i++) {
+            const name = medNameInputs[i].value.trim();
+            const qty = parseInt(qtyInputs[i].value, 10);
+            if (name && qty > 0) {
+                items.push({ medicine_name: name, quantity: qty });
+            }
+        }
+
+        if (items.length === 0) {
+            alert("Please enter at least one medicine with valid quantity to checkout.");
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Processing Multi-Medicine Checkout...';
+
+        const payload = {
+            items: items,
+            prescription_uuid: document.getElementById('checkout-prescription-uuid').value || null
+        };
+
+        fetch('/checkout', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="ph-bold ph-barcode"></i> Complete Sale & Deduct All Medicines';
+            resultDiv.style.display = 'block';
+
+            if (data.success) {
+                resultDiv.className = 'alert alert-success';
+                resultDiv.innerHTML = `
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; width: 100%;">
+                        <div style="display: flex; align-items: center; gap: 0.6rem;">
+                            <i class="ph-bold ph-check-circle" style="font-size: 1.5rem; color: var(--success); flex-shrink: 0;"></i>
+                            <strong>All Prescribed Medicines Successfully Deducted!</strong>
+                        </div>
+                        <div style="font-size: 0.88rem; line-height: 1.5;">${data.message}</div>
+                    </div>
+                `;
+
+                // Mark all slots as completed
+                const slots = document.querySelectorAll('.checkout-slot-card');
+                slots.forEach((slot, idx) => {
+                    const statusSpan = slot.querySelector('.slot-status-indicator, [id^="slot-status-indicator-"]');
+                    if (statusSpan) {
+                        statusSpan.innerHTML = '<span style="color: var(--secondary); font-weight: 700;"><i class="ph-bold ph-check-circle"></i> Deducted</span>';
+                    }
+                });
+            } else {
+                resultDiv.className = 'alert alert-danger';
+                resultDiv.innerHTML = `<i class="ph-bold ph-warning-octagon" style="font-size: 1.4rem;"></i> <div>${data.message}</div>`;
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="ph-bold ph-barcode"></i> Complete Sale & Deduct All Medicines';
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'alert alert-danger';
+            resultDiv.innerHTML = `<i class="ph-bold ph-warning-octagon"></i> Error processing checkout.`;
+        });
+    }
+
+    // Fixed Robust Tab Switching (No Slidebars/Scrollbars)
+    function switchPharmacyTab(tabId) {
+        const tabcontents = document.getElementsByClassName("tab-content");
+        for (let i = 0; i < tabcontents.length; i++) {
+            tabcontents[i].classList.remove("active");
+        }
+        
+        const tablinks = document.getElementsByClassName("pharmacy-tab-btn");
+        for (let i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+        }
+
+        const target = document.getElementById(tabId);
+        if (target) target.classList.add("active");
+
+        const shortName = tabId.replace('-tab', '');
+        const activeBtn = document.getElementById(`tab-btn-${shortName}`);
+        if (activeBtn) activeBtn.classList.add("active");
+    }
+
+    // Alias for backwards compatibility
+    function openTab(evt, tabName) {
+        switchPharmacyTab(tabName);
+    }
+
+    // Initialize initial slot and defaults on page load
     document.addEventListener("DOMContentLoaded", function() {
+        const container = document.getElementById('checkout-slots-container');
+        if (container && container.children.length === 0) {
+            addManualCheckoutSlot();
+        }
+
         const today = new Date();
         const nextYear = new Date(today.getTime() + 365 * 24 * 60 * 60 * 1000);
         const yyyy = nextYear.getFullYear();
@@ -483,7 +971,7 @@
         let dd = nextYear.getDate();
         if (mm < 10) mm = '0' + mm;
         if (dd < 10) dd = '0' + dd;
-        const expiryInput = document.getElementById('expiry_date');
+        const expiryInput = document.getElementById('modal_expiry_date');
         if (expiryInput) expiryInput.value = `${yyyy}-${mm}-${dd}`;
     });
 
@@ -505,49 +993,6 @@
         .catch(err => {
             console.error(err);
             alert("An error occurred while deleting the inventory item.");
-        });
-    }
-
-    // Helper to click-fill checkout name
-    function selectCheckoutMed(name) {
-        document.getElementById('checkout_medicine_name').value = name;
-    }
-
-    // Submit sale checkout AJAX
-    function submitCheckout(e) {
-        e.preventDefault();
-        
-        const form = document.getElementById('checkout-form');
-        const formData = new FormData(form);
-        const resultDiv = document.getElementById('checkout-result');
-        
-        fetch('/checkout', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            resultDiv.style.display = 'block';
-            if (data.success) {
-                resultDiv.className = 'alert alert-success';
-                resultDiv.innerHTML = `<i class="ph-bold ph-check-circle" style="font-size: 1.5rem;"></i> <div>${data.message}</div>`;
-                // Reset checkout quantity
-                document.getElementById('checkout_quantity').value = 10;
-                
-                // Alert warning if expiration batch is flagged
-                if (data.message.includes("Note:")) {
-                    resultDiv.className = 'alert alert-warning';
-                }
-            } else {
-                resultDiv.className = 'alert alert-danger';
-                resultDiv.innerHTML = `<i class="ph-bold ph-warning-octagon" style="font-size: 1.5rem;"></i> <div>${data.message}</div>`;
-            }
-        })
-        .catch(err => {
-            console.error(err);
-            resultDiv.style.display = 'block';
-            resultDiv.className = 'alert alert-danger';
-            resultDiv.innerHTML = `<i class="ph-bold ph-warning-octagon"></i> An error occurred during checkout.`;
         });
     }
 

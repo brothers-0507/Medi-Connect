@@ -728,6 +728,34 @@ def delete_prescription(rx_id):
     flash(f'Prescription for {patient_name} deleted successfully.', 'success')
     return redirect(url_for('doctor_dashboard'))
 
+def categorize_time_slot(time_str):
+    """Categorizes a time string (e.g. '08:00', '14:00', '20:00', 'Morning') into a routine slot key."""
+    if not time_str:
+        return 'morning'
+    t_lower = time_str.lower().strip()
+    if any(k in t_lower for k in ['morning', 'breakfast', 'am']):
+        return 'morning'
+    if any(k in t_lower for k in ['afternoon', 'lunch', 'noon', 'midday']):
+        return 'afternoon'
+    if any(k in t_lower for k in ['evening', 'dinner', 'sunset']):
+        return 'evening'
+    if any(k in t_lower for k in ['night', 'bedtime', 'sleep', 'hs']):
+        return 'night'
+    
+    try:
+        parts = t_lower.split(':')
+        hour = int(parts[0])
+        if 5 <= hour < 12:
+            return 'morning'
+        elif 12 <= hour < 17:
+            return 'afternoon'
+        elif 17 <= hour < 21:
+            return 'evening'
+        else:
+            return 'night'
+    except Exception:
+        return 'morning'
+
 # ----------------- PATIENT PORTAL -----------------
 
 @app.route('/dashboard/patient')
@@ -764,26 +792,158 @@ def patient_dashboard():
         db.func.date(TrackerLog.taken_at) == today_date
     ).all()
     
-    # Map tracker schedules to logs for UI checkboxes
+    # Cache doctor instructions from prescription items for realistic meal context
+    med_instructions_map = {}
+    for rx in prescriptions:
+        for it in rx.items:
+            if it.instructions and it.instructions.strip():
+                med_instructions_map[it.medicine_name.lower().strip()] = it.instructions.strip()
+
+    # Define the 4 Time-of-Day Routine Slots
+    routine_slots = {
+        'morning': {
+            'key': 'morning',
+            'label': 'Morning Routine',
+            'sublabel': 'Breakfast (06:00 - 11:59 AM)',
+            'icon': 'ph-sun-horizon',
+            'color': '#f59e0b',
+            'bg_color': 'rgba(245, 158, 11, 0.08)',
+            'border_color': 'rgba(245, 158, 11, 0.3)',
+            'items': [],
+            'total_doses': 0,
+            'taken_doses': 0
+        },
+        'afternoon': {
+            'key': 'afternoon',
+            'label': 'Afternoon Routine',
+            'sublabel': 'Lunch (12:00 - 04:59 PM)',
+            'icon': 'ph-sun',
+            'color': '#0284c7',
+            'bg_color': 'rgba(2, 132, 199, 0.08)',
+            'border_color': 'rgba(2, 132, 199, 0.3)',
+            'items': [],
+            'total_doses': 0,
+            'taken_doses': 0
+        },
+        'evening': {
+            'key': 'evening',
+            'label': 'Evening Routine',
+            'sublabel': 'Dinner (05:00 - 08:59 PM)',
+            'icon': 'ph-cloud-sun',
+            'color': '#8b5cf6',
+            'bg_color': 'rgba(139, 92, 246, 0.08)',
+            'border_color': 'rgba(139, 92, 246, 0.3)',
+            'items': [],
+            'total_doses': 0,
+            'taken_doses': 0
+        },
+        'night': {
+            'key': 'night',
+            'label': 'Night / Bedtime',
+            'sublabel': 'Before Sleep (09:00 PM - 05:00 AM)',
+            'icon': 'ph-moon-stars',
+            'color': '#10b981',
+            'bg_color': 'rgba(16, 185, 129, 0.08)',
+            'border_color': 'rgba(16, 185, 129, 0.3)',
+            'items': [],
+            'total_doses': 0,
+            'taken_doses': 0
+        }
+    }
+
+    # Map tracker schedules to routine slots and legacy checklist
     checklist = []
+    now_hour = datetime.now().hour
+    if 5 <= now_hour < 12:
+        current_slot_key = 'morning'
+    elif 12 <= now_hour < 17:
+        current_slot_key = 'afternoon'
+    elif 17 <= now_hour < 21:
+        current_slot_key = 'evening'
+    else:
+        current_slot_key = 'night'
+
     for sched in schedules:
         if sched.start_date <= today_date <= sched.end_date:
-            # Check how many times today we logged this schedule
             times = [t.strip() for t in sched.time_of_day.split(',') if t.strip()]
             sched_logs = [l for l in today_logs if l.schedule_id == sched.id]
+            logged_count = len(sched_logs)
             
             checklist.append({
                 'schedule': sched,
                 'times': times,
-                'logged_count': len(sched_logs),
+                'logged_count': logged_count,
                 'total_needed': len(times)
             })
+
+            # Retrieve meal instruction
+            m_lower = sched.medicine_name.lower().strip()
+            instruction_text = med_instructions_map.get(m_lower)
+            if not instruction_text:
+                if 'dolo' in m_lower or 'augmentin' in m_lower or 'paracetamol' in m_lower:
+                    instruction_text = 'Take after food with water'
+                elif 'pan' in m_lower or 'pantocid' in m_lower:
+                    instruction_text = 'Take 30 mins before breakfast'
+                elif 'montair' in m_lower or 'cetirizine' in m_lower:
+                    instruction_text = 'Take at night after food'
+                else:
+                    instruction_text = 'Take with water as advised'
+
+            # Populate routine slot items
+            for idx, t in enumerate(times):
+                slot_key = categorize_time_slot(t)
+                is_taken = idx < logged_count
+                taken_time = sched_logs[idx].taken_at.strftime('%I:%M %p') if is_taken and idx < len(sched_logs) else None
+                
+                # Determine status
+                if is_taken:
+                    status = 'taken'
+                elif idx == logged_count:
+                    status = 'due'
+                else:
+                    status = 'upcoming'
+
+                entry = {
+                    'schedule_id': sched.id,
+                    'medicine_name': sched.medicine_name,
+                    'dosage': sched.dosage,
+                    'frequency': sched.frequency or 'Daily',
+                    'scheduled_time': t,
+                    'dose_index': idx,
+                    'is_taken': is_taken,
+                    'taken_time': taken_time,
+                    'status': status,
+                    'instructions': instruction_text,
+                    'current_stock': sched.current_stock,
+                    'is_low_stock': sched.current_stock <= sched.refill_alert_threshold
+                }
+                routine_slots[slot_key]['items'].append(entry)
+                routine_slots[slot_key]['total_doses'] += 1
+                if is_taken:
+                    routine_slots[slot_key]['taken_doses'] += 1
 
     # Calculate KPI Stats & upcoming dose
     total_doses_today = sum(c['total_needed'] for c in checklist)
     doses_taken_today = sum(c['logged_count'] for c in checklist)
     adherence_pct = round((doses_taken_today / total_doses_today * 100) if total_doses_today > 0 else 100)
     
+    # Calculate adherence streak (consecutive active compliance days)
+    streak_days = 0
+    check_day = today_date - timedelta(days=1)
+    for _ in range(30):
+        day_logs_count = TrackerLog.query.join(MedicationSchedule).filter(
+            MedicationSchedule.patient_id == patient_id,
+            db.func.date(TrackerLog.taken_at) == check_day
+        ).count()
+        if day_logs_count > 0:
+            streak_days += 1
+            check_day -= timedelta(days=1)
+        else:
+            break
+    if doses_taken_today > 0:
+        streak_days += 1
+    streak_days = max(1, streak_days) if doses_taken_today > 0 else streak_days
+
     next_dose_info = "All doses completed today" if total_doses_today > 0 and doses_taken_today >= total_doses_today else None
     if not next_dose_info and checklist:
         for c in checklist:
@@ -806,6 +966,9 @@ def patient_dashboard():
         refill_alerts=refill_alerts,
         broadcasts=broadcasts,
         checklist=checklist,
+        routine_slots=routine_slots,
+        current_slot_key=current_slot_key,
+        adherence_streak=streak_days,
         notifications=notifications,
         unread_notifications_count=unread_notifications_count,
         total_doses_today=total_doses_today,
@@ -817,6 +980,41 @@ def patient_dashboard():
         low_stock_count=len(refill_alerts),
         broadcasts_count=len(broadcasts)
     )
+
+@app.route('/api/tracker/take-slot/<slot_key>', methods=['POST'])
+@login_required
+@role_required('patient')
+def take_slot_doses(slot_key):
+    patient_id = session['user_id']
+    today_date = date.today()
+    schedules = MedicationSchedule.query.filter_by(patient_id=patient_id).all()
+    today_logs = TrackerLog.query.join(MedicationSchedule).filter(
+        MedicationSchedule.patient_id == patient_id,
+        db.func.date(TrackerLog.taken_at) == today_date
+    ).all()
+    
+    logged_count = 0
+    for sched in schedules:
+        if sched.start_date <= today_date <= sched.end_date:
+            times = [t.strip() for t in sched.time_of_day.split(',') if t.strip()]
+            sched_logs = [l for l in today_logs if l.schedule_id == sched.id]
+            current_logged = len(sched_logs)
+            
+            for idx, t in enumerate(times):
+                if categorize_time_slot(t) == slot_key:
+                    if idx >= current_logged:
+                        if sched.current_stock > 0:
+                            sched.current_stock -= 1
+                        log = TrackerLog(schedule_id=sched.id, status='taken')
+                        db.session.add(log)
+                        logged_count += 1
+                        current_logged += 1
+    db.session.commit()
+    return jsonify({
+        'success': True, 
+        'logged_count': logged_count,
+        'taken_time': datetime.now().strftime('%I:%M %p')
+    })
 
 @app.route('/api/patient/notifications/live')
 @login_required
@@ -1138,7 +1336,8 @@ def log_dose(schedule_id):
         'success': True,
         'current_stock': sched.current_stock,
         'running_low': running_low,
-        'alert_message': f"Stock warning! Only {sched.current_stock} doses of {sched.medicine_name} left." if running_low else ""
+        'alert_message': f"Stock warning! Only {sched.current_stock} doses of {sched.medicine_name} left." if running_low else "",
+        'taken_time': datetime.now().strftime('%I:%M %p')
     })
 
 @app.route('/tracker/refill/<int:schedule_id>', methods=['POST'])

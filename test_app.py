@@ -679,7 +679,7 @@ class MediConnectTestCase(unittest.TestCase):
         self.assertNotIn(b'daypart-grid', res.data)
         self.assertNotIn(b'08:00 AM &bull; With breakfast', res.data)
         # Verify core patient features remain intact
-        self.assertIn(b"Today's Dosages", res.data)
+        self.assertIn(b"Daily Medication Routine", res.data)
         self.assertIn(b'My Prescriptions', res.data)
 
     def test_doctor_new_prescription_and_delete(self):
@@ -1018,5 +1018,85 @@ class MediConnectTestCase(unittest.TestCase):
             self.assertTrue(any('KMC-99999' in b['text'] for b in badges))
             self.assertTrue(any('Pediatrics' in b['text'] for b in badges))
 
+    def test_patient_method_1_and_4_routine_tracker(self):
+        # 1. Test categorization of times into slots
+        from app import categorize_time_slot
+        self.assertEqual(categorize_time_slot('08:00'), 'morning')
+        self.assertEqual(categorize_time_slot('morning'), 'morning')
+        self.assertEqual(categorize_time_slot('breakfast'), 'morning')
+        self.assertEqual(categorize_time_slot('13:30'), 'afternoon')
+        self.assertEqual(categorize_time_slot('lunch'), 'afternoon')
+        self.assertEqual(categorize_time_slot('19:00'), 'evening')
+        self.assertEqual(categorize_time_slot('dinner'), 'evening')
+        self.assertEqual(categorize_time_slot('22:00'), 'night')
+        self.assertEqual(categorize_time_slot('bedtime'), 'night')
+
+        # 2. Setup patient with medication schedules covering slots
+        with app.app_context():
+            s1 = MedicationSchedule(
+                patient_id=self.pat_id,
+                medicine_name='Dolo 650',
+                dosage='1 tab',
+                frequency='Twice daily',
+                time_of_day='09:00, 21:00',
+                start_date=date.today(),
+                end_date=date.today() + timedelta(days=5),
+                current_stock=10,
+                refill_alert_threshold=3
+            )
+            s2 = MedicationSchedule(
+                patient_id=self.pat_id,
+                medicine_name='Pan-D',
+                dosage='1 cap',
+                frequency='Daily',
+                time_of_day='08:00',
+                start_date=date.today(),
+                end_date=date.today() + timedelta(days=5),
+                current_stock=2, # low stock to trigger watchdog
+                refill_alert_threshold=3
+            )
+            db.session.add(s1)
+            db.session.add(s2)
+            db.session.commit()
+            s1_id = s1.id
+            s2_id = s2.id
+
+        # 3. Log in as patient and verify Method 1 + 4 UI components
+        self.login_as('test_patient')
+        res = self.app.get('/dashboard/patient')
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(b'Daily Medication Routine', res.data)
+        self.assertIn(b'Morning Routine', res.data)
+        self.assertIn(b'Afternoon Routine', res.data)
+        self.assertIn(b'Evening Routine', res.data)
+        self.assertIn(b'Night / Bedtime', res.data)
+        self.assertIn(b"Today's Adherence", res.data)
+        self.assertIn(b'Stock & Refill Watchdog', res.data)
+        self.assertIn(b'Add Custom Medication', res.data)
+        self.assertIn(b'Dolo 650', res.data)
+        self.assertIn(b'Pan-D', res.data)
+
+        # 4. Test individual dose log with taken_time and stock decrement
+        log_res = self.app.post(f'/tracker/log/{s1_id}', data={'action': 'taken'})
+        self.assertEqual(log_res.status_code, 200)
+        log_data = log_res.get_json()
+        self.assertTrue(log_data['success'])
+        self.assertEqual(log_data['current_stock'], 9)
+        self.assertIn('taken_time', log_data)
+
+        # 5. Test take slot API endpoint (/api/tracker/take-slot/morning)
+        slot_res = self.app.post('/api/tracker/take-slot/morning')
+        self.assertEqual(slot_res.status_code, 200)
+        slot_data = slot_res.get_json()
+        self.assertTrue(slot_data['success'])
+        self.assertGreaterEqual(slot_data['logged_count'], 1)
+        self.assertIn('taken_time', slot_data)
+
+        # Verify s2 stock was decremented by take-slot
+        with app.app_context():
+            s2_check = db.session.get(MedicationSchedule, s2_id)
+            self.assertEqual(s2_check.current_stock, 1)
+
 if __name__ == '__main__':
     unittest.main()
+

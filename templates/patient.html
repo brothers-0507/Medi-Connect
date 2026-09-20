@@ -42,135 +42,291 @@
         {% endif %}
     </div>
 
-    <div class="grid-container">
-        <!-- Checklist for Today -->
-        <div>
-            <div class="card">
-                <h2 class="card-title">
-                    <span><i class="ph-bold ph-check-square card-title-icon"></i> Today's Dosages</span>
-                    <span style="font-size: 0.85rem; font-weight: normal; color: var(--text-secondary);">Click dots to log doses</span>
-                </h2>
+    <div class="patient-tracker-layout">
+        <!-- Main Column: Time-of-Day Routine Slots (Method 1) -->
+        <div class="tracker-main-col">
+            <div class="tracker-header-bar">
+                <div>
+                    <h2 style="margin: 0; font-size: 1.3rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.6rem;">
+                        <i class="ph-bold ph-calendar-check" style="color: var(--primary);"></i> Daily Medication Routine
+                    </h2>
+                    <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: var(--text-secondary);">
+                        Organized into Morning, Afternoon, Evening, and Night compartments.
+                    </p>
+                </div>
+                <div class="tracker-date-pill">
+                    <i class="ph-bold ph-clock"></i> {{ current_slot_key|capitalize }} Routine Active
+                </div>
+            </div>
 
-                {% if checklist %}
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
-                        {% for item in checklist %}
-                            <div class="checklist-item" id="sched-card-{{ item.schedule.id }}">
-                                <div class="checklist-info">
-                                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                                        <span class="checklist-med-name">{{ item.schedule.medicine_name }}</span>
-                                        {% if item.schedule.current_stock <= item.schedule.refill_alert_threshold %}
-                                            <span class="badge badge-danger" style="text-transform: none; font-size: 0.7rem; padding: 0.15rem 0.4rem; display: inline-flex; align-items: center; gap: 0.2rem;">
-                                                <i class="ph-bold ph-warning-octagon"></i> Low Stock
-                                            </span>
-                                            <form action="{{ url_for('refill_stock', schedule_id=item.schedule.id) }}" method="POST" style="display: inline-flex; align-items: center; margin: 0; padding: 0;">
-                                                <input type="hidden" name="amount" value="30">
-                                                <button type="submit" class="badge badge-warning" style="cursor: pointer; border: none; text-transform: none; font-size: 0.7rem; padding: 0.15rem 0.4rem; display: inline-flex; align-items: center; gap: 0.2rem;" title="Replenish stock by 30 doses instantly">
-                                                    <i class="ph-bold ph-plus-circle"></i> Quick Refill (+30)
-                                                </button>
-                                            </form>
-                                        {% endif %}
-                                    </div>
-                                    <div class="checklist-details">
-                                        <i class="ph ph-pill"></i> {{ item.schedule.dosage }} | 
-                                        <i class="ph ph-clock"></i> Times: {{ item.schedule.time_of_day }} | 
-                                        <i class="ph ph-archive"></i> Stock: <span class="stock-display">{{ item.schedule.current_stock }}</span> left
-                                    </div>
-                                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                                        Start: {{ item.schedule.start_date }} - End: {{ item.schedule.end_date }}
-                                    </div>
-                                </div>
-                                <div class="checklist-checkboxes">
-                                    {% for idx in range(item.total_needed) %}
-                                        <button 
-                                            class="log-dot {% if idx < item.logged_count %}checked{% endif %}" 
-                                            onclick="logDoseClick(this, {{ item.schedule.id }}, {{ idx }}, {{ item.logged_count }})"
-                                            {% if idx < item.logged_count %}disabled{% endif %}
-                                            title="Dose {{ idx + 1 }}"
-                                        >
-                                            {% if idx < item.logged_count %}
-                                                <i class="ph-bold ph-check"></i>
-                                            {% else %}
-                                                {{ idx + 1 }}
-                                            {% endif %}
-                                        </button>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                {% else %}
-                    <div style="text-align: center; padding: 1.5rem 1rem; color: var(--text-secondary);">
-                        <i class="ph-bold ph-calendar-blank" style="font-size: 2.5rem; margin-bottom: 1rem; color: var(--secondary); opacity: 0.8;"></i>
-                        <p style="font-weight: 600; color: var(--text-primary); margin-bottom: 1.5rem;">Welcome to MediConnect! No medication schedule active for today.</p>
+            {% if total_doses_today == 0 and not checklist %}
+                <!-- Empty Onboarding State if no active schedules exist -->
+                <div class="card" style="text-align: center; padding: 2.5rem 1.5rem; margin-top: 0.5rem;">
+                    <i class="ph-bold ph-calendar-blank" style="font-size: 3rem; margin-bottom: 1rem; color: var(--secondary); opacity: 0.85;"></i>
+                    <h3 style="font-weight: 700; color: var(--text-primary); margin-bottom: 0.5rem;">No Medications Scheduled for Today</h3>
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); max-width: 500px; margin: 0 auto 1.5rem auto;">
+                        Your routine slots will automatically populate when your doctor links a digital prescription or when you add custom medications.
+                    </p>
+                    
+                    <!-- 3-Step Guided Setup -->
+                    <div style="text-align: left; display: flex; flex-direction: column; gap: 1rem; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.5rem; max-width: 650px; margin: 0 auto;">
+                        <h4 style="font-size: 0.95rem; color: var(--text-primary); font-weight: 600; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="ph-bold ph-compass" style="color: var(--secondary);"></i> Quick 3-Step Guided Setup
+                        </h4>
                         
-                        <!-- 3-Step Guided Setup -->
-                        <div style="text-align: left; display: flex; flex-direction: column; gap: 1rem; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.5rem; margin-top: 1rem;">
-                            <h4 style="font-size: 0.95rem; color: var(--text-primary); font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem;">
-                                <i class="ph-bold ph-compass" style="color: var(--secondary);"></i> Quick 3-Step Guided Setup
-                            </h4>
-                            
-                            <div style="display: flex; gap: 1rem; align-items: start;">
-                                <span style="display: flex; align-items: center; justify-content: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: rgba(99, 102, 241, 0.15); color: var(--primary); font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">1</span>
-                                <div>
-                                    <strong style="color: var(--text-primary); font-size: 0.9rem;">Share your Username with your Doctor</strong>
-                                    <p style="font-size: 0.85rem; margin-top: 0.25rem;">Give your doctor your registered username: <code style="color: var(--accent); background: rgba(255,255,255,0.05); padding: 0.1rem 0.4rem; border-radius: 4px;">{{ current_user.username }}</code>. They will link prescriptions directly to your account.</p>
-                                </div>
+                        <div style="display: flex; gap: 1rem; align-items: start;">
+                            <span style="display: flex; align-items: center; justify-content: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: rgba(99, 102, 241, 0.15); color: var(--primary); font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">1</span>
+                            <div>
+                                <strong style="color: var(--text-primary); font-size: 0.9rem;">Share your Username with your Doctor</strong>
+                                <p style="font-size: 0.85rem; margin-top: 0.25rem; color: var(--text-secondary);">Give your doctor your registered username: <code style="color: var(--accent); background: rgba(255,255,255,0.05); padding: 0.1rem 0.4rem; border-radius: 4px;">{{ current_user.username }}</code>. They will link prescriptions directly to your account.</p>
                             </div>
-                            
-                            <div style="display: flex; gap: 1rem; align-items: start;">
-                                <span style="display: flex; align-items: center; justify-content: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: var(--secondary); font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">2</span>
-                                <div>
-                                    <strong style="color: var(--text-primary); font-size: 0.9rem;">Accept and Import</strong>
-                                    <p style="font-size: 0.85rem; margin-top: 0.25rem;">When your doctor issues the prescription, a notification pop-up alert will appear at the top of this dashboard. Click **"Accept & Import"** to automate your daily dosage tracker.</p>
-                                </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 1rem; align-items: start;">
+                            <span style="display: flex; align-items: center; justify-content: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: rgba(20, 184, 166, 0.15); color: var(--secondary); font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">2</span>
+                            <div>
+                                <strong style="color: var(--text-primary); font-size: 0.9rem;">Accept and Import</strong>
+                                <p style="font-size: 0.85rem; margin-top: 0.25rem; color: var(--text-secondary);">When your doctor issues the prescription, a notification pop-up alert appears above. Click <strong>"Accept & Import"</strong> to automate your daily dosage slots.</p>
                             </div>
-                            
-                            <div style="display: flex; gap: 1rem; align-items: start;">
-                                <span style="display: flex; align-items: center; justify-content: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: rgba(139, 92, 246, 0.15); color: var(--accent); font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">3</span>
-                                <div>
-                                    <strong style="color: var(--text-primary); font-size: 0.9rem;">Log Daily Doses</strong>
-                                    <p style="font-size: 0.85rem; margin-top: 0.25rem;">Click the check dots representing your morning, afternoon, or evening doses on the dashboard checklist daily to stay compliant.</p>
-                                </div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 1rem; align-items: start;">
+                            <span style="display: flex; align-items: center; justify-content: center; width: 1.8rem; height: 1.8rem; border-radius: 50%; background: rgba(139, 92, 246, 0.15); color: var(--accent); font-weight: 700; font-size: 0.85rem; flex-shrink: 0;">3</span>
+                            <div>
+                                <strong style="color: var(--text-primary); font-size: 0.9rem;">Log Routine Compartments Daily</strong>
+                                <p style="font-size: 0.85rem; margin-top: 0.25rem; color: var(--text-secondary);">Click "Take Dose" or "Take All" in your morning, afternoon, evening, or night compartment to build your health streak.</p>
                             </div>
                         </div>
                     </div>
-                {% endif %}
+                </div>
+            {% endif %}
+
+            <!-- 4 Routine Slots Cards -->
+            <div class="routine-slots-container" {% if total_doses_today == 0 and not checklist %}style="display: none;"{% endif %}>
+                {% for s_key in ['morning', 'afternoon', 'evening', 'night'] %}
+                    {% set slot = routine_slots[s_key] %}
+                    <div class="card routine-slot-card {% if s_key == current_slot_key %}current-active-slot{% endif %}" id="slot-card-{{ s_key }}">
+                        <div class="routine-slot-header">
+                            <div class="slot-header-left">
+                                <div class="slot-icon-box" style="background: {{ slot.bg_color }}; color: {{ slot.color }}; border: 1px solid {{ slot.border_color }};">
+                                    <i class="ph-bold {{ slot.icon }}"></i>
+                                </div>
+                                <div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                        <h3 class="slot-title">{{ slot.label }}</h3>
+                                        {% if s_key == current_slot_key %}
+                                            <span class="badge badge-primary" style="font-size: 0.68rem; padding: 0.15rem 0.45rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                                                <i class="ph-bold ph-lightning"></i> Active Window
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="slot-sublabel">{{ slot.sublabel }}</div>
+                                </div>
+                            </div>
+                            
+                            <div class="slot-header-right">
+                                <span class="slot-progress-pill" id="slot-pill-{{ s_key }}">
+                                    {% if slot.total_doses == 0 %}
+                                        <span style="color: var(--text-secondary); font-size: 0.8rem;">No doses</span>
+                                    {% elif slot.taken_doses == slot.total_doses %}
+                                        <span class="badge badge-success" style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                                            <i class="ph-bold ph-check"></i> {{ slot.taken_doses }}/{{ slot.total_doses }} All Done
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-warning" style="display: inline-flex; align-items: center; gap: 0.25rem;">
+                                            <i class="ph-bold ph-clock"></i> <span id="slot-taken-num-{{ s_key }}">{{ slot.taken_doses }}</span>/{{ slot.total_doses }} Taken
+                                        </span>
+                                    {% endif %}
+                                </span>
+
+                                {% if slot.total_doses > 0 and slot.taken_doses < slot.total_doses %}
+                                    <button type="button" class="btn btn-outline btn-xs slot-take-all-btn" id="btn-take-all-{{ s_key }}" onclick="takeAllSlotDoses('{{ s_key }}', this)" title="Log all pending doses for this routine">
+                                        <i class="ph-bold ph-checks"></i> Take All
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Slot Items -->
+                        <div class="routine-slot-items" id="slot-items-{{ s_key }}">
+                            {% if slot['items'] %}
+                                {% for item in slot['items'] %}
+                                    <div class="routine-item-card {% if item.is_taken %}item-taken{% endif %}" id="routine-row-{{ item.schedule_id }}-{{ item.dose_index }}">
+                                        <div class="routine-item-left">
+                                            <div class="med-avatar-icon">
+                                                <i class="ph-bold ph-pill"></i>
+                                            </div>
+                                            <div class="med-details-wrap">
+                                                <div class="med-headline">
+                                                    <span class="med-name">{{ item.medicine_name }}</span>
+                                                    <span class="badge badge-info" style="font-size: 0.72rem; padding: 0.15rem 0.45rem;">{{ item.dosage }}</span>
+                                                    <span class="routine-time-badge"><i class="ph ph-clock"></i> {{ item.scheduled_time }}</span>
+                                                </div>
+                                                
+                                                <div class="med-subline">
+                                                    <span class="meal-instruction-badge">
+                                                        <i class="ph-bold ph-fork-knife"></i> {{ item.instructions }}
+                                                    </span>
+                                                    <span class="stock-pill {% if item.is_low_stock %}stock-low{% endif %}">
+                                                        <i class="ph-bold ph-archive"></i> <span class="stock-display-{{ item.schedule_id }}">{{ item.current_stock }}</span> left
+                                                    </span>
+                                                    {% if item.is_low_stock %}
+                                                        <form action="{{ url_for('refill_stock', schedule_id=item.schedule_id) }}" method="POST" style="display: inline-flex; margin: 0;">
+                                                            <input type="hidden" name="amount" value="30">
+                                                            <button type="submit" class="btn-quick-refill-mini" title="Replenish 30 doses">+30 Quick Refill</button>
+                                                        </form>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="routine-item-action" id="action-cell-{{ item.schedule_id }}-{{ item.dose_index }}">
+                                            {% if item.is_taken %}
+                                                <div class="dose-taken-badge">
+                                                    <i class="ph-bold ph-check-circle"></i> Taken {% if item.taken_time %}at {{ item.taken_time }}{% endif %}
+                                                </div>
+                                            {% else %}
+                                                <button type="button" class="btn btn-primary btn-sm btn-take-dose" onclick="logRoutineDose(this, {{ item.schedule_id }}, {{ item.dose_index }}, '{{ s_key }}')">
+                                                    <i class="ph-bold ph-check"></i> Take Dose
+                                                </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <div class="routine-empty-slot">
+                                    <i class="ph-bold {{ slot.icon }}" style="opacity: 0.35;"></i>
+                                    <span>No medications scheduled for {{ slot.label }}.</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
             </div>
         </div>
 
-        <!-- Add Custom Schedule Form -->
-        <div>
-            <button id="toggle-tracker-btn" class="btn btn-outline" style="width: 100%; margin-bottom: 1.5rem; justify-content: center; gap: 0.5rem;" onclick="toggleCustomTracker()">
-                <i class="ph-bold ph-plus-circle"></i> Add Custom Medication
-            </button>
+        <!-- Sidebar Column: Health Companion Sidebar (Method 4) -->
+        <div class="tracker-companion-col">
+            <!-- 1. Today's Adherence Ring & Streak Card -->
+            <div class="card companion-card">
+                <div class="companion-header">
+                    <span class="companion-title"><i class="ph-bold ph-heartbeat" style="color: var(--secondary);"></i> Today's Adherence</span>
+                    <span class="streak-pill">
+                        <i class="ph-bold ph-fire" style="color: #f59e0b;"></i> {{ adherence_streak }}-Day Streak
+                    </span>
+                </div>
 
-            <div class="card" id="custom-tracker-card" style="display: none; animation: fadeIn 0.3s ease;">
-                <h2 class="card-title" style="margin-bottom: 1rem; border-bottom: none; padding-bottom: 0;">
-                    <span><i class="ph-bold ph-plus-circle card-title-icon"></i> Custom Medication</span>
-                </h2>
-                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1.5rem;">Manually add a medication to your tracker checklist.</p>
-                
-                <form action="{{ url_for('add_custom_tracker') }}" method="POST">
-                    <div class="form-group">
-                        <label for="medicine_name">Medicine Name</label>
-                        <input type="text" id="medicine_name" name="medicine_name" class="form-control" required>
+                <div class="adherence-circle-wrap">
+                    <div class="adherence-progress-ring" id="adherence-ring" style="--adherence-pct: {{ adherence_pct }}%;">
+                        <div class="adherence-ring-inner">
+                            <span class="adherence-val" id="adherence-text-pct">{{ adherence_pct }}%</span>
+                            <span class="adherence-sub">Compliance</span>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="dosage">Dosage (e.g. 1 pill, 5ml)</label>
-                        <input type="text" id="dosage" name="dosage" class="form-control" required>
+                    
+                    <div class="adherence-stats-detail">
+                        <div style="font-weight: 600; font-size: 1.05rem; color: var(--text-primary);">
+                            <span id="doses-taken-count">{{ doses_taken_today }}</span> of <span id="doses-total-count">{{ total_doses_today }}</span> Doses
+                        </div>
+                        <div class="adherence-motivational-text" id="adherence-motivational">
+                            {% if total_doses_today == 0 %}
+                                No medications due today. Stay healthy!
+                            {% elif adherence_pct == 100 %}
+                                🌟 Perfect score! All doses completed for today.
+                            {% elif adherence_pct >= 50 %}
+                                ⚡ Great pace! More than halfway through today's doses.
+                            {% elif adherence_pct > 0 %}
+                                👍 Off to a good start! Don't forget your next doses.
+                            {% else %}
+                                🌅 Ready to begin? Log your morning medicines above.
+                            {% endif %}
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="time_of_day">Taking Time (e.g. 08:00, 20:00)</label>
-                        <input type="text" id="time_of_day" name="time_of_day" class="form-control" value="09:00" required>
+                </div>
+            </div>
+
+            <!-- 2. Next Upcoming Dose Banner -->
+            <div class="card companion-card next-dose-card">
+                <div class="next-dose-header">
+                    <i class="ph-bold ph-alarm" style="color: var(--accent); font-size: 1.4rem;"></i>
+                    <div>
+                        <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 600;">Next Dose Due</div>
+                        <div class="next-dose-content" id="next-dose-display">
+                            {{ next_dose_info }}
+                        </div>
                     </div>
-                    <div class="form-group" style="margin-bottom: 1.5rem;">
-                        <label for="current_stock">Tablets Left (in strip / bottle)</label>
-                        <input type="number" id="current_stock" name="current_stock" class="form-control" value="10" min="0" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="width: 100%;">
-                        <i class="ph ph-plus-circle"></i> Save Medication
+                </div>
+            </div>
+
+            <!-- 3. Stock & Refill Watchdog -->
+            <div class="card companion-card">
+                <h3 class="companion-title" style="margin-bottom: 0.85rem;">
+                    <i class="ph-bold ph-shield-warning" style="color: var(--warning);"></i> Stock & Refill Watchdog
+                </h3>
+                <div id="companion-refill-list">
+                    {% if refill_alerts %}
+                        <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+                            {% for r in refill_alerts %}
+                                <div class="refill-watchdog-row">
+                                    <div>
+                                        <strong style="font-size: 0.88rem; color: var(--text-primary);">{{ r.medicine_name }}</strong>
+                                        <div style="font-size: 0.75rem; color: var(--danger);">
+                                            <i class="ph-bold ph-warning-octagon"></i> Only <span class="stock-display-{{ r.id }}">{{ r.current_stock }}</span> doses remaining
+                                        </div>
+                                    </div>
+                                    <form action="{{ url_for('refill_stock', schedule_id=r.id) }}" method="POST" style="margin: 0;">
+                                        <input type="hidden" name="amount" value="30">
+                                        <button type="submit" class="btn btn-outline btn-xs" style="color: var(--warning); border-color: rgba(245, 158, 11, 0.4);" title="Add 30 tablets to stock">
+                                            <i class="ph-bold ph-plus-circle"></i> +30 Refill
+                                        </button>
+                                    </form>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="stock-healthy-banner">
+                            <i class="ph-bold ph-shield-check" style="color: var(--secondary); font-size: 1.25rem;"></i>
+                            <span>All active medicines are adequately stocked (10+ doses remaining).</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 4. Add Custom Medication Card -->
+            <div class="card companion-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleCustomTracker()">
+                    <h3 class="companion-title" style="margin: 0;">
+                        <i class="ph-bold ph-plus-circle" style="color: var(--primary);"></i> Add Custom Medication
+                    </h3>
+                    <button type="button" class="btn btn-outline btn-xs" id="custom-tracker-toggle-btn" style="padding: 0.2rem 0.5rem;" title="Toggle Form">
+                        <i class="ph-bold ph-caret-down" id="custom-tracker-caret"></i>
                     </button>
-                </form>
+                </div>
+                
+                <div id="custom-tracker-card" style="display: none; margin-top: 1rem; border-top: 1px dashed var(--card-border); padding-top: 1rem; animation: fadeIn 0.25s ease;">
+                    <form action="{{ url_for('add_custom_tracker') }}" method="POST">
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label for="medicine_name" style="font-size: 0.8rem;">Medicine Name</label>
+                            <input type="text" id="medicine_name" name="medicine_name" class="form-control" placeholder="e.g. Paracetamol" required style="font-size: 0.85rem; padding: 0.45rem 0.65rem;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label for="dosage" style="font-size: 0.8rem;">Dosage</label>
+                            <input type="text" id="dosage" name="dosage" class="form-control" placeholder="e.g. 500mg, 1 tablet" required style="font-size: 0.85rem; padding: 0.45rem 0.65rem;">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0.75rem;">
+                            <label for="time_of_day" style="font-size: 0.8rem;">Taking Time (e.g. 08:00, 14:00, 20:00)</label>
+                            <input type="text" id="time_of_day" name="time_of_day" class="form-control" value="09:00" required style="font-size: 0.85rem; padding: 0.45rem 0.65rem;">
+                            <span style="font-size: 0.72rem; color: var(--text-secondary); display: block; margin-top: 0.2rem;">Morning (08:00), Afternoon (13:00), Evening (19:00), Night (21:00)</span>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1rem;">
+                            <label for="current_stock" style="font-size: 0.8rem;">Tablets / Stock Count</label>
+                            <input type="number" id="current_stock" name="current_stock" class="form-control" value="14" min="1" required style="font-size: 0.85rem; padding: 0.45rem 0.65rem;">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm" style="width: 100%;">
+                            <i class="ph-bold ph-plus-circle"></i> Save Medication
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -444,15 +600,153 @@
         });
     }
 
+    function logRoutineDose(btn, scheduleId, doseIndex, slotKey) {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Logging...';
+
+        const formData = new FormData();
+        formData.append('action', 'taken');
+
+        fetch(`/tracker/log/${scheduleId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // 1. Mark row as taken
+                const row = document.getElementById(`routine-row-${scheduleId}-${doseIndex}`);
+                if (row) {
+                    row.classList.add('item-taken');
+                }
+                const actionCell = document.getElementById(`action-cell-${scheduleId}-${doseIndex}`);
+                if (actionCell) {
+                    actionCell.innerHTML = `<div class="dose-taken-badge"><i class="ph-bold ph-check-circle"></i> Taken at ${data.taken_time || 'Just now'}</div>`;
+                }
+
+                // 2. Update all stock indicators for this schedule
+                const stockSpans = document.querySelectorAll(`.stock-display-${scheduleId}`);
+                stockSpans.forEach(el => {
+                    el.textContent = data.current_stock;
+                });
+
+                // 3. Update slot header count
+                const takenNumEl = document.getElementById(`slot-taken-num-${slotKey}`);
+                if (takenNumEl) {
+                    let cur = parseInt(takenNumEl.textContent) || 0;
+                    takenNumEl.textContent = cur + 1;
+                }
+                // Check if slot is now completely taken
+                const slotItems = document.getElementById(`slot-items-${slotKey}`);
+                if (slotItems) {
+                    const pendingBtns = slotItems.querySelectorAll('.btn-take-dose');
+                    if (pendingBtns.length === 0) {
+                        const pill = document.getElementById(`slot-pill-${slotKey}`);
+                        if (pill) {
+                            pill.innerHTML = `<span class="badge badge-success" style="display: inline-flex; align-items: center; gap: 0.25rem;"><i class="ph-bold ph-check"></i> All Done</span>`;
+                        }
+                        const takeAllBtn = document.getElementById(`btn-take-all-${slotKey}`);
+                        if (takeAllBtn) takeAllBtn.remove();
+                    }
+                }
+
+                // 4. Update Adherence widget
+                const takenCountEl = document.getElementById('doses-taken-count');
+                const totalCountEl = document.getElementById('doses-total-count');
+                if (takenCountEl && totalCountEl) {
+                    let taken = (parseInt(takenCountEl.textContent) || 0) + 1;
+                    let total = parseInt(totalCountEl.textContent) || 0;
+                    takenCountEl.textContent = taken;
+                    let pct = total > 0 ? Math.round((taken / total) * 100) : 100;
+                    const pctEl = document.getElementById('adherence-text-pct');
+                    const ringEl = document.getElementById('adherence-ring');
+                    if (pctEl) pctEl.textContent = `${pct}%`;
+                    if (ringEl) ringEl.style.setProperty('--adherence-pct', `${pct}%`);
+                    
+                    const motivEl = document.getElementById('adherence-motivational');
+                    if (motivEl) {
+                        if (pct >= 100) {
+                            motivEl.textContent = "🌟 Perfect score! All doses completed for today.";
+                            const nextDoseEl = document.getElementById('next-dose-display');
+                            if (nextDoseEl) nextDoseEl.textContent = "All doses completed today";
+                        } else if (pct >= 50) {
+                            motivEl.textContent = "⚡ Great pace! More than halfway through today's doses.";
+                        } else {
+                            motivEl.textContent = "👍 Off to a good start! Don't forget your next doses.";
+                        }
+                    }
+                }
+
+                // 5. Show low stock alert if triggered
+                if (data.running_low && data.alert_message) {
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-warning no-print';
+                    alertDiv.style.animation = 'fadeIn 0.3s ease';
+                    alertDiv.innerHTML = `<i class="ph-bold ph-warning"></i> <span>${data.alert_message}</span>`;
+                    const main = document.querySelector('main');
+                    if (main) main.insertBefore(alertDiv, main.firstChild);
+                }
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                alert("Error: " + (data.message || 'Could not log dose'));
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            alert("An error occurred while logging the dose.");
+        });
+    }
+
+    function takeAllSlotDoses(slotKey, btn) {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Taking All...';
+
+        fetch(`/api/tracker/take-slot/${slotKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload dashboard to refresh all slot cards, stock levels, next dose, and adherence stats
+                window.location.reload();
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+                alert("Error: " + (data.message || 'Could not log slot doses'));
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            alert("An error occurred while logging slot doses.");
+        });
+    }
+
     function toggleCustomTracker() {
         const card = document.getElementById('custom-tracker-card');
-        const btn = document.getElementById('toggle-tracker-btn');
-        if (card.style.display === 'none') {
+        const caret = document.getElementById('custom-tracker-caret');
+        if (!card) return;
+        if (card.style.display === 'none' || card.style.display === '') {
             card.style.display = 'block';
-            btn.innerHTML = '<i class="ph-bold ph-minus-circle"></i> Hide Form';
+            if (caret) {
+                caret.classList.remove('ph-caret-down');
+                caret.classList.add('ph-caret-up');
+            }
         } else {
             card.style.display = 'none';
-            btn.innerHTML = '<i class="ph-bold ph-plus-circle"></i> Add Custom Medication';
+            if (caret) {
+                caret.classList.remove('ph-caret-up');
+                caret.classList.add('ph-caret-down');
+            }
         }
     }
 

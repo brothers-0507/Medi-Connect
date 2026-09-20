@@ -4,7 +4,7 @@
     {% if portal %}
         {{ portal.title() }} Portal Authentication - MediConnect
     {% else %}
-        Authentication - MediConnect
+        Log In - MediConnect
     {% endif %}
 {% endblock %}
 
@@ -34,19 +34,18 @@
                 Only registered {{ portal }} accounts are permitted to enter this portal.
             </div>
         </div>
+        {% else %}
+        <div style="text-align: center; margin-bottom: 1.75rem;">
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(2, 132, 199, 0.12); color: var(--primary); display: flex; align-items: center; justify-content: center; margin: 0 auto 0.75rem auto; font-size: 1.5rem;">
+                <i class="ph-bold ph-lock-key"></i>
+            </div>
+            <h2 style="font-size: 1.45rem; font-weight: 700; color: var(--text-primary); margin: 0;">Sign In to MediConnect</h2>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">Enter your credentials to access your dashboard</p>
+        </div>
         {% endif %}
 
-        <div class="tabs" style="margin-bottom: 2rem; justify-content: center; border-bottom: none; gap: 2rem;">
-            <button class="tab-btn active" id="login-tab" onclick="switchAuth('login')">
-                <i class="ph-bold ph-lock-key" style="margin-right: 0.25rem;"></i> LOG IN
-            </button>
-            <button class="tab-btn" id="register-tab" onclick="switchAuth('register')">
-                <i class="ph-bold ph-user-plus" style="margin-right: 0.25rem;"></i> REGISTER
-            </button>
-        </div>
-
-        <!-- Login Form -->
-        <form id="login-form" action="{{ url_for('login') }}" method="POST" style="animation: fadeIn 0.3s ease;">
+        <!-- Login Form (Exclusively Dedicated to Sign-In) -->
+        <form id="login-form" action="{{ url_for('login') }}" method="POST">
             {% if portal %}
             <input type="hidden" name="portal" value="{{ portal }}">
             {% endif %}
@@ -64,12 +63,9 @@
                     </button>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.9rem;">
+            <button type="submit" class="btn btn-primary" style="width: 100%; padding: 0.9rem; font-weight: 650;">
                 <i class="ph-bold ph-sign-in"></i> Sign In to {{ portal.title() if portal else 'MediConnect' }}
             </button>
-            <div style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem; color: var(--text-secondary);">
-                Don't have an account? <a href="#" onclick="switchAuth('register'); event.preventDefault();">Create one here</a>.
-            </div>
             
             <!-- Quick Login Hints for Testing -->
             <div style="margin-top: 2rem; padding: 1.25rem; background: rgba(255,255,255,0.02); border: 1px dashed var(--card-border); border-radius: 12px; font-size: 0.85rem; color: var(--text-secondary);">
@@ -89,93 +85,12 @@
                 </ul>
             </div>
         </form>
-
-        <!-- Register Form -->
-        <form id="register-form" action="{{ url_for('register') }}" method="POST" style="display: none; animation: fadeIn 0.3s ease;">
-            {% if portal %}
-            <input type="hidden" name="portal" value="{{ portal }}">
-            <input type="hidden" name="role" value="{{ portal }}">
-            {% endif %}
-
-            <div class="form-group">
-                <label for="reg-username">Username</label>
-                <input type="text" id="reg-username" name="username" class="form-control" placeholder="Choose unique username" required>
-            </div>
-            <div class="form-group">
-                <label for="reg-password">Password</label>
-                <div style="position: relative; display: flex; align-items: center;">
-                    <input type="password" id="reg-password" name="password" class="form-control" placeholder="Create strong password" required style="padding-right: 2.5rem;">
-                    <button type="button" onclick="togglePasswordVisibility('reg-password', this)" style="position: absolute; right: 1rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; padding: 0;">
-                        <i class="ph-bold ph-eye" style="font-size: 1.2rem;"></i>
-                    </button>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="reg-name">Full Name / Business Name</label>
-                <input type="text" id="reg-name" name="name" class="form-control" placeholder="e.g. Dr. Rajesh Sharma or Apollo Care" required>
-            </div>
-            
-            <div class="form-group">
-                <label for="reg-role">Account Type</label>
-                {% if portal %}
-                <input type="text" class="form-control" value="{{ portal.title() }} (Locked to this Portal)" readonly style="background: rgba(0,0,0,0.04); cursor: not-allowed; opacity: 0.85;">
-                {% else %}
-                <select id="reg-role" name="role" class="form-control" required>
-                    <option value="patient">Patient (Medi-Tracker & Broadcaster)</option>
-                    <option value="doctor">Doctor (Digital Prescription Creator)</option>
-                    <option value="pharmacy">Pharmacy (Stock Management & Quote Bidder)</option>
-                </select>
-                {% endif %}
-            </div>
-
-            <div class="form-group">
-                <label for="reg-contact">Contact Number / Email</label>
-                <input type="text" id="reg-contact" name="contact" class="form-control" placeholder="e.g. +91 98765 43210 or user@example.in" required>
-            </div>
-            <div class="form-group" style="margin-bottom: 2rem;">
-                <label for="reg-location">Location (City/Town)</label>
-                <input type="text" id="reg-location" name="location" class="form-control" placeholder="e.g. Bengaluru, Mumbai, Chennai, Delhi" required>
-            </div>
-            <button type="submit" class="btn btn-secondary" style="width: 100%; padding: 0.9rem;">
-                <i class="ph-bold ph-user-plus"></i> Register {{ portal.title() if portal else '' }} Account
-            </button>
-            <div style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem; color: var(--text-secondary);">
-                Already have an account? <a href="#" onclick="switchAuth('login'); event.preventDefault();">Log in here</a>.
-            </div>
-        </form>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    function switchAuth(mode) {
-        const loginForm = document.getElementById('login-form');
-        const regForm = document.getElementById('register-form');
-        const loginTab = document.getElementById('login-tab');
-        const regTab = document.getElementById('register-tab');
-
-        if (mode === 'login') {
-            loginForm.style.display = 'block';
-            regForm.style.display = 'none';
-            loginTab.classList.add('active');
-            regTab.classList.remove('active');
-        } else {
-            loginForm.style.display = 'none';
-            regForm.style.display = 'block';
-            loginTab.classList.remove('active');
-            regTab.classList.add('active');
-        }
-    }
-
-    document.addEventListener("DOMContentLoaded", function() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const action = urlParams.get('action');
-        if (action === 'register') {
-            switchAuth('register');
-        }
-    });
-
     function togglePasswordVisibility(inputId, btn) {
         const input = document.getElementById(inputId);
         const icon = btn.querySelector('i');

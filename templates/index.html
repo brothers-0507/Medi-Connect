@@ -31,7 +31,7 @@
         </div>
         <div style="display: flex; gap: 0.75rem;">
             <a href="{{ url_for('login', portal='doctor') }}" class="btn btn-primary btn-sm" style="flex: 1;">Doctor Log In</a>
-            <a href="{{ url_for('login', action='register', portal='doctor') }}" class="btn btn-outline btn-sm" style="flex: 1;">Register</a>
+            <a href="{{ url_for('register', role='doctor') }}" class="btn btn-outline btn-sm" style="flex: 1;">Register</a>
         </div>
     </div>
 
@@ -48,7 +48,7 @@
         </div>
         <div style="display: flex; gap: 0.75rem;">
             <a href="{{ url_for('login', portal='patient') }}" class="btn btn-secondary btn-sm" style="flex: 1;">Patient Log In</a>
-            <a href="{{ url_for('login', action='register', portal='patient') }}" class="btn btn-outline btn-sm" style="flex: 1;">Register</a>
+            <a href="{{ url_for('register', role='patient') }}" class="btn btn-outline btn-sm" style="flex: 1;">Register</a>
         </div>
     </div>
 
@@ -65,7 +65,7 @@
         </div>
         <div style="display: flex; gap: 0.75rem;">
             <a href="{{ url_for('login', portal='pharmacy') }}" class="btn btn-primary btn-sm" style="flex: 1; background: linear-gradient(135deg, var(--accent) 0%, #a78bfa 100%);">Pharmacy Log In</a>
-            <a href="{{ url_for('login', action='register', portal='pharmacy') }}" class="btn btn-outline btn-sm" style="flex: 1;">Register</a>
+            <a href="{{ url_for('register', role='pharmacy') }}" class="btn btn-outline btn-sm" style="flex: 1;">Register</a>
         </div>
     </div>
 </div>

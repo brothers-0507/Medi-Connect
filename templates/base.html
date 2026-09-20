@@ -40,6 +40,13 @@
                     })();
                 </script>
                 {% if current_user %}
+                    {% if current_user.role == 'patient' %}
+                    <!-- Notification Bell & Unread Badge -->
+                    <button type="button" id="nav-notif-btn" class="nav-notification-btn" onclick="toggleNotificationDrawer()" title="Notification Center" aria-label="Notification Center">
+                        <i class="ph-bold ph-bell"></i>
+                        <span class="notif-badge" id="global-notif-badge" style="display: none;">0</span>
+                    </button>
+                    {% endif %}
                     <div class="user-badge">
                         <i class="ph-fill ph-user-circle"></i>
                         <span>{{ current_user.name }}</span>
@@ -55,13 +62,84 @@
                         <i class="ph-bold ph-sign-out"></i> Log Out
                     </a>
                 {% else %}
-                    <a href="{{ url_for('login') }}" class="btn btn-primary btn-sm">
+                    <a href="{{ url_for('login') }}" class="btn btn-outline btn-sm">
                         <i class="ph-bold ph-sign-in"></i> Log In
                     </a>
+                    <div class="register-dropdown-wrapper">
+                        <button type="button" class="btn btn-primary btn-sm register-menu-btn" onclick="toggleRegisterDropdown(event)" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i class="ph-bold ph-user-plus"></i> Register <i class="ph-bold ph-caret-down" style="font-size: 0.72rem;"></i>
+                        </button>
+                        <div id="nav-register-menu" class="register-dropdown-menu">
+                            <div style="font-size: 0.75rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; padding: 0.4rem 0.6rem 0.5rem 0.6rem; border-bottom: 1px solid var(--card-border); margin-bottom: 0.35rem;">
+                                Select Your Role
+                            </div>
+                            <a href="{{ url_for('register', role='doctor') }}" class="reg-role-option">
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(2, 132, 199, 0.15); display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink: 0;">
+                                    <i class="ph-bold ph-stethoscope" style="font-size: 1.1rem;"></i>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.88rem; font-weight: 650; color: var(--text-primary);">Doctor</div>
+                                    <div style="font-size: 0.72rem; color: var(--text-secondary);">Practitioner Portal</div>
+                                </div>
+                            </a>
+                            <a href="{{ url_for('register', role='patient') }}" class="reg-role-option">
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(13, 148, 136, 0.15); display: flex; align-items: center; justify-content: center; color: var(--secondary); flex-shrink: 0;">
+                                    <i class="ph-bold ph-user" style="font-size: 1.1rem;"></i>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.88rem; font-weight: 650; color: var(--text-primary);">Patient</div>
+                                    <div style="font-size: 0.72rem; color: var(--text-secondary);">Personal Health Space</div>
+                                </div>
+                            </a>
+                            <a href="{{ url_for('register', role='pharmacy') }}" class="reg-role-option">
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(99, 102, 241, 0.15); display: flex; align-items: center; justify-content: center; color: var(--accent); flex-shrink: 0;">
+                                    <i class="ph-bold ph-first-aid" style="font-size: 1.1rem;"></i>
+                                </div>
+                                <div>
+                                    <div style="font-size: 0.88rem; font-weight: 650; color: var(--text-primary);">Pharmacy</div>
+                                    <div style="font-size: 0.72rem; color: var(--text-secondary);">Pharmacy Network</div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
                 {% endif %}
             </nav>
         </div>
     </header>
+
+    {% if current_user and current_user.role == 'patient' %}
+    <!-- Slide-out Persistent Notification Center -->
+    <div id="patient-notification-drawer" class="notification-drawer no-print">
+        <div class="notif-header">
+            <div style="font-weight: 700; font-size: 0.95rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
+                <i class="ph-bold ph-bell" style="color: var(--primary);"></i> Notification Center (<span id="drawer-notif-count">0</span>)
+            </div>
+            <div style="display: flex; gap: 0.4rem; align-items: center;">
+                <button type="button" onclick="markAllNotificationsRead()" class="btn btn-outline btn-sm" style="font-size: 0.72rem; padding: 0.2rem 0.5rem;">
+                    Mark all read
+                </button>
+                <button type="button" onclick="toggleNotificationDrawer()" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.3rem; line-height: 1;">
+                    &times;
+                </button>
+            </div>
+        </div>
+        <div class="notif-list" id="drawer-notifs-list">
+            <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary);">
+                <i class="ph-bold ph-bell-slash" style="font-size: 2rem; margin-bottom: 0.5rem; display: block; opacity: 0.5;"></i>
+                <span style="font-size: 0.85rem;">No notifications right now</span>
+            </div>
+        </div>
+        <div style="padding: 0.65rem 1rem; text-align: center; border-top: 1px solid var(--card-border); background: rgba(255,255,255,0.01); display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.74rem; color: var(--text-secondary);">Stored across sessions</span>
+            <button type="button" onclick="clearAllNotifications()" style="background: transparent; border: none; color: var(--danger); font-size: 0.74rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem;">
+                <i class="ph-bold ph-trash"></i> Clear History
+            </button>
+        </div>
+    </div>
+
+    <!-- Floating Real-Time Pop-Up Toast Container -->
+    <div id="realtime-toast-container" class="realtime-toast-container no-print"></div>
+    {% endif %}
 
     <main>
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -93,6 +171,269 @@
     </footer>
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+    {% if current_user and current_user.role == 'patient' %}
+    <script>
+        // Real-Time Notification Poller & Instant Push Engine
+        let lastSeenNotifId = 0;
+        let knownPendingRxIds = new Set();
+        let isFirstPoll = true;
+
+        function playNotificationChime() {
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                if (ctx.state === 'suspended') ctx.resume();
+                
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                const now = ctx.currentTime;
+                
+                osc.frequency.setValueAtTime(587.33, now); // D5
+                osc.frequency.exponentialRampToValueAtTime(880, now + 0.12); // A5
+                gain.gain.setValueAtTime(0.18, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+                
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            } catch(e) {}
+        }
+
+        function toggleNotificationDrawer() {
+            const drawer = document.getElementById('patient-notification-drawer');
+            if (!drawer) return;
+            if (drawer.style.display === 'flex') {
+                drawer.style.display = 'none';
+            } else {
+                drawer.style.display = 'flex';
+                fetchNotificationsLive();
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            const drawer = document.getElementById('patient-notification-drawer');
+            const btn = document.getElementById('nav-notif-btn');
+            if (drawer && drawer.style.display === 'flex') {
+                if (!drawer.contains(e.target) && !btn.contains(e.target)) {
+                    drawer.style.display = 'none';
+                }
+            }
+        });
+
+        function showRealtimeToast(title, message, acceptUrl, viewUrl) {
+            const container = document.getElementById('realtime-toast-container');
+            if (!container) return;
+
+            const toast = document.createElement('div');
+            toast.className = 'realtime-toast';
+            toast.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--text-primary); font-size: 0.92rem;">
+                        <i class="ph-bold ph-bell-ringing" style="color: var(--accent); font-size: 1.15rem;"></i>
+                        <span>${title}</span>
+                    </div>
+                    <button type="button" onclick="this.closest('.realtime-toast').remove()" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.1rem; line-height: 1;">
+                        &times;
+                    </button>
+                </div>
+                <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
+                    ${message}
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.35rem; align-items: center;">
+                    ${acceptUrl ? `
+                        <form action="${acceptUrl}" method="POST" style="margin: 0;">
+                            <button type="submit" class="btn btn-secondary btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.65rem;">
+                                <i class="ph-bold ph-check"></i> Accept & Import
+                            </button>
+                        </form>
+                    ` : ''}
+                    ${viewUrl ? `
+                        <a href="${viewUrl}" target="_blank" class="btn btn-outline btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.65rem;">
+                            <i class="ph-bold ph-eye"></i> View Sheet
+                        </a>
+                    ` : ''}
+                </div>
+            `;
+            container.appendChild(toast);
+
+            // Auto-dismiss after 12 seconds
+            setTimeout(() => {
+                toast.style.transition = 'all 0.4s ease';
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(50px)';
+                setTimeout(() => toast.remove(), 400);
+            }, 12000);
+        }
+
+        function renderDrawerNotifications(notifs) {
+            const list = document.getElementById('drawer-notifs-list');
+            if (!list) return;
+
+            if (!notifs || notifs.length === 0) {
+                list.innerHTML = `
+                    <div style="text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary);">
+                        <i class="ph-bold ph-bell-slash" style="font-size: 2rem; margin-bottom: 0.5rem; display: block; opacity: 0.5;"></i>
+                        <span style="font-size: 0.85rem;">No notifications right now</span>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            notifs.forEach(n => {
+                let iconClass = 'ph-bold ph-prescription';
+                let wrapClass = 'notif-icon-wrap';
+                if (n.category === 'quote') {
+                    iconClass = 'ph-bold ph-tag';
+                    wrapClass += ' quote';
+                } else if (n.category === 'refill') {
+                    iconClass = 'ph-bold ph-warning';
+                    wrapClass += ' refill';
+                }
+
+                html += `
+                    <div class="notif-item ${!n.is_read ? 'unread' : ''}" id="notif-row-${n.id}">
+                        <div class="${wrapClass}">
+                            <i class="${iconClass}"></i>
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 0.4rem;">
+                                <strong style="font-size: 0.85rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${n.title}</strong>
+                                <span style="font-size: 0.7rem; color: var(--text-secondary); flex-shrink: 0;">${n.time_ago}</span>
+                            </div>
+                            <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 0.2rem 0 0.4rem 0; line-height: 1.35;">${n.message}</p>
+                            ${n.prescription_uuid ? `
+                                <div style="display: flex; gap: 0.4rem;">
+                                    <a href="/prescription/${n.prescription_uuid}" target="_blank" class="btn btn-outline btn-sm" style="font-size: 0.72rem; padding: 0.15rem 0.45rem;">
+                                        View Prescription
+                                    </a>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            list.innerHTML = html;
+        }
+
+        function fetchNotificationsLive() {
+            fetch(`/api/patient/notifications/live?last_id=${lastSeenNotifId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) return;
+
+                    // Update badge
+                    const badge = document.getElementById('global-notif-badge');
+                    const drawerCount = document.getElementById('drawer-notif-count');
+                    if (badge) {
+                        if (data.unread_count > 0) {
+                            badge.textContent = data.unread_count;
+                            badge.style.display = 'block';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+                    if (drawerCount) {
+                        drawerCount.textContent = data.unread_count;
+                    }
+
+                    // Render drawer list
+                    renderDrawerNotifications(data.notifications);
+
+                    // Check for sudden incoming prescriptions without refresh
+                    if (data.pending_prescriptions) {
+                        data.pending_prescriptions.forEach(p => {
+                            if (!knownPendingRxIds.has(p.id)) {
+                                knownPendingRxIds.add(p.id);
+                                if (!isFirstPoll) {
+                                    // Trigger sudden arrival notification!
+                                    playNotificationChime();
+                                    showRealtimeToast(
+                                        `New Prescription from ${p.doctor_name}`,
+                                        `Prescription #${p.uuid.substring(0, 8)} (${p.items_count} medicines) has arrived. Link to your Medi-Tracker now.`,
+                                        `/prescription/accept/${p.id}`,
+                                        `/prescription/${p.uuid}`
+                                    );
+
+                                    // If user is currently on patient dashboard, dynamically inject the alert banner
+                                    const bannerWrap = document.getElementById('live-pending-rx-container');
+                                    if (bannerWrap) {
+                                        const newBanner = document.createElement('div');
+                                        newBanner.className = 'alert alert-info';
+                                        newBanner.style = 'justify-content: space-between; display: flex; align-items: center; border-left: 5px solid var(--accent); background: rgba(139, 92, 246, 0.15); box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15); margin-bottom: 1.5rem; animation: fadeIn 0.4s ease;';
+                                        newBanner.innerHTML = `
+                                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                                <i class="ph-bold ph-bell-ringing" style="font-size: 1.5rem; color: var(--accent);"></i>
+                                                <div>
+                                                    <strong style="color: var(--text-primary);">New Prescription Received!</strong>
+                                                    <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                                                        ${p.doctor_name} issued Prescription #${p.uuid.substring(0, 8)} (${p.items.join(', ')}).
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <form action="/prescription/accept/${p.id}" method="POST" style="margin: 0;">
+                                                <button type="submit" class="btn btn-secondary btn-sm" style="box-shadow: 0 4px 15px rgba(20, 184, 166, 0.3);">
+                                                    <i class="ph-bold ph-check"></i> Accept & Import
+                                                </button>
+                                            </form>
+                                        `;
+                                        bannerWrap.prepend(newBanner);
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    if (data.notifications && data.notifications.length > 0) {
+                        const maxId = Math.max(...data.notifications.map(n => n.id));
+                        if (maxId > lastSeenNotifId) lastSeenNotifId = maxId;
+                    }
+
+                    isFirstPoll = false;
+                })
+                .catch(err => console.log('Notification poller error:', err));
+        }
+
+        function markAllNotificationsRead() {
+            fetch('/api/patient/notifications/read-all', { method: 'POST' })
+                .then(res => res.json())
+                .then(() => fetchNotificationsLive());
+        }
+
+        function clearAllNotifications() {
+            if (!confirm('Clear all stored notification history?')) return;
+            fetch('/api/patient/notifications/clear', { method: 'POST' })
+                .then(res => res.json())
+                .then(() => fetchNotificationsLive());
+        }
+
+        // Start live polling every 3.5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchNotificationsLive();
+            setInterval(fetchNotificationsLive, 3500);
+        });
+    </script>
+    {% endif %}
+
+    <script>
+        function toggleRegisterDropdown(e) {
+            if (e) e.stopPropagation();
+            const menu = document.getElementById('nav-register-menu');
+            if (menu) menu.classList.toggle('show');
+        }
+
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('nav-register-menu');
+            if (menu && !menu.contains(e.target)) {
+                menu.classList.remove('show');
+            }
+        });
+    </script>
+
     {% block scripts %}{% endblock %}
 </body>
 </html>

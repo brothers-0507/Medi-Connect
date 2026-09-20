@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+
+{% block title %}Issued Prescriptions Directory - Doctor Portal - MediConnect{% endblock %}
+
+{% block content %}
+<div class="no-print" style="margin-bottom: 2rem; animation: fadeIn 0.3s ease;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <a href="{{ url_for('doctor_dashboard') }}" class="btn btn-outline btn-sm" style="margin-bottom: 0.75rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="ph-bold ph-arrow-left"></i> Back to Doctor Workspace
+            </a>
+            <h1 style="font-size: 2rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.6rem; margin: 0;">
+                <i class="ph-bold ph-prescription" style="color: var(--primary);"></i> Issued Prescriptions Archive
+            </h1>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0.35rem 0 0 0;">
+                Full searchable repository of all clinical prescriptions issued from your registered credentials.
+            </p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <a href="{{ url_for('doctor_dashboard') }}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.65rem 1.25rem;">
+                <i class="ph-bold ph-plus-circle"></i> Write New Prescription
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="padding: 1.75rem 2rem; border-top: 4px solid var(--primary); animation: fadeIn 0.4s ease;">
+    <!-- Filter & Search Toolbar -->
+    <div class="inventory-toolbar no-print" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div class="search-input-group" style="flex: 1; min-width: 280px; max-width: 520px;">
+            <i class="ph-bold ph-magnifying-glass"></i>
+            <input type="text" id="prescriptions-search-input" class="form-control" value="{{ search_query }}" placeholder="Search patient name, prescription code, medicines..." oninput="filterFullDirectory()">
+        </div>
+        
+        <div class="filter-chips">
+            <a href="{{ url_for('doctor_prescriptions', status='all') }}" class="filter-chip {% if status_filter == 'all' %}active{% endif %}" style="text-decoration: none;">
+                All Prescriptions ({{ total_count }})
+            </a>
+            <a href="{{ url_for('doctor_prescriptions', status='pending') }}" class="filter-chip {% if status_filter == 'pending' %}active{% endif %}" style="text-decoration: none;">
+                ⏳ Pending Claim ({{ pending_count }})
+            </a>
+            <a href="{{ url_for('doctor_prescriptions', status='claimed') }}" class="filter-chip {% if status_filter == 'claimed' %}active{% endif %}" style="text-decoration: none;">
+                ✅ Dispensed ({{ claimed_count }})
+            </a>
+        </div>
+    </div>
+
+    {% if prescriptions %}
+        <div id="full-prescriptions-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem;">
+            {% for rx in prescriptions %}
+                <div class="rx-full-card" id="full-rx-card-{{ rx.id }}" data-search="{{ rx.patient_name|lower }} {{ rx.uuid|lower }} {% for item in rx.items %}{{ item.medicine_name|lower }} {% endfor %}" style="background: var(--card-bg); border: 1.5px solid var(--card-border); border-radius: 14px; padding: 1.4rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.25s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; gap: 0.5rem;">
+                            <div>
+                                <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-primary);">{{ rx.patient_name }}</div>
+                                <div style="font-size: 0.78rem; color: var(--text-secondary); font-family: monospace; margin-top: 0.15rem;">
+                                    Code: #{{ rx.uuid[:8] }}
+                                </div>
+                            </div>
+                            <span class="badge {% if rx.is_claimed %}badge-success{% else %}badge-warning{% endif %}" style="font-size: 0.72rem; text-transform: none; padding: 0.25rem 0.6rem;">
+                                {% if rx.is_claimed %}
+                                    <i class="ph-bold ph-check-circle"></i> Dispensed
+                                {% else %}
+                                    <i class="ph-bold ph-clock"></i> Pending Claim
+                                {% endif %}
+                            </span>
+                        </div>
+
+                        <div style="display: flex; gap: 1rem; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem; flex-wrap: wrap;">
+                            <span><i class="ph-bold ph-calendar"></i> {{ rx.created_at.strftime('%d %b %Y, %I:%M %p') }}</span>
+                            {% if rx.patient_age %}<span><i class="ph-bold ph-user"></i> Age: {{ rx.patient_age }}</span>{% endif %}
+                            {% if rx.patient_contact %}<span><i class="ph-bold ph-phone"></i> {{ rx.patient_contact }}</span>{% endif %}
+                        </div>
+
+                        <!-- Prescribed Medicines -->
+                        <div style="background: rgba(13, 148, 136, 0.04); border: 1px solid rgba(13, 148, 136, 0.15); border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1rem;">
+                            <div style="font-size: 0.78rem; font-weight: 650; color: var(--primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+                                <i class="ph-bold ph-pill"></i> Prescribed Regimen ({{ rx.items|length }} item{% if rx.items|length != 1 %}s{% endif %}):
+                            </div>
+                            <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                                {% for item in rx.items %}
+                                    <div style="font-size: 0.82rem; color: var(--text-primary); display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem;">
+                                        <span><strong>{{ item.medicine_name }}</strong> ({{ item.dosage }})</span>
+                                        <span style="font-size: 0.75rem; color: var(--text-secondary); font-style: italic;">{{ item.frequency }} &bull; {{ item.duration }}</span>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        {% if rx.instructions %}
+                            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem; background: rgba(255,255,255,0.02); border-radius: 8px; padding: 0.6rem 0.8rem; border-left: 3px solid var(--card-border);">
+                                <strong style="color: var(--text-primary);">Advice:</strong> {{ rx.instructions }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div style="display: flex; gap: 0.6rem; border-top: 1px solid var(--card-border); padding-top: 1rem; margin-top: 0.5rem;">
+                        <a href="{{ url_for('view_prescription', rx_uuid=rx.uuid) }}" target="_blank" class="btn btn-primary btn-sm" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                            <i class="ph-bold ph-qr-code"></i> View Sheet / QR
+                        </a>
+                        <button type="button" class="btn btn-outline btn-sm" onclick="deleteFullPrescription({{ rx.id }}, '{{ rx.patient_name|replace("'", "\\'") }}')" title="Permanently Delete Prescription" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3); padding: 0.4rem 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i class="ph-bold ph-trash"></i> Delete
+                        </button>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div style="text-align: center; padding: 4.5rem 1rem; color: var(--text-secondary);">
+            <i class="ph-bold ph-prescription" style="font-size: 3.5rem; margin-bottom: 1rem; color: var(--card-border);"></i>
+            <h3 style="font-size: 1.25rem; color: var(--text-primary); margin-bottom: 0.5rem;">No Prescriptions in this View</h3>
+            <p style="font-size: 0.9rem; margin-bottom: 1.5rem;">You have no records matching the selected status filter.</p>
+            <a href="{{ url_for('doctor_dashboard') }}" class="btn btn-primary btn-sm">
+                <i class="ph-bold ph-plus-circle"></i> Create New Prescription
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function filterFullDirectory() {
+        const query = (document.getElementById('prescriptions-search-input').value || '').toLowerCase().trim();
+        const cards = document.querySelectorAll('#full-prescriptions-grid .rx-full-card');
+        
+        cards.forEach(c => {
+            const str = c.getAttribute('data-search') || '';
+            if (!query || str.includes(query)) {
+                c.style.display = 'flex';
+            } else {
+                c.style.display = 'none';
+            }
+        });
+    }
+
+    function deleteFullPrescription(rxId, patientName) {
+        if (!confirm(`Are you sure you want to delete the prescription for ${patientName}? This action is irreversible.`)) {
+            return;
+        }
+        fetch(`/prescription/${rxId}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const card = document.getElementById(`full-rx-card-${rxId}`);
+                if (card) {
+                    card.style.transition = 'all 0.35s ease';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.9)';
+                    setTimeout(() => {
+                        card.remove();
+                        const remaining = document.querySelectorAll('.rx-full-card');
+                        if (remaining.length === 0) location.reload();
+                    }, 350);
+                } else {
+                    location.reload();
+                }
+            } else {
+                alert(data.message || 'Error deleting prescription');
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            location.reload();
+        });
+    }
+</script>
+{% endblock %}

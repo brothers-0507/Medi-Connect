@@ -1,6 +1,6 @@
 import unittest
 from datetime import date, timedelta
-from app import app, db, User, Prescription, PrescriptionItem, Broadcast, PharmacyOffer, MedicationSchedule, TrackerLog, InventoryItem
+from app import app, db, User, Prescription, PrescriptionItem, Broadcast, PharmacyOffer, MedicationSchedule, TrackerLog, InventoryItem, DoctorPreset, PatientNotification
 
 class MediConnectTestCase(unittest.TestCase):
     def setUp(self):
@@ -870,6 +870,153 @@ class MediConnectTestCase(unittest.TestCase):
         self.assertIn(b'id="scanned-rx-card"', res.data)
         self.assertIn(b'Add Another Medicine Slot', res.data)
         self.assertIn(b'Complete Sale & Deduct All Medicines', res.data)
+
+    def test_doctor_preset_creation_and_deletion(self):
+        self.login_as('test_doctor')
+        # Create custom preset via POST
+        res = self.app.post('/api/doctor/presets', json={
+            'name': 'Diabetes Routine',
+            'icon': '🩸',
+            'medications': [
+                {'medicine_name': 'Metformin 500mg', 'dosage': '500mg', 'frequency': 'Twice daily', 'duration': '30 days', 'instructions': 'After food'},
+                {'medicine_name': 'Glimepiride 1mg', 'dosage': '1mg', 'frequency': 'Once daily', 'duration': '30 days', 'instructions': 'Before breakfast'}
+            ]
+        })
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+        self.assertTrue(data['success'])
+        preset_id = data['preset']['id']
+        self.assertEqual(data['preset']['name'], 'Diabetes Routine')
+
+        # Verify custom preset appears in GET /api/doctor/presets
+        get_res = self.app.get('/api/doctor/presets')
+        self.assertEqual(get_res.status_code, 200)
+        get_data = get_res.get_json()
+        self.assertTrue(any(p['name'] == 'Diabetes Routine' for p in get_data['presets']))
+
+        # Delete preset
+        del_res = self.app.delete(f'/api/doctor/presets/{preset_id}')
+        self.assertEqual(del_res.status_code, 200)
+        self.assertTrue(del_res.get_json()['success'])
+
+    def test_pharmacy_registration_geolocation(self):
+        # Register a pharmacy with explicit address and coordinates
+        res = self.app.post('/register', data={
+            'username': 'indiranagar_pharma',
+            'password': 'password123',
+            'name': 'Indiranagar Care Meds',
+            'role': 'pharmacy',
+            'contact': '+91 98450 11223',
+            'location': 'Bengaluru, Karnataka',
+            'address': '100ft Road, HAL 2nd Stage, Indiranagar',
+            'latitude': '12.9784',
+            'longitude': '77.6408'
+        }, follow_redirects=True)
+        self.assertEqual(res.status_code, 200)
+
+        with app.app_context():
+            user = User.query.filter_by(username='indiranagar_pharma').first()
+            self.assertIsNotNone(user)
+            self.assertEqual(user.role, 'pharmacy')
+            self.assertAlmostEqual(user.latitude, 12.9784, places=4)
+            self.assertAlmostEqual(user.longitude, 77.6408, places=4)
+            self.assertIn('Indiranagar', user.address)
+
+    def test_patient_live_notifications_api(self):
+        # 1. Issue prescription as doctor for test_patient
+        self.login_as('test_doctor')
+        rx_res = self.app.post('/prescription/create', data={
+            'patient_username': 'test_patient',
+            'patient_name': 'Patient Test',
+            'patient_age': '29',
+            'patient_contact': '555-9988',
+            'instructions': 'Drink plenty of water',
+            'med_name[]': ['Dolo 650'],
+            'med_dosage[]': ['650mg'],
+            'med_frequency[]': ['TDS'],
+            'med_duration[]': ['3 days'],
+            'med_instructions[]': ['After meals']
+        }, headers={'X-Requested-With': 'XMLHttpRequest'})
+        self.assertEqual(rx_res.status_code, 200)
+        rx_data = rx_res.get_json()
+        self.assertTrue(rx_data['success'])
+
+        # 2. Login as patient and check live notifications endpoint
+        self.login_as('test_patient')
+        notif_res = self.app.get('/api/patient/notifications/live')
+        self.assertEqual(notif_res.status_code, 200)
+        notif_data = notif_res.get_json()
+        self.assertTrue(notif_data['success'])
+        self.assertGreaterEqual(notif_data['unread_count'], 1)
+        self.assertTrue(any('Prescription' in n['title'] for n in notif_data['notifications']))
+        self.assertGreaterEqual(len(notif_data['pending_prescriptions']), 1)
+
+        # 3. Mark all notifications as read
+        read_all_res = self.app.post('/api/patient/notifications/read-all')
+        self.assertEqual(read_all_res.status_code, 200)
+        self.assertTrue(read_all_res.get_json()['success'])
+
+        check_res = self.app.get('/api/patient/notifications/live')
+        self.assertEqual(check_res.get_json()['unread_count'], 0)
+
+    def test_doctor_workspace_and_custom_prescriptions_page(self):
+        self.login_as('test_doctor')
+        # Check doctor workspace has prescription form directly on display
+        dash_res = self.app.get('/dashboard/doctor')
+        self.assertEqual(dash_res.status_code, 200)
+        self.assertIn(b'Digital Prescription Creator', dash_res.data)
+        self.assertIn(b'1-Click Medication Presets', dash_res.data)
+        self.assertIn(b'Recent Prescriptions', dash_res.data)
+        self.assertIn(b'Issued Prescriptions Archive', dash_res.data)
+
+        # Check dedicated custom prescriptions archive page
+        archive_res = self.app.get('/doctor/prescriptions')
+        self.assertEqual(archive_res.status_code, 200)
+        self.assertIn(b'Issued Prescriptions Archive', archive_res.data)
+        self.assertIn(b'All Prescriptions', archive_res.data)
+
+    def test_dedicated_registration_page_and_purified_login(self):
+        # 1. Test GET /login contains only sign-in, no registration tabs or forms
+        login_res = self.app.get('/login')
+        self.assertEqual(login_res.status_code, 200)
+        self.assertIn(b'Sign In to MediConnect', login_res.data)
+        self.assertNotIn(b'id="register-tab"', login_res.data)
+        self.assertNotIn(b'id="register-form"', login_res.data)
+        self.assertNotIn(b"Don't have an account?", login_res.data)
+
+        # 2. Test navbar contains Register dropdown with roles
+        self.assertIn(b'Register', login_res.data)
+        self.assertIn(b'/register?role=doctor', login_res.data)
+        self.assertIn(b'/register?role=patient', login_res.data)
+        self.assertIn(b'/register?role=pharmacy', login_res.data)
+
+        # 3. Test GET /register renders dedicated registration page
+        reg_res = self.app.get('/register?role=doctor')
+        self.assertEqual(reg_res.status_code, 200)
+        self.assertIn(b'Create Your Account', reg_res.data)
+        self.assertIn(b'Medical Registration Number', reg_res.data)
+        self.assertIn(b'id="role-btn-doctor"', reg_res.data)
+
+        # 4. Test doctor registration with credentials
+        post_reg_res = self.app.post('/register', data={
+            'username': 'dr_newuser',
+            'password': 'password',
+            'name': 'Dr. New Clinician',
+            'role': 'doctor',
+            'contact': '9876543210',
+            'reg_no': 'KMC-99999',
+            'department': 'Pediatrics',
+            'workplace': 'Manipal Hospital, Bengaluru'
+        }, follow_redirects=True)
+        self.assertEqual(post_reg_res.status_code, 200)
+
+        with app.app_context():
+            doc = User.query.filter_by(username='dr_newuser').first()
+            self.assertIsNotNone(doc)
+            self.assertEqual(doc.role, 'doctor')
+            badges = doc.get_doctor_badges()
+            self.assertTrue(any('KMC-99999' in b['text'] for b in badges))
+            self.assertTrue(any('Pediatrics' in b['text'] for b in badges))
 
 if __name__ == '__main__':
     unittest.main()

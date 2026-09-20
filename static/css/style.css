@@ -1315,3 +1315,332 @@ tr:hover td {
     color: var(--text-secondary);
 }
 
+/* ==========================================================================
+   DOCTOR WORKSPACE & COMPACT PRESCRIPTION HISTORY
+   ========================================================================== */
+.doctor-workspace-grid {
+    display: block;
+    width: 100%;
+    margin-bottom: 2rem;
+}
+
+.rx-form-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-top: 4px solid var(--primary);
+    border-radius: 14px;
+    padding: 2.25rem 2.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    width: 100%;
+}
+
+/* ==========================================================================
+   NAVBAR REGISTER DROPDOWN & DIRECT ROLE SELECTION
+   ========================================================================== */
+.register-dropdown-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.register-dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    width: 270px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.28);
+    padding: 0.5rem;
+    z-index: 1000;
+}
+
+.register-dropdown-menu.show {
+    display: block;
+    animation: fadeIn 0.18s ease-out;
+}
+
+.reg-role-option {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.65rem 0.8rem;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: var(--transition);
+}
+
+.reg-role-option:hover {
+    background: rgba(2, 132, 199, 0.08);
+    transform: translateX(3px);
+}
+
+.rx-companion-panel {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    position: sticky;
+    top: 1.5rem;
+    max-height: calc(100vh - 3rem);
+    overflow: hidden;
+}
+
+.rx-companion-scroll {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding-right: 0.25rem;
+    max-height: 520px;
+}
+
+.rx-compact-item {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    transition: all 0.25s ease;
+}
+
+.rx-compact-item:hover {
+    border-color: rgba(13, 148, 136, 0.4);
+    background: rgba(13, 148, 136, 0.03);
+    transform: translateY(-1px);
+}
+
+.rx-compact-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.rx-compact-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-top: 1px dashed var(--card-border);
+    padding-top: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+/* Custom Preset Chips */
+.preset-chip.custom-preset {
+    background: rgba(139, 92, 246, 0.1);
+    border-color: rgba(139, 92, 246, 0.35);
+    color: var(--text-primary);
+    position: relative;
+    padding-right: 1.75rem;
+}
+
+.preset-chip.custom-preset:hover {
+    border-color: var(--accent);
+    background: rgba(139, 92, 246, 0.2);
+}
+
+.preset-del-btn {
+    position: absolute;
+    right: 0.35rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.preset-del-btn:hover {
+    color: var(--danger);
+    background: rgba(239, 68, 68, 0.15);
+}
+
+/* ==========================================================================
+   PATIENT NOTIFICATION CENTER & REAL-TIME TOASTS
+   ========================================================================== */
+.nav-notification-btn {
+    position: relative;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--card-border);
+    color: var(--text-primary);
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 1.15rem;
+    transition: all 0.2s ease;
+}
+
+.nav-notification-btn:hover {
+    background: rgba(13, 148, 136, 0.15);
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.notif-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #ef4444;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+    border-radius: 9999px;
+    padding: 0 4px;
+    border: 2px solid var(--body-bg, #0f172a);
+    animation: notifPulse 2s infinite;
+}
+
+@keyframes notifPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+/* Notification Drawer */
+.notification-drawer {
+    position: fixed;
+    top: 65px;
+    right: 1.5rem;
+    width: 380px;
+    max-width: 90vw;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.35);
+    z-index: 9999;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideDownFade 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDownFade {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.notif-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--card-border);
+    background: rgba(255, 255, 255, 0.01);
+}
+
+.notif-list {
+    max-height: 420px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.notif-item {
+    padding: 0.9rem 1.2rem;
+    border-bottom: 1px solid var(--card-border);
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+    transition: background 0.2s;
+    text-decoration: none;
+}
+
+.notif-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.notif-item.unread {
+    background: rgba(13, 148, 136, 0.06);
+    border-left: 3px solid var(--primary);
+}
+
+.notif-icon-wrap {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: rgba(13, 148, 136, 0.15);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.notif-icon-wrap.quote {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+}
+
+.notif-icon-wrap.refill {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+/* Floating Real-Time Toast */
+.realtime-toast-container {
+    position: fixed;
+    top: 80px;
+    right: 1.5rem;
+    z-index: 10000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    pointer-events: none;
+}
+
+.realtime-toast {
+    pointer-events: auto;
+    background: var(--card-bg);
+    border: 1.5px solid var(--primary);
+    box-shadow: 0 10px 30px rgba(13, 148, 136, 0.25), 0 0 20px rgba(13, 148, 136, 0.15);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    width: 360px;
+    max-width: 90vw;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    animation: toastSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(10px);
+}
+
+@keyframes toastSlideIn {
+    from { opacity: 0; transform: translateX(50px) scale(0.95); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+/* Geolocation Form Inputs */
+.geo-input-box {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px dashed var(--card-border);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-top: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+

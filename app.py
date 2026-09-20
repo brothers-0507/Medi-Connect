@@ -1,12 +1,13 @@
 import io
 import base64
 import math
+import json
 from datetime import datetime, date, timedelta
 import qrcode
 from flask import Flask, render_template, redirect, url_for, request, flash, session, jsonify
 from sqlalchemy import func
 from config import Config
-from models import db, User, Prescription, PrescriptionItem, Broadcast, PharmacyOffer, MedicationSchedule, TrackerLog, InventoryItem
+from models import db, User, Prescription, PrescriptionItem, Broadcast, PharmacyOffer, MedicationSchedule, TrackerLog, InventoryItem, DoctorPreset, PatientNotification
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -157,6 +158,10 @@ def portal_gateway(role_name):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if request.args.get('action') == 'register':
+        role_param = request.args.get('portal') or request.args.get('role')
+        return redirect(url_for('register', role=role_param))
+
     portal = request.args.get('portal') or request.args.get('role') or request.form.get('portal') or request.form.get('role')
     if portal:
         portal = portal.strip().lower()
@@ -192,17 +197,64 @@ def login():
             
     return render_template('login.html', portal=portal)
 
-@app.route('/register', methods=['POST'])
+# Indian City Coordinate mapping for reliable local distance calculations
+INDIAN_CITY_COORDINATES = {
+    'bengaluru': (12.9716, 77.5946),
+    'bangalore': (12.9716, 77.5946),
+    'indiranagar': (12.9784, 77.6408),
+    'koramangala': (12.9352, 77.6245),
+    'whitefield': (12.9698, 77.7500),
+    'jayanagar': (12.9308, 77.5838),
+    'mumbai': (19.0760, 72.8777),
+    'delhi': (28.6139, 77.2090),
+    'chennai': (13.0827, 80.2707),
+    'hyderabad': (17.3850, 78.4867),
+    'kolkata': (22.5726, 88.3639),
+    'pune': (18.5204, 73.8567),
+    'ahmedabad': (23.0225, 72.5714),
+    'jaipur': (26.9124, 75.7873),
+    'chandigarh': (30.7333, 76.7794)
+}
+
+def geocode_indian_city(text):
+    if not text:
+        return None, None
+    lower = text.lower()
+    for city, coords in INDIAN_CITY_COORDINATES.items():
+        if city in lower:
+            return coords
+    return None, None
+
+@app.route('/register', methods=['GET', 'POST'])
 def register():
+    role_arg = request.args.get('role') or request.args.get('portal')
+    if role_arg:
+        role_arg = role_arg.strip().lower()
+        if role_arg not in {'doctor', 'patient', 'pharmacy'}:
+            role_arg = None
+
+    if request.method == 'GET':
+        if 'user_id' in session:
+            user = User.query.get(session['user_id'])
+            if user:
+                return redirect(url_for(user.role + '_dashboard'))
+            else:
+                session.clear()
+        return render_template('register.html', role=role_arg)
+
+    # POST registration submission
     portal = request.form.get('portal', '').strip().lower()
     username = request.form['username'].strip()
     password = request.form['password']
     name = request.form['name'].strip()
-    role = request.form['role'].strip().lower()
-    contact = request.form['contact'].strip()
+    role = request.form.get('role', '').strip().lower()
+    contact = request.form.get('contact', '').strip()
     location = request.form.get('location', '').strip()
+    address = request.form.get('address', '').strip()
+    lat_val = request.form.get('latitude', '').strip()
+    lng_val = request.form.get('longitude', '').strip()
     
-    # If registered from a specific portal, lock role to that portal
+    # If registered from a specific portal or role, validate role
     if portal in {'doctor', 'patient', 'pharmacy'}:
         role = portal
     elif role not in {'doctor', 'patient', 'pharmacy'}:
@@ -210,9 +262,52 @@ def register():
     
     if User.query.filter_by(username=username).first():
         flash('Username already exists.', 'danger')
-        return redirect(url_for('login', action='register', portal=portal if portal else None))
-        
-    user = User(username=username, name=name, role=role, contact=contact, location=location)
+        return redirect(url_for('register', role=role))
+    
+    latitude = None
+    longitude = None
+    if lat_val and lng_val:
+        try:
+            latitude = float(lat_val)
+            longitude = float(lng_val)
+        except ValueError:
+            latitude, longitude = None, None
+            
+    # Geocoding fallback if coordinates not provided
+    if latitude is None or longitude is None:
+        fb_lat, fb_lng = geocode_indian_city(address or location)
+        if fb_lat is not None:
+            latitude, longitude = fb_lat, fb_lng
+        elif role == 'pharmacy':
+            # Default to Bangalore center if no match for testing
+            latitude, longitude = 12.9716, 77.5946
+    
+    bio = None
+    if role == 'doctor':
+        reg_no = request.form.get('reg_no', '').strip()
+        department = request.form.get('department', '').strip()
+        workplace = request.form.get('workplace', '').strip()
+        if reg_no or department or workplace:
+            badges = []
+            if reg_no:
+                badges.append({"id": "reg_no", "icon": "ph-identification-badge", "color": "var(--primary)", "label": "Reg No", "text": f"Reg No: {reg_no}"})
+            if department:
+                badges.append({"id": "department", "icon": "ph-stethoscope", "color": "var(--secondary)", "label": "Department", "text": department})
+            if workplace:
+                badges.append({"id": "workplace", "icon": "ph-hospital", "color": "var(--accent)", "label": "Workplace", "text": workplace})
+            bio = json.dumps(badges)
+
+    user = User(
+        username=username, 
+        name=name, 
+        role=role, 
+        contact=contact, 
+        location=location or 'Bengaluru, Karnataka',
+        address=address or location or 'Bengaluru, Karnataka',
+        latitude=latitude,
+        longitude=longitude,
+        bio=bio
+    )
     user.set_password(password)
     db.session.add(user)
     db.session.commit()
@@ -256,6 +351,22 @@ def update_settings():
     user.username = username
     user.contact = contact
     user.location = location
+    
+    address = request.form.get('address', '').strip()
+    lat_val = request.form.get('latitude', '').strip()
+    lng_val = request.form.get('longitude', '').strip()
+    if address:
+        user.address = address
+    if lat_val:
+        try:
+            user.latitude = float(lat_val)
+        except ValueError:
+            pass
+    if lng_val:
+        try:
+            user.longitude = float(lng_val)
+        except ValueError:
+            pass
     
     if user.role == 'doctor':
         if 'doctor_badges_json' in request.form and request.form['doctor_badges_json'].strip():
@@ -344,6 +455,7 @@ def doctor_dashboard():
     doctor_id = session['user_id']
     prescriptions = Prescription.query.filter_by(doctor_id=doctor_id).order_by(Prescription.created_at.desc()).all()
     patients = User.query.filter_by(role='patient').order_by(User.name.asc()).all()
+    custom_presets = DoctorPreset.query.filter_by(doctor_id=doctor_id).order_by(DoctorPreset.created_at.asc()).all()
     
     # KPI Stats
     total_rx = len(prescriptions)
@@ -353,13 +465,123 @@ def doctor_dashboard():
     
     return render_template(
         'doctor.html', 
-        prescriptions=prescriptions, 
+        prescriptions=prescriptions,
+        recent_prescriptions=prescriptions[:12],
         patients=patients,
+        custom_presets=custom_presets,
         total_rx=total_rx,
         active_rx=active_rx,
         dispensed_rx=dispensed_rx,
         total_patients=total_patients
     )
+
+@app.route('/doctor/prescriptions')
+@login_required
+@role_required('doctor')
+def doctor_prescriptions():
+    doctor_id = session['user_id']
+    status_filter = request.args.get('status', 'all')
+    search_query = request.args.get('q', '').strip()
+    
+    query = Prescription.query.filter_by(doctor_id=doctor_id)
+    if status_filter == 'claimed':
+        query = query.filter_by(is_claimed=True)
+    elif status_filter == 'pending':
+        query = query.filter_by(is_claimed=False)
+        
+    prescriptions = query.order_by(Prescription.created_at.desc()).all()
+    
+    if search_query:
+        sq = search_query.lower()
+        prescriptions = [p for p in prescriptions if sq in p.patient_name.lower() or sq in p.uuid.lower() or (p.instructions and sq in p.instructions.lower())]
+        
+    total_count = Prescription.query.filter_by(doctor_id=doctor_id).count()
+    claimed_count = Prescription.query.filter_by(doctor_id=doctor_id, is_claimed=True).count()
+    pending_count = total_count - claimed_count
+    
+    return render_template(
+        'doctor_prescriptions.html',
+        prescriptions=prescriptions,
+        status_filter=status_filter,
+        search_query=search_query,
+        total_count=total_count,
+        claimed_count=claimed_count,
+        pending_count=pending_count
+    )
+
+@app.route('/api/doctor/presets', methods=['GET', 'POST'])
+@login_required
+@role_required('doctor')
+def doctor_presets_api():
+    doctor_id = session['user_id']
+    import json
+    if request.method == 'GET':
+        presets = DoctorPreset.query.filter_by(doctor_id=doctor_id).order_by(DoctorPreset.created_at.asc()).all()
+        result = []
+        for p in presets:
+            try:
+                meds = json.loads(p.medications_json)
+            except Exception:
+                meds = []
+            result.append({
+                'id': p.id,
+                'name': p.name,
+                'icon': p.icon or '💊',
+                'medications': meds
+            })
+        return jsonify({'success': True, 'presets': result})
+        
+    # POST
+    data = request.get_json(silent=True) or request.form
+    name = (data.get('name') or '').strip()
+    icon = (data.get('icon') or '💊').strip() or '💊'
+    meds = data.get('medications')
+    
+    if not name:
+        return jsonify({'success': False, 'message': 'Preset name cannot be empty'}), 400
+        
+    if isinstance(meds, str):
+        try:
+            meds = json.loads(meds)
+        except Exception:
+            meds = []
+            
+    if not meds or not isinstance(meds, list):
+        return jsonify({'success': False, 'message': 'At least one medicine is required in preset'}), 400
+        
+    preset = DoctorPreset(
+        doctor_id=doctor_id,
+        name=name,
+        icon=icon,
+        medications_json=json.dumps(meds)
+    )
+    db.session.add(preset)
+    db.session.commit()
+    
+    return jsonify({
+        'success': True, 
+        'message': f'Preset "{name}" created successfully!',
+        'preset': {
+            'id': preset.id,
+            'name': preset.name,
+            'icon': preset.icon,
+            'medications': meds
+        }
+    })
+
+@app.route('/api/doctor/presets/<int:preset_id>', methods=['DELETE', 'POST'])
+@login_required
+@role_required('doctor')
+def delete_doctor_preset(preset_id):
+    doctor_id = session['user_id']
+    preset = DoctorPreset.query.filter_by(id=preset_id, doctor_id=doctor_id).first()
+    if not preset:
+        return jsonify({'success': False, 'message': 'Preset not found'}), 404
+        
+    name = preset.name
+    db.session.delete(preset)
+    db.session.commit()
+    return jsonify({'success': True, 'message': f'Preset "{name}" deleted successfully.'})
 
 @app.route('/api/patient/lookup')
 @login_required
@@ -392,7 +614,7 @@ def lookup_patient():
 def create_prescription():
     doctor_id = session['user_id']
     patient_username = request.form.get('patient_username')
-    patient_name = request.form['patient_name']
+    patient_name = request.form.get('patient_name', '')
     patient_age = request.form.get('patient_age')
     patient_contact = request.form.get('patient_contact')
     instructions = request.form.get('instructions')
@@ -403,6 +625,8 @@ def create_prescription():
         pat_user = User.query.filter_by(username=patient_username.strip(), role='patient').first()
     
     if not pat_user:
+        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'Patient username not found. Please verify with patient.'}), 400
         flash('Error: Patient username not found. Please verify the registered username with the patient.', 'danger')
         return redirect(url_for('doctor_dashboard'))
         
@@ -430,19 +654,45 @@ def create_prescription():
     durations = request.form.getlist('med_duration[]')
     med_instructions = request.form.getlist('med_instructions[]')
     
+    items_created = 0
     for i in range(len(med_names)):
         if med_names[i].strip():
             item = PrescriptionItem(
                 prescription_id=prescription.id,
                 medicine_name=med_names[i],
-                dosage=dosages[i],
-                frequency=frequencies[i],
-                duration=durations[i],
-                instructions=med_instructions[i]
+                dosage=dosages[i] if i < len(dosages) else '',
+                frequency=frequencies[i] if i < len(frequencies) else '',
+                duration=durations[i] if i < len(durations) else '',
+                instructions=med_instructions[i] if i < len(med_instructions) else ''
             )
             db.session.add(item)
+            items_created += 1
             
+    # Auto-create instant patient notification
+    doc_user = User.query.get(doctor_id)
+    doc_name = doc_user.name if doc_user else 'Dr. Rajesh Sharma'
+    notif = PatientNotification(
+        patient_id=pat_user.id,
+        category='prescription',
+        title=f"New Prescription from {doc_name}",
+        message=f"{doc_name} issued prescription #{prescription.uuid[:8]} with {items_created} prescribed medication(s). Accept to link with your Medi-Tracker.",
+        prescription_uuid=prescription.uuid,
+        is_read=False
+    )
+    db.session.add(notif)
+    
     db.session.commit()
+    
+    if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({
+            'success': True,
+            'message': 'Digital prescription created successfully!',
+            'uuid': prescription.uuid,
+            'id': prescription.id,
+            'patient_name': prescription.patient_name,
+            'view_url': url_for('view_prescription', rx_uuid=prescription.uuid)
+        })
+        
     flash('Digital prescription created successfully!', 'success')
     return redirect(url_for('doctor_dashboard'))
 
@@ -454,7 +704,8 @@ def new_prescription():
     if request.method == 'POST':
         return create_prescription()
     patients = User.query.filter_by(role='patient').order_by(User.name.asc()).all()
-    return render_template('prescription_new.html', patients=patients)
+    custom_presets = DoctorPreset.query.filter_by(doctor_id=session['user_id']).order_by(DoctorPreset.created_at.asc()).all()
+    return render_template('prescription_new.html', patients=patients, custom_presets=custom_presets)
 
 @app.route('/prescription/<int:rx_id>/delete', methods=['POST'])
 @login_required
@@ -544,6 +795,9 @@ def patient_dashboard():
     if not next_dose_info:
         next_dose_info = "No pending doses"
 
+    notifications = PatientNotification.query.filter_by(patient_id=patient_id).order_by(PatientNotification.created_at.desc()).limit(30).all()
+    unread_notifications_count = PatientNotification.query.filter_by(patient_id=patient_id, is_read=False).count()
+
     return render_template(
         'patient.html', 
         prescriptions=prescriptions,
@@ -552,6 +806,8 @@ def patient_dashboard():
         refill_alerts=refill_alerts,
         broadcasts=broadcasts,
         checklist=checklist,
+        notifications=notifications,
+        unread_notifications_count=unread_notifications_count,
         total_doses_today=total_doses_today,
         doses_taken_today=doses_taken_today,
         adherence_pct=adherence_pct,
@@ -561,6 +817,104 @@ def patient_dashboard():
         low_stock_count=len(refill_alerts),
         broadcasts_count=len(broadcasts)
     )
+
+@app.route('/api/patient/notifications/live')
+@login_required
+@role_required('patient')
+def patient_live_notifications():
+    patient_id = session['user_id']
+    last_id = request.args.get('last_id', 0, type=int)
+    
+    unread_count = PatientNotification.query.filter_by(patient_id=patient_id, is_read=False).count()
+    all_notifs = PatientNotification.query.filter_by(patient_id=patient_id).order_by(PatientNotification.created_at.desc()).limit(25).all()
+    pending_rx = Prescription.query.filter_by(patient_id=patient_id, is_claimed=False).order_by(Prescription.created_at.desc()).all()
+    
+    schedules = MedicationSchedule.query.filter_by(patient_id=patient_id).all()
+    refill_alerts = [
+        {
+            'schedule_id': s.id,
+            'medicine_name': s.medicine_name,
+            'current_stock': s.current_stock,
+            'threshold': s.refill_alert_threshold
+        }
+        for s in schedules if s.current_stock <= s.refill_alert_threshold
+    ]
+    
+    new_notifs = [n for n in all_notifs if n.id > last_id] if last_id > 0 else []
+    
+    def time_ago_str(dt):
+        diff = datetime.utcnow() - dt
+        secs = int(diff.total_seconds())
+        if secs < 60:
+            return "Just now"
+        elif secs < 3600:
+            return f"{secs // 60}m ago"
+        elif secs < 86400:
+            return f"{secs // 3600}h ago"
+        return dt.strftime('%d %b %Y')
+
+    return jsonify({
+        'success': True,
+        'unread_count': unread_count,
+        'has_new': len(new_notifs) > 0,
+        'new_notifications': [{
+            'id': n.id,
+            'category': n.category,
+            'title': n.title,
+            'message': n.message,
+            'prescription_uuid': n.prescription_uuid,
+            'created_at': n.created_at.strftime('%d %b %Y, %I:%M %p')
+        } for n in new_notifs],
+        'notifications': [{
+            'id': n.id,
+            'category': n.category,
+            'title': n.title,
+            'message': n.message,
+            'prescription_uuid': n.prescription_uuid,
+            'is_read': n.is_read,
+            'time_ago': time_ago_str(n.created_at),
+            'created_at': n.created_at.strftime('%d %b %Y, %I:%M %p')
+        } for n in all_notifs],
+        'pending_prescriptions': [{
+            'id': rx.id,
+            'uuid': rx.uuid,
+            'doctor_name': rx.doctor.name if rx.doctor else 'Doctor',
+            'items_count': len(rx.items),
+            'items': [it.medicine_name for it in rx.items],
+            'created_at': rx.created_at.strftime('%d %b %Y, %I:%M %p')
+        } for rx in pending_rx],
+        'refill_alerts': refill_alerts
+    })
+
+@app.route('/api/patient/notifications/<int:notif_id>/read', methods=['POST'])
+@login_required
+@role_required('patient')
+def mark_notification_read(notif_id):
+    patient_id = session['user_id']
+    notif = PatientNotification.query.filter_by(id=notif_id, patient_id=patient_id).first()
+    if notif:
+        notif.is_read = True
+        db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/patient/notifications/read-all', methods=['POST'])
+@login_required
+@role_required('patient')
+def mark_all_notifications_read():
+    patient_id = session['user_id']
+    PatientNotification.query.filter_by(patient_id=patient_id, is_read=False).update({'is_read': True})
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/patient/notifications/clear', methods=['POST'])
+@login_required
+@role_required('patient')
+def clear_patient_notifications():
+    patient_id = session['user_id']
+    PatientNotification.query.filter_by(patient_id=patient_id).delete()
+    db.session.commit()
+    return jsonify({'success': True})
+
 
 @app.route('/prescription/claim', methods=['POST'])
 @login_required
@@ -1139,6 +1493,20 @@ def submit_offer():
             notes=notes
         )
         db.session.add(offer)
+        
+    # Auto-notify patient about the new pharmacy quote
+    broadcast = Broadcast.query.get(broadcast_id)
+    ph_user = User.query.get(pharmacy_id)
+    if broadcast and ph_user:
+        notif = PatientNotification(
+            patient_id=broadcast.patient_id,
+            category='quote',
+            title=f"New Quote from {ph_user.name}",
+            message=f"{ph_user.name} submitted an estimate of ₹{price:.2f} ({status.title()}) for Prescription #{broadcast.prescription.uuid[:8]}.",
+            prescription_uuid=broadcast.prescription.uuid,
+            is_read=False
+        )
+        db.session.add(notif)
         
     db.session.commit()
     flash('Price estimate and availability submitted successfully!', 'success')

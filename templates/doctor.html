@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 
-{% block title %}Doctor Dashboard - MediConnect{% endblock %}
+{% block title %}Doctor Workspace - MediConnect{% endblock %}
 
 {% block content %}
 <!-- Clinical Banner -->
@@ -25,107 +25,668 @@
             </div>
         </div>
     </div>
-    <div class="clinical-banner-right">
-        <a href="{{ url_for('settings') }}" class="btn btn-outline btn-sm" title="Edit Doctor Credentials & Badges">
-            <i class="ph-bold ph-pencil-simple"></i> Edit Credentials
-        </a>
+    <div class="clinical-banner-right" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
         <a href="{{ url_for('new_prescription') }}" class="btn btn-primary btn-sm">
             <i class="ph-bold ph-plus-circle"></i> New Prescription
+        </a>
+        <a href="{{ url_for('doctor_prescriptions') }}" class="btn btn-outline btn-sm" id="banner-recent-rx-btn" title="View Issued Prescriptions Archive & Recent History">
+            <i class="ph-bold ph-clock-counter-clockwise"></i> Recent Prescriptions (<span id="banner-rx-count">{{ total_rx }}</span>)
+        </a>
+        <a href="{{ url_for('settings') }}" class="btn btn-outline btn-sm" title="Edit Doctor Credentials & Badges">
+            <i class="ph-bold ph-pencil-simple"></i> Edit Credentials
         </a>
     </div>
 </div>
 
-<!-- Full-Width Issued Prescriptions & Consultations Directory -->
-<div class="card" style="width: 100%; border-top: 4px solid var(--primary); animation: fadeIn 0.4s ease;">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--card-border); padding-bottom: 1rem;">
-        <div>
-            <h2 style="font-size: 1.35rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                <i class="ph-bold ph-prescription" style="color: var(--primary);"></i>
-                Issued Prescriptions & Consultations
-            </h2>
-            <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">
-                Manage digitally signed clinical prescriptions issued to your registered patients.
-            </p>
-        </div>
-        <a href="{{ url_for('new_prescription') }}" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 1.1rem;">
-            <i class="ph-bold ph-plus-circle"></i> New Prescription
-        </a>
-    </div>
+<!-- Modal: Create New Custom Preset -->
+<div id="new-preset-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(9, 10, 15, 0.85); backdrop-filter: blur(6px); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 580px; width: 92%; max-height: 90vh; overflow-y: auto; padding: 2rem; position: relative; border-top: 4px solid var(--accent); box-shadow: 0 20px 50px rgba(0,0,0,0.5);">
+        <button type="button" onclick="closePresetModal()" style="position: absolute; top: 1.25rem; right: 1.25rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.4rem;">
+            <i class="ph-bold ph-x"></i>
+        </button>
+        <h3 style="margin-bottom: 0.35rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+            <i class="ph-bold ph-lightning" style="color: var(--accent);"></i> Create Custom Prescription Preset
+        </h3>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+            Save reusable medication regimens to instantly fast-fill future prescriptions with 1 click.
+        </p>
 
-    <!-- Search & Filter Toolbar -->
-    <div class="inventory-toolbar no-print" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-        <div class="search-input-group" style="flex: 1; max-width: 480px;">
-            <i class="ph-bold ph-magnifying-glass"></i>
-            <input type="text" id="doc-rx-search" class="form-control" placeholder="Search by patient name, prescription code, or date..." oninput="filterDoctorRx()">
-        </div>
-        <span style="font-size: 0.85rem; color: var(--text-secondary);">
-            Total: <strong>{{ prescriptions|length }}</strong> record(s)
-        </span>
-    </div>
+        <form id="create-preset-form" onsubmit="submitNewPreset(event)">
+            <div class="form-row" style="display: grid; grid-template-columns: 80px 1fr; gap: 0.75rem; margin-bottom: 1.25rem;">
+                <div class="form-group" style="margin: 0;">
+                    <label style="font-size: 0.78rem; color: var(--text-secondary);">Icon</label>
+                    <input type="text" id="preset-icon" class="form-control" value="💊" maxlength="4" style="text-align: center; font-size: 1.2rem;" required>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label style="font-size: 0.78rem; color: var(--text-secondary);">Preset Name / Title</label>
+                    <input type="text" id="preset-name" class="form-control" placeholder="e.g. Type-2 Diabetes Regular, Migraine SOS" required>
+                </div>
+            </div>
 
-    {% if prescriptions %}
-        <div id="doc-rx-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1.25rem;">
-            {% for rx in prescriptions %}
-                <div class="rx-history-item" id="rx-card-{{ rx.id }}" data-search="{{ rx.patient_name|lower }} {{ rx.uuid|lower }} {{ rx.created_at.strftime('%d %b %Y')|lower }}" style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; transition: var(--transition);">
-                    <div>
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; gap: 0.5rem;">
-                            <div>
-                                <div style="font-weight: 650; font-size: 1.05rem; color: var(--text-primary);">{{ rx.patient_name }}</div>
-                                <div style="font-size: 0.78rem; color: var(--text-secondary); font-family: monospace;">Code: #{{ rx.uuid[:8] }}</div>
-                            </div>
-                            <span class="badge {% if rx.is_claimed %}badge-success{% else %}badge-warning{% endif %}" style="font-size: 0.72rem; text-transform: none;">
-                                {% if rx.is_claimed %}Dispensed{% else %}Pending Claim{% endif %}
-                            </span>
+            <div style="margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem;">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary);">Preset Medications</span>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="addPresetMedRow()" style="font-size: 0.75rem; padding: 0.25rem 0.6rem;">
+                        <i class="ph-bold ph-plus"></i> Add Line
+                    </button>
+                </div>
+                <div id="preset-meds-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                    <!-- Preset Med Row 0 -->
+                    <div class="preset-builder-row" style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 8px; padding: 0.75rem;">
+                        <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <input type="text" class="form-control p-med-name" placeholder="Medicine Name (e.g. Metformin 500mg)" required>
+                            <input type="text" class="form-control p-med-dosage" placeholder="Dosage (e.g. 500mg)" required>
                         </div>
-
-                        <div style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
-                            <i class="ph-bold ph-calendar"></i> {{ rx.created_at.strftime('%d %b %Y, %I:%M %p') }}
-                        </div>
-
-                        <div style="background: rgba(13, 148, 136, 0.05); border: 1px solid rgba(13, 148, 136, 0.1); border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 1rem;">
-                            <div style="font-size: 0.78rem; font-weight: 600; color: var(--primary); margin-bottom: 0.3rem;">
-                                <i class="ph-bold ph-pill"></i> Medications ({{ rx.items|length }}):
-                            </div>
-                            <div style="display: flex; flex-wrap: wrap; gap: 0.35rem;">
-                                {% for item in rx.items %}
-                                    <span style="font-size: 0.75rem; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 4px; padding: 0.15rem 0.45rem;">
-                                        {{ item.medicine_name }} ({{ item.dosage }})
-                                    </span>
-                                {% endfor %}
-                            </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 0.5rem; align-items: center;">
+                            <input type="text" class="form-control p-med-freq" placeholder="Freq (BD)" required>
+                            <input type="text" class="form-control p-med-dur" placeholder="Duration (30d)" required>
+                            <input type="text" class="form-control p-med-inst" placeholder="Instructions">
+                            <button type="button" onclick="this.closest('.preset-builder-row').remove()" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: rgba(239,68,68,0.3); padding: 0.4rem;" title="Remove Line">
+                                <i class="ph-bold ph-trash"></i>
+                            </button>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <div style="display: flex; gap: 0.6rem; border-top: 1px solid var(--card-border); padding-top: 0.85rem;">
-                        <a href="{{ url_for('view_prescription', rx_uuid=rx.uuid) }}" target="_blank" class="btn btn-outline btn-sm" style="flex: 1;">
-                            <i class="ph-bold ph-qr-code"></i> View / QR
-                        </a>
-                        <button type="button" class="btn btn-outline btn-sm" onclick="deletePrescription({{ rx.id }}, '{{ rx.patient_name|replace("'", "\\'") }}')" title="Delete Prescription" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
-                            <i class="ph-bold ph-trash"></i> Delete
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; border-top: 1px solid var(--card-border); padding-top: 1rem;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closePresetModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary btn-sm" id="btn-save-preset" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <i class="ph-bold ph-check"></i> Save Preset
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ================= DOCTOR WORKSPACE: 2-COLUMN LAYOUT ================= -->
+<div class="doctor-workspace-grid">
+    <!-- LEFT: Digital Prescription Creation Workspace (Directly on Display) -->
+    <div class="rx-form-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--card-border); padding-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+                <h2 style="font-size: 1.35rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="ph-bold ph-prescription" style="color: var(--primary);"></i> Digital Prescription Creator
+                </h2>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.25rem 0 0 0;">
+                    Issue tamper-evident, digitally signed prescriptions with instant patient push & QR authentication.
+                </p>
+            </div>
+            <button type="button" class="btn btn-outline btn-sm" onclick="resetPrescriptionForm()" title="Clear form to write another prescription" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="ph-bold ph-arrows-counter-clockwise"></i> Clear / Reset Form
+            </button>
+        </div>
+
+        <!-- Feedback Alert Container -->
+        <div id="rx-form-alert" style="display: none; margin-bottom: 1.25rem;"></div>
+
+        <form action="{{ url_for('create_prescription') }}" method="POST" id="prescription-form" onsubmit="handlePrescriptionSubmit(event)">
+            <!-- Patient Info Section -->
+            <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--card-border); padding-bottom: 1.75rem;">
+                <h3 style="font-size: 0.95rem; color: var(--primary); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="ph-bold ph-user"></i> Patient Information
+                </h3>
+                
+                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group" style="margin: 0;">
+                        <label for="patient_username" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; display: block;">
+                            Patient Registered Username (Autofills Profile)
+                        </label>
+                        <input type="text" id="patient_username" name="patient_username" class="form-control" list="patient-list" placeholder="Enter patient username (e.g. patient)..." autocomplete="off" required>
+                        {% if patients %}
+                        <datalist id="patient-list">
+                            {% for p in patients %}
+                                <option value="{{ p.username }}">{{ p.name }} ({{ p.username }})</option>
+                            {% endfor %}
+                        </datalist>
+                        {% endif %}
+                        <div id="patient-lookup-status" style="font-size: 0.8rem; margin-top: 0.35rem; min-height: 1.2rem;"></div>
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label for="patient_name" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; display: block;">
+                            Patient Full Name
+                        </label>
+                        <input type="text" id="patient_name" name="patient_name" class="form-control" placeholder="Autofilled from registered account" required>
+                    </div>
+                </div>
+
+                <div class="form-row" style="display: grid; grid-template-columns: 140px 1fr; gap: 1rem;">
+                    <div class="form-group" style="margin: 0;">
+                        <label for="patient_age" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; display: block;">Age</label>
+                        <input type="number" id="patient_age" name="patient_age" class="form-control" min="0" max="150" placeholder="e.g. 32">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label for="patient_contact" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; display: block;">Contact (Phone / Email)</label>
+                        <input type="text" id="patient_contact" name="patient_contact" class="form-control" placeholder="Autofilled from registered account" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prescribed Medications Section -->
+            <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--card-border); padding-bottom: 1.75rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+                    <h3 style="font-size: 0.95rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="ph-bold ph-pill"></i> Prescribed Medicines & Regimen
+                    </h3>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="addMedicationRow()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                        <i class="ph-bold ph-plus"></i> Add Medicine Line
+                    </button>
+                </div>
+
+                <div id="medications-container" style="display: flex; flex-direction: column; gap: 0.85rem;">
+                    <!-- Initial Medicine Row 0 -->
+                    <div class="prescription-item-row" id="med-row-0">
+                        <div>
+                            <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Medicine Name</label>
+                            <input type="text" name="med_name[]" class="form-control" placeholder="e.g. Dolo 650" required>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Dosage</label>
+                            <input type="text" name="med_dosage[]" class="form-control" placeholder="e.g. 650mg" required>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Frequency</label>
+                            <input type="text" name="med_frequency[]" class="form-control" placeholder="e.g. Twice daily (BD)" required>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Duration</label>
+                            <input type="text" name="med_duration[]" class="form-control" placeholder="e.g. 5 days" required>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Instructions</label>
+                            <input type="text" name="med_instructions[]" class="form-control" placeholder="e.g. After food">
+                        </div>
+                        <div style="display: flex; align-items: flex-end;">
+                            <button type="button" class="btn btn-outline btn-sm" onclick="removeMedicationRow('med-row-0')" title="Delete Medicine" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
+                                <i class="ph-bold ph-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fast-Fill 1-Click Clinical Rx Presets Bar (Situated Under Prescribed Medicines) -->
+            <div style="margin-bottom: 2rem; background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1rem 1.25rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <span class="rx-presets-label" style="font-size: 0.82rem; font-weight: 650; color: var(--text-secondary); display: flex; align-items: center; gap: 0.4rem;">
+                        <i class="ph-bold ph-lightning" style="color: var(--accent);"></i> 1-Click Medication Presets:
+                    </span>
+                    <div style="display: flex; gap: 0.4rem;">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="saveCurrentFormAsPreset()" title="Save current medicine rows as a new preset" style="font-size: 0.75rem; padding: 0.25rem 0.6rem; color: var(--primary); border-color: rgba(13, 148, 136, 0.3);">
+                            <i class="ph-bold ph-floppy-disk"></i> Save Current as Preset
+                        </button>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="openPresetModal()" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; background: var(--accent); border-color: var(--accent);">
+                            <i class="ph-bold ph-plus"></i> + New Preset
                         </button>
                     </div>
                 </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div style="text-align: center; padding: 4rem 1rem; color: var(--text-secondary);">
-            <i class="ph-bold ph-prescription" style="font-size: 3.5rem; margin-bottom: 1rem; color: var(--card-border);"></i>
-            <h3 style="font-size: 1.15rem; color: var(--text-primary); margin-bottom: 0.5rem;">No Prescriptions Issued Yet</h3>
-            <p style="font-size: 0.9rem; margin-bottom: 1.5rem;">Create your first digital prescription for a registered patient.</p>
-            <a href="{{ url_for('new_prescription') }}" class="btn btn-primary btn-sm">
-                <i class="ph-bold ph-plus-circle"></i> Create New Prescription
-            </a>
-        </div>
-    {% endif %}
+
+                <!-- Presets Chips Container (Built-in + Custom) -->
+                <div id="presets-chips-bar" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                    <!-- Built-in Standard Presets -->
+                    <button type="button" class="preset-chip" onclick="applyRxPreset('fever')">
+                        🌡️ Cold & Fever (Dolo 650)
+                    </button>
+                    <button type="button" class="preset-chip" onclick="applyRxPreset('antibiotic')">
+                        💊 Antibiotic (Augmentin 625)
+                    </button>
+                    <button type="button" class="preset-chip" onclick="applyRxPreset('gerd')">
+                        🔥 Acidity / GERD (Pan-D)
+                    </button>
+                    <button type="button" class="preset-chip" onclick="applyRxPreset('allergy')">
+                        🤧 Allergy (Montair-LC)
+                    </button>
+                    <button type="button" class="preset-chip" onclick="applyRxPreset('bp')">
+                        ❤️ Hypertension (Telma 40)
+                    </button>
+
+                    <!-- Doctor's Custom Presets rendered dynamically -->
+                    {% for cp in custom_presets %}
+                        <div class="preset-chip custom-preset" id="preset-chip-{{ cp.id }}" onclick="applyCustomPreset({{ cp.id }})" title="Click to apply {{ cp.name }}">
+                            <span>{{ cp.icon or '💊' }} {{ cp.name }}</span>
+                            <button type="button" class="preset-del-btn" onclick="event.stopPropagation(); deleteCustomPreset({{ cp.id }}, '{{ cp.name|replace("'", "\\'") }}')" title="Delete custom preset">
+                                &times;
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- General Clinical Notes -->
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <label for="instructions" style="font-size: 0.88rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem; display: block;">
+                    Doctor Clinical Notes / Dietary Advice
+                </label>
+                <textarea id="instructions" name="instructions" class="form-control" rows="3" placeholder="e.g. Adequate rest, hydrate with warm water, avoid oily food. Review after 5 days if symptoms persist."></textarea>
+            </div>
+
+            <!-- Form Actions -->
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-top: 1px solid var(--card-border); padding-top: 1.5rem;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="resetPrescriptionForm()">
+                    <i class="ph-bold ph-trash"></i> Clear Form
+                </button>
+                <div style="display: flex; gap: 0.75rem; align-items: center;">
+                    <button type="submit" class="btn btn-primary" id="btn-submit-rx" style="padding: 0.75rem 2rem; font-weight: 650; box-shadow: 0 4px 15px rgba(13, 148, 136, 0.25); display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <i class="ph-bold ph-check-circle"></i> Generate Digital Prescription & QR Link
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    function deletePrescription(rxId, patientName) {
-        if (!confirm(`Are you sure you want to delete the prescription for ${patientName}? This action will permanently remove the prescription and any active pharmacy broadcasts.`)) {
+    let medRowCount = 1;
+
+    // Default Clinical Presets
+    const defaultRxPresets = {
+        fever: [
+            { name: 'Dolo 650', dosage: '650mg', frequency: 'Three times daily (TDS)', duration: '3 days', instructions: 'Post-meals, only when temp > 100°F' },
+            { name: 'Cetirizine 10mg', dosage: '10mg', frequency: 'Once daily at bedtime (HS)', duration: '5 days', instructions: 'May cause mild drowsiness' }
+        ],
+        antibiotic: [
+            { name: 'Augmentin 625 Duo', dosage: '625mg', frequency: 'Twice daily (BD)', duration: '5 days', instructions: 'With food, complete full antibiotic course' },
+            { name: 'Pan-D', dosage: '40mg/30mg', frequency: 'Once daily in morning (OD)', duration: '5 days', instructions: 'Empty stomach, 30 mins before breakfast' }
+        ],
+        gerd: [
+            { name: 'Pan-D', dosage: '40mg/30mg', frequency: 'Once daily (OD)', duration: '14 days', instructions: 'Take 30 mins before breakfast in the morning' }
+        ],
+        allergy: [
+            { name: 'Montair-LC', dosage: '10mg/5mg', frequency: 'Once daily at bedtime (HS)', duration: '10 days', instructions: 'Take at night after food' }
+        ],
+        bp: [
+            { name: 'Telma 40', dosage: '40mg', frequency: 'Once daily in morning (OD)', duration: '30 days', instructions: 'Take with breakfast, monitor BP weekly' }
+        ]
+    };
+
+    // Cache of custom presets
+    let customPresetsCache = {};
+    {% for cp in custom_presets %}
+        try {
+            customPresetsCache[{{ cp.id }}] = {
+                id: {{ cp.id }},
+                name: "{{ cp.name|replace('"', '\\"') }}",
+                icon: "{{ cp.icon or '💊' }}",
+                medications: {{ cp.medications_json|safe }}
+            };
+        } catch(e) { console.error(e); }
+    {% endfor %}
+
+    function applyRxPreset(key) {
+        const meds = defaultRxPresets[key];
+        if (meds) populateMedicationRows(meds);
+    }
+
+    function applyCustomPreset(presetId) {
+        const p = customPresetsCache[presetId];
+        if (p && p.medications) {
+            populateMedicationRows(p.medications);
+        } else {
+            fetch('/api/doctor/presets')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        data.presets.forEach(pr => customPresetsCache[pr.id] = pr);
+                        if (customPresetsCache[presetId]) {
+                            populateMedicationRows(customPresetsCache[presetId].medications);
+                        }
+                    }
+                });
+        }
+    }
+
+    function populateMedicationRows(meds) {
+        const container = document.getElementById('medications-container');
+        container.innerHTML = '';
+        medRowCount = 0;
+
+        meds.forEach(med => {
+            const rowId = `med-row-${medRowCount}`;
+            const row = document.createElement('div');
+            row.className = 'prescription-item-row';
+            row.id = rowId;
+            row.innerHTML = `
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Medicine Name</label>
+                    <input type="text" name="med_name[]" class="form-control" value="${med.medicine_name || med.name || ''}" required>
+                </div>
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Dosage</label>
+                    <input type="text" name="med_dosage[]" class="form-control" value="${med.dosage || ''}" required>
+                </div>
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Frequency</label>
+                    <input type="text" name="med_frequency[]" class="form-control" value="${med.frequency || ''}" required>
+                </div>
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Duration</label>
+                    <input type="text" name="med_duration[]" class="form-control" value="${med.duration || ''}" required>
+                </div>
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Instructions</label>
+                    <input type="text" name="med_instructions[]" class="form-control" value="${med.instructions || ''}">
+                </div>
+                <div style="display: flex; align-items: flex-end;">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="removeMedicationRow('${rowId}')" title="Delete Medicine" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
+                        <i class="ph-bold ph-trash"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(row);
+            medRowCount++;
+        });
+    }
+
+    function addMedicationRow() {
+        const container = document.getElementById('medications-container');
+        const rowId = `med-row-${medRowCount}`;
+        const row = document.createElement('div');
+        row.className = 'prescription-item-row';
+        row.id = rowId;
+        row.innerHTML = `
+            <div>
+                <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Medicine Name</label>
+                <input type="text" name="med_name[]" class="form-control" placeholder="e.g. Amoxicillin 500mg" required>
+            </div>
+            <div>
+                <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Dosage</label>
+                <input type="text" name="med_dosage[]" class="form-control" placeholder="e.g. 500mg" required>
+            </div>
+            <div>
+                <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Frequency</label>
+                <input type="text" name="med_frequency[]" class="form-control" placeholder="e.g. Twice daily (BD)" required>
+            </div>
+            <div>
+                <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Duration</label>
+                <input type="text" name="med_duration[]" class="form-control" placeholder="e.g. 5 days" required>
+            </div>
+            <div>
+                <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Instructions</label>
+                <input type="text" name="med_instructions[]" class="form-control" placeholder="e.g. After food">
+            </div>
+            <div style="display: flex; align-items: flex-end;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="removeMedicationRow('${rowId}')" title="Delete Medicine" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
+                    <i class="ph-bold ph-trash"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(row);
+        medRowCount++;
+    }
+
+    function removeMedicationRow(rowId) {
+        const row = document.getElementById(rowId);
+        const container = document.getElementById('medications-container');
+        if (container.children.length > 1) {
+            row.remove();
+        } else {
+            alert("At least one medicine is required in the prescription.");
+        }
+    }
+
+    function resetPrescriptionForm() {
+        document.getElementById('prescription-form').reset();
+        document.getElementById('patient-lookup-status').innerHTML = '';
+        const container = document.getElementById('medications-container');
+        container.innerHTML = '';
+        medRowCount = 0;
+        addMedicationRow();
+        const alertBox = document.getElementById('rx-form-alert');
+        if (alertBox) alertBox.style.display = 'none';
+    }
+
+    // Modal Preset Creation Controls
+    function openPresetModal() {
+        document.getElementById('new-preset-modal').style.display = 'flex';
+    }
+
+    function closePresetModal() {
+        document.getElementById('new-preset-modal').style.display = 'none';
+    }
+
+    function addPresetMedRow() {
+        const container = document.getElementById('preset-meds-container');
+        const row = document.createElement('div');
+        row.className = 'preset-builder-row';
+        row.style = 'background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 8px; padding: 0.75rem;';
+        row.innerHTML = `
+            <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                <input type="text" class="form-control p-med-name" placeholder="Medicine Name" required>
+                <input type="text" class="form-control p-med-dosage" placeholder="Dosage" required>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 0.5rem; align-items: center;">
+                <input type="text" class="form-control p-med-freq" placeholder="Frequency" required>
+                <input type="text" class="form-control p-med-dur" placeholder="Duration" required>
+                <input type="text" class="form-control p-med-inst" placeholder="Instructions">
+                <button type="button" onclick="this.closest('.preset-builder-row').remove()" class="btn btn-outline btn-sm" style="color: var(--danger); border-color: rgba(239,68,68,0.3); padding: 0.4rem;" title="Remove Line">
+                    <i class="ph-bold ph-trash"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(row);
+    }
+
+    function saveCurrentFormAsPreset() {
+        const rows = document.querySelectorAll('#medications-container .prescription-item-row');
+        const meds = [];
+        rows.forEach(r => {
+            const name = r.querySelector('input[name="med_name[]"]')?.value.trim();
+            const dosage = r.querySelector('input[name="med_dosage[]"]')?.value.trim();
+            const freq = r.querySelector('input[name="med_frequency[]"]')?.value.trim();
+            const dur = r.querySelector('input[name="med_duration[]"]')?.value.trim();
+            const inst = r.querySelector('input[name="med_instructions[]"]')?.value.trim();
+            if (name) {
+                meds.push({ medicine_name: name, dosage: dosage, frequency: freq, duration: dur, instructions: inst });
+            }
+        });
+
+        if (meds.length === 0) {
+            alert("Please fill at least one medicine in the form to save as a preset.");
             return;
         }
+
+        const presetName = prompt("Enter a title for this preset (e.g. 'Post-Op Antibiotic Care'):");
+        if (!presetName || !presetName.trim()) return;
+
+        fetch('/api/doctor/presets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: presetName.trim(),
+                icon: '💊',
+                medications: meds
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                customPresetsCache[data.preset.id] = data.preset;
+                appendPresetChip(data.preset);
+                alert(`Preset "${presetName}" saved successfully! You can now apply it with 1 click.`);
+            } else {
+                alert(data.message || 'Error saving preset');
+            }
+        });
+    }
+
+    function submitNewPreset(e) {
+        e.preventDefault();
+        const name = document.getElementById('preset-name').value.trim();
+        const icon = document.getElementById('preset-icon').value.trim() || '💊';
+        const rows = document.querySelectorAll('#preset-meds-container .preset-builder-row');
+        
+        const meds = [];
+        rows.forEach(r => {
+            const name = r.querySelector('.p-med-name')?.value.trim();
+            const dosage = r.querySelector('.p-med-dosage')?.value.trim();
+            const freq = r.querySelector('.p-med-freq')?.value.trim();
+            const dur = r.querySelector('.p-med-dur')?.value.trim();
+            const inst = r.querySelector('.p-med-inst')?.value.trim();
+            if (name) {
+                meds.push({ medicine_name: name, dosage: dosage, frequency: freq, duration: dur, instructions: inst });
+            }
+        });
+
+        if (meds.length === 0) {
+            alert("Please add at least one medication to the preset.");
+            return;
+        }
+
+        fetch('/api/doctor/presets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, icon, medications: meds })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                customPresetsCache[data.preset.id] = data.preset;
+                appendPresetChip(data.preset);
+                closePresetModal();
+                document.getElementById('create-preset-form').reset();
+            } else {
+                alert(data.message || 'Error saving preset');
+            }
+        });
+    }
+
+    function appendPresetChip(preset) {
+        const bar = document.getElementById('presets-chips-bar');
+        const chip = document.createElement('div');
+        chip.className = 'preset-chip custom-preset';
+        chip.id = `preset-chip-${preset.id}`;
+        chip.onclick = () => applyCustomPreset(preset.id);
+        chip.title = `Click to apply ${preset.name}`;
+        chip.innerHTML = `
+            <span>${preset.icon || '💊'} ${preset.name}</span>
+            <button type="button" class="preset-del-btn" onclick="event.stopPropagation(); deleteCustomPreset(${preset.id}, '${preset.name.replace(/'/g, "\\'")}')" title="Delete custom preset">
+                &times;
+            </button>
+        `;
+        bar.appendChild(chip);
+    }
+
+    function deleteCustomPreset(id, name) {
+        if (!confirm(`Delete custom preset "${name}"?`)) return;
+        fetch(`/api/doctor/presets/${id}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const chip = document.getElementById(`preset-chip-${id}`);
+                    if (chip) chip.remove();
+                    delete customPresetsCache[id];
+                }
+            });
+    }
+
+    // Prescription Submission via AJAX for instant "Create Another" flow
+    function handlePrescriptionSubmit(e) {
+        e.preventDefault();
+        const form = document.getElementById('prescription-form');
+        const btn = document.getElementById('btn-submit-rx');
+        btn.disabled = true;
+        btn.innerHTML = `<i class="ph-bold ph-spinner ph-spin"></i> Generating Prescription...`;
+
+        const formData = new FormData(form);
+
+        fetch('/prescription/create', {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            btn.disabled = false;
+            btn.innerHTML = `<i class="ph-bold ph-check-circle"></i> Generate Digital Prescription & QR Link`;
+
+            if (data.success) {
+                const alertBox = document.getElementById('rx-form-alert');
+                alertBox.style.display = 'block';
+                alertBox.innerHTML = `
+                    <div style="background: rgba(16, 185, 129, 0.12); border: 1.5px solid var(--secondary); border-radius: 12px; padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <div>
+                            <div style="font-weight: 700; color: var(--secondary); font-size: 1.05rem; display: flex; align-items: center; gap: 0.4rem;">
+                                <i class="ph-bold ph-check-circle"></i> Prescription #${data.uuid.substring(0, 8)} Generated Successfully!
+                            </div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                Digital prescription issued for <strong>${data.patient_name}</strong> and transmitted directly to their patient portal in real time.
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 0.6rem; align-items: center;">
+                            <a href="${data.view_url}" target="_blank" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                                <i class="ph-bold ph-qr-code"></i> View Full Sheet / QR
+                            </a>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="resetPrescriptionForm()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                                <i class="ph-bold ph-plus-circle"></i> Create Another Prescription
+                            </button>
+                        </div>
+                    </div>
+                `;
+                alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+                // Append new card to companion panel
+                appendCompanionPrescriptionCard(data);
+            } else {
+                alert(data.message || "Error generating prescription");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            form.submit();
+        });
+    }
+
+    function appendCompanionPrescriptionCard(data) {
+        // Increment top banner prescription counter
+        const countSpan = document.getElementById('banner-rx-count');
+        if (countSpan) {
+            const current = parseInt(countSpan.textContent || '0', 10);
+            countSpan.textContent = current + 1;
+        }
+
+        const list = document.getElementById('companion-rx-list');
+        if (!list) return;
+        const emptyMsg = list.querySelector('div[style*="text-align: center"]');
+        if (emptyMsg) emptyMsg.remove();
+
+        const card = document.createElement('div');
+        card.className = 'rx-compact-item';
+        card.id = `comp-rx-${data.id}`;
+        card.setAttribute('data-search', `${data.patient_name.toLowerCase()} ${data.uuid.toLowerCase()}`);
+        card.innerHTML = `
+            <div class="rx-compact-header">
+                <div>
+                    <div style="font-weight: 650; font-size: 0.95rem; color: var(--text-primary);">
+                        ${data.patient_name}
+                    </div>
+                    <div style="font-size: 0.74rem; color: var(--text-secondary); font-family: monospace;">
+                        #${data.uuid.substring(0, 8)} &bull; Just now
+                    </div>
+                </div>
+                <span class="badge badge-warning" style="font-size: 0.68rem; padding: 0.15rem 0.4rem; text-transform: none;">
+                    Pending
+                </span>
+            </div>
+            <div style="font-size: 0.76rem; color: var(--text-secondary);">
+                <i class="ph-bold ph-check" style="color: var(--secondary);"></i> Generated Just Now
+            </div>
+            <div class="rx-compact-actions">
+                <a href="${data.view_url}" target="_blank" class="btn btn-outline btn-sm" style="flex: 1; font-size: 0.75rem; padding: 0.25rem 0.5rem; text-align: center;">
+                    <i class="ph-bold ph-qr-code"></i> View / QR
+                </a>
+                <button type="button" class="btn btn-outline btn-sm" onclick="deletePrescription(${data.id}, '${data.patient_name.replace(/'/g, "\\'")}')" title="Delete prescription" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3); font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                    <i class="ph-bold ph-trash"></i>
+                </button>
+            </div>
+        `;
+        list.prepend(card);
+    }
+
+    function deletePrescription(rxId, patientName) {
+        if (!confirm(`Are you sure you want to delete the prescription for ${patientName}? This action will permanently remove the record.`)) return;
+
         fetch(`/prescription/${rxId}/delete`, {
             method: 'POST',
             headers: {
@@ -136,45 +697,75 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                const card = document.getElementById(`rx-card-${rxId}`);
+                const countSpan = document.getElementById('banner-rx-count');
+                if (countSpan) {
+                    const current = Math.max(0, parseInt(countSpan.textContent || '1', 10) - 1);
+                    countSpan.textContent = current;
+                }
+                const card = document.getElementById(`comp-rx-${rxId}`);
                 if (card) {
-                    card.style.transition = 'all 0.35s ease';
+                    card.style.transition = 'all 0.3s ease';
                     card.style.opacity = '0';
                     card.style.transform = 'scale(0.9)';
-                    setTimeout(() => {
-                        card.remove();
-                        const remaining = document.querySelectorAll('.rx-history-item');
-                        if (remaining.length === 0) location.reload();
-                    }, 350);
-                } else {
-                    location.reload();
+                    setTimeout(() => card.remove(), 300);
                 }
             } else {
                 alert(data.message || 'Error deleting prescription');
             }
-        })
-        .catch(err => {
-            console.error(err);
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = `/prescription/${rxId}/delete`;
-            document.body.appendChild(form);
-            form.submit();
         });
     }
 
-    function filterDoctorRx() {
-        const query = (document.getElementById('doc-rx-search').value || '').toLowerCase().trim();
-        const items = document.querySelectorAll('#doc-rx-list .rx-history-item');
-
-        items.forEach(item => {
-            const dataSearch = item.getAttribute('data-search') || '';
-            if (!query || dataSearch.includes(query)) {
-                item.style.display = 'flex';
-            } else {
-                item.style.display = 'none';
-            }
+    function filterCompanionRx() {
+        const input = document.getElementById('companion-search');
+        if (!input) return;
+        const query = (input.value || '').toLowerCase().trim();
+        const items = document.querySelectorAll('#companion-rx-list .rx-compact-item');
+        items.forEach(it => {
+            const str = it.getAttribute('data-search') || '';
+            it.style.display = (!query || str.includes(query)) ? 'flex' : 'none';
         });
+    }
+
+    // Patient Autofill
+    const usernameInput = document.getElementById('patient_username');
+    const nameInput = document.getElementById('patient_name');
+    const ageInput = document.getElementById('patient_age');
+    const contactInput = document.getElementById('patient_contact');
+    const statusDiv = document.getElementById('patient-lookup-status');
+
+    let lookupTimer = null;
+    function checkPatientUsername() {
+        const username = (usernameInput.value || '').trim();
+        if (!username) {
+            statusDiv.innerHTML = '';
+            return;
+        }
+        fetch(`/api/patient/lookup?username=${encodeURIComponent(username)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.found) {
+                    nameInput.value = data.name;
+                    contactInput.value = data.contact;
+                    if (data.age) ageInput.value = data.age;
+                    statusDiv.innerHTML = `<span style="color: var(--secondary); font-weight: 600;"><i class="ph-bold ph-check-circle"></i> Registered Patient: ${data.name} (Autofilled)</span>`;
+                    [nameInput, contactInput, ageInput].forEach(inp => {
+                        inp.style.transition = 'background-color 0.4s';
+                        inp.style.backgroundColor = 'rgba(16, 185, 129, 0.08)';
+                        setTimeout(() => inp.style.backgroundColor = '', 800);
+                    });
+                } else {
+                    statusDiv.innerHTML = `<span style="color: var(--danger); font-weight: 550;"><i class="ph-bold ph-warning-circle"></i> Patient username not found</span>`;
+                }
+            })
+            .catch(() => statusDiv.innerHTML = '');
+    }
+
+    if (usernameInput) {
+        usernameInput.addEventListener('input', () => {
+            clearTimeout(lookupTimer);
+            lookupTimer = setTimeout(checkPatientUsername, 350);
+        });
+        usernameInput.addEventListener('change', checkPatientUsername);
     }
 </script>
 {% endblock %}

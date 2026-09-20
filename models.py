@@ -27,6 +27,8 @@ class User(db.Model):
     offers = db.relationship('PharmacyOffer', back_populates='pharmacy')
     schedules = db.relationship('MedicationSchedule', back_populates='patient')
     inventory = db.relationship('InventoryItem', back_populates='pharmacy')
+    doctor_presets = db.relationship('DoctorPreset', back_populates='doctor', cascade='all, delete-orphan')
+    notifications = db.relationship('PatientNotification', back_populates='patient', cascade='all, delete-orphan')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -233,3 +235,30 @@ class InventoryItem(db.Model):
         # Flag if expiring within 30 days
         diff = self.expiry_date - date.today()
         return diff.days <= 30
+
+class DoctorPreset(db.Model):
+    __tablename__ = 'doctor_presets'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    doctor_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    icon = db.Column(db.String(50), default='💊')
+    medications_json = db.Column(db.Text, nullable=False)  # JSON list of dicts
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    doctor = db.relationship('User', back_populates='doctor_presets')
+
+class PatientNotification(db.Model):
+    __tablename__ = 'patient_notifications'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    patient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    category = db.Column(db.String(30), default='prescription')  # 'prescription', 'quote', 'refill', 'system'
+    title = db.Column(db.String(150), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    prescription_uuid = db.Column(db.String(36), nullable=True)
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    patient = db.relationship('User', back_populates='notifications')
+

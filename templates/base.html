@@ -354,7 +354,7 @@
                                     playNotificationChime();
                                     showRealtimeToast(
                                         `New Prescription from ${p.doctor_name}`,
-                                        `Prescription #${p.uuid.substring(0, 8)} (${p.items_count} medicines) has arrived. Link to your Medi-Tracker now.`,
+                                        `A digital prescription (${p.items_count} medicines) has arrived. Link to your Medi-Tracker now.`,
                                         `/prescription/accept/${p.id}`,
                                         `/prescription/${p.uuid}`
                                     );
@@ -371,7 +371,7 @@
                                                 <div>
                                                     <strong style="color: var(--text-primary);">New Prescription Received!</strong>
                                                     <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                                                        ${p.doctor_name} issued Prescription #${p.uuid.substring(0, 8)} (${p.items.join(', ')}).
+                                                        ${p.doctor_name} issued a new prescription (${p.items.join(', ')}).
                                                     </div>
                                                 </div>
                                             </div>

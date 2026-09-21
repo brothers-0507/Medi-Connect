@@ -1,105 +1,135 @@
 {% extends 'base.html' %}
 
-{% block title %}MediConnect - Smart Digital Prescriptions & Medication Tracker{% endblock %}
+{% block title %}MediConnect — Healthcare Adherence{% endblock %}
+
+{% block body_attrs %}data-page="landing"{% endblock %}
 
 {% block content %}
-<div class="hero-section" style="text-align: center; margin: 3rem auto 4rem auto; max-width: 800px; animation: fadeIn 0.6s ease;">
-    <h1 style="font-size: 2.8rem; font-weight: 700; line-height: 1.2; background: linear-gradient(135deg, var(--text-primary) 30%, var(--accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 1.5rem;">
-        Bridging the Gap in Healthcare Adherence
-    </h1>
-    <p style="font-size: 1.15rem; color: var(--text-secondary); line-height: 1.6; margin-bottom: 2rem;">
-        MediConnect is a unified health network connecting **doctors**, **patients**, and **pharmacies**. We secure prescription sharing, automate daily medication tracking, and optimize pharmacy inventory lookups in one seamless flow.
-    </p>
-</div>
+<section class="hero">
+    <div class="hero-content">
+        <h1>Bridging the Gap in Healthcare Adherence</h1>
 
-<!-- Role Selection Section -->
-<h2 style="text-align: center; font-size: 1.5rem; font-weight: 600; margin-bottom: 2rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-primary);">
-    Select Your Portal to Get Started
-</h2>
+        <p class="hero-description">
+            MediConnect is a unified health network connecting <strong>doctors</strong>,
+            <strong>patients</strong>, and <strong>pharmacies</strong>. We secure prescription
+            sharing, automate daily medication tracking, and optimize pharmacy inventory
+            lookups in one seamless flow.
+        </p>
 
-<div class="grid-container" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-bottom: 5rem; animation: fadeIn 0.8s ease;">
-    <!-- Doctor Card -->
-    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; text-align: center; transition: var(--transition); border-top: 4px solid var(--primary); padding: 2.5rem 2rem;">
-        <div>
-            <div style="width: 4.5rem; height: 4.5rem; border-radius: 50%; background: rgba(2, 132, 199, 0.1); border: 1px solid rgba(2, 132, 199, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto;">
-                <i class="ph-bold ph-stethoscope" style="font-size: 2.2rem; color: var(--primary);"></i>
-            </div>
-            <h3 style="font-size: 1.35rem; margin-bottom: 1rem; color: var(--text-primary);">Practitioner Portal</h3>
-            <p style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.5;">
-                For doctors and clinic practitioners. Write secure digital prescriptions, generate access QR links, and link securely via patient usernames.
-            </p>
-        </div>
-        <div style="display: flex; gap: 0.75rem;">
-            <a href="{{ url_for('login', portal='doctor') }}" class="btn btn-primary btn-sm" style="flex: 1;">Doctor Log In</a>
-            <a href="{{ url_for('register', role='doctor') }}" class="btn btn-outline btn-sm" style="flex: 1;">Register</a>
+        <div class="portal-title">SELECT YOUR PORTAL TO GET STARTED</div>
+
+        <div class="portals">
+            <!-- Practitioner Portal -->
+            <article class="portal-card">
+                <div class="portal-icon">
+                    <i class="ph-bold ph-stethoscope"></i>
+                </div>
+                <h2>Practitioner Portal</h2>
+                <p>
+                    For doctors and clinic practitioners. Write secure digital prescriptions,
+                    generate access QR links, and link securely via patient usernames.
+                </p>
+                <div class="card-actions">
+                    <a href="{{ url_for('login', portal='doctor') }}" class="login-btn">Doctor Log In</a>
+                    <a href="{{ url_for('register', role='doctor') }}" class="card-register">Register</a>
+                </div>
+            </article>
+
+            <!-- Personal Health Space -->
+            <article class="portal-card">
+                <div class="portal-icon">
+                    <i class="ph-bold ph-user"></i>
+                </div>
+                <h2>Personal Health Space</h2>
+                <p>
+                    For patients. Log daily compliance checker logs, receive automatic
+                    prescription alerts, and book/test drug lists to find the best local pricing.
+                </p>
+                <div class="card-actions">
+                    <a href="{{ url_for('login', portal='patient') }}" class="login-btn">Patient Log In</a>
+                    <a href="{{ url_for('register', role='patient') }}" class="card-register">Register</a>
+                </div>
+            </article>
+
+            <!-- Pharmacy Network -->
+            <article class="portal-card">
+                <div class="portal-icon">
+                    <i class="ph-bold ph-first-aid"></i>
+                </div>
+                <h2>Pharmacy Network</h2>
+                <p>
+                    For pharmacies and medical distributors. Manage stock levels, check batch
+                    numbers, receive warnings for expiring batches, and bid on patient quotes.
+                </p>
+                <div class="card-actions">
+                    <a href="{{ url_for('login', portal='pharmacy') }}" class="login-btn">Pharmacy Log In</a>
+                    <a href="{{ url_for('register', role='pharmacy') }}" class="card-register">Register</a>
+                </div>
+            </article>
         </div>
     </div>
+</section>
 
-    <!-- Patient Card -->
-    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; text-align: center; transition: var(--transition); border-top: 4px solid var(--secondary); padding: 2.5rem 2rem;">
-        <div>
-            <div style="width: 4.5rem; height: 4.5rem; border-radius: 50%; background: rgba(13, 148, 136, 0.1); border: 1px solid rgba(13, 148, 136, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto;">
-                <i class="ph-bold ph-user" style="font-size: 2.2rem; color: var(--secondary);"></i>
-            </div>
-            <h3 style="font-size: 1.35rem; margin-bottom: 1rem; color: var(--text-primary);">Personal Health Space</h3>
-            <p style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.5;">
-                For patients. Log daily compliance checker logs, receive automatic prescription alerts, and broadcast drug lists to find the best local pricing.
-            </p>
-        </div>
-        <div style="display: flex; gap: 0.75rem;">
-            <a href="{{ url_for('login', portal='patient') }}" class="btn btn-secondary btn-sm" style="flex: 1;">Patient Log In</a>
-            <a href="{{ url_for('register', role='patient') }}" class="btn btn-outline btn-sm" style="flex: 1;">Register</a>
-        </div>
-    </div>
+<div class="features-container-wrap">
+    <!-- Decorative side flanks matching mockup: Left plant with pulse, Right wave with heart-cross -->
+    <img src="{{ url_for('static', filename='img/landing_decor_left.png') }}" class="decor-flank-left no-print" alt="" aria-hidden="true">
+    <img src="{{ url_for('static', filename='img/landing_decor_right.png') }}" class="decor-flank-right no-print" alt="" aria-hidden="true">
 
-    <!-- Pharmacy Card -->
-    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; text-align: center; transition: var(--transition); border-top: 4px solid var(--accent); padding: 2.5rem 2rem;">
-        <div>
-            <div style="width: 4.5rem; height: 4.5rem; border-radius: 50%; background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem auto;">
-                <i class="ph-bold ph-first-aid" style="font-size: 2.2rem; color: var(--accent);"></i>
-            </div>
-            <h3 style="font-size: 1.35rem; margin-bottom: 1rem; color: var(--text-primary);">Pharmacy Network</h3>
-            <p style="font-size: 0.95rem; color: var(--text-secondary); margin-bottom: 2rem; line-height: 1.5;">
-                For pharmacies and medical distributors. Manage stock levels, check batch numbers, receive warnings for expiring batches, and bid on patient quotes.
-            </p>
-        </div>
-        <div style="display: flex; gap: 0.75rem;">
-            <a href="{{ url_for('login', portal='pharmacy') }}" class="btn btn-primary btn-sm" style="flex: 1; background: linear-gradient(135deg, var(--accent) 0%, #a78bfa 100%);">Pharmacy Log In</a>
-            <a href="{{ url_for('register', role='pharmacy') }}" class="btn btn-outline btn-sm" style="flex: 1;">Register</a>
-        </div>
-    </div>
-</div>
+    <section class="features">
+        <h2>How MediConnect Protects &amp; Empowers You</h2>
 
-<!-- Core System Features -->
-<div class="card" style="padding: 3rem; margin-bottom: 4rem; animation: fadeIn 1s ease;">
-    <h2 style="font-size: 1.6rem; text-align: center; margin-bottom: 2.5rem; color: var(--text-primary);">
-        How MediConnect Protects & Empowers You
-    </h2>
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 2.5rem;">
-        <div>
-            <h4 style="font-size: 1.15rem; color: var(--primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                <i class="ph-bold ph-shield-check"></i> Private Relations
-            </h4>
-            <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">
-                Doctor-patient connections are isolated. Doctors lookup patients solely by their secure registered username, preventing public user registry leaks.
-            </p>
+        <div class="feature-grid">
+            <article class="feature">
+                <img class="feature-image" src="{{ url_for('static', filename='img/private-relations.png') }}" alt="Healthcare data privacy">
+                <div class="feature-copy">
+                    <div class="feature-heading">
+                        <i class="ph-bold ph-shield-check feature-icon"></i>
+                        Private Relations
+                    </div>
+                    <p>
+                        Doctor-patient connections are isolated, keeping sensitive healthcare information secure and confidential.
+                    </p>
+                </div>
+            </article>
+
+            <article class="feature">
+                <img class="feature-image" src="{{ url_for('static', filename='img/popup-automation.png') }}" alt="Prescription notification automation">
+                <div class="feature-copy">
+                    <div class="feature-heading">
+                        <i class="ph-bold ph-bell-ringing feature-icon"></i>
+                        Popup Automation
+                    </div>
+                    <p>
+                        Prescription alerts appear directly on the patient's dashboard for quick review and acceptance.
+                    </p>
+                </div>
+            </article>
+
+            <article class="feature">
+                <img class="feature-image" src="{{ url_for('static', filename='img/fifo-expiry-alarms.png') }}" alt="Medicine expiry monitoring">
+                <div class="feature-copy">
+                    <div class="feature-heading">
+                        <i class="ph-bold ph-squares-four feature-icon"></i>
+                        FIFO Expiry Alarms
+                    </div>
+                    <p>
+                        Pharmacy stock monitoring highlights near-expiry medicines and supports FIFO inventory handling.
+                    </p>
+                </div>
+            </article>
         </div>
-        <div>
-            <h4 style="font-size: 1.15rem; color: var(--secondary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                <i class="ph-bold ph-bell-ringing"></i> Popup Automation
-            </h4>
-            <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">
-                No manual data entry. Prescriptions pop up directly on the patient's dashboard, importing dosages and schedules automatically into their tracker on acceptance.
-            </p>
+    </section>
+
+    <!-- Bottom Health Network Trust Badges & Copyright inside lower background wrap -->
+    <div class="landing-footer">
+        <div class="landing-footer-trust">
+            <span class="trust-badge"><i class="ph-bold ph-shield-check"></i> Isolated Relations</span>
+            <span class="trust-badge"><i class="ph-bold ph-bell-ringing"></i> Automated Push</span>
+            <span class="trust-badge"><i class="ph-bold ph-squares-four"></i> FIFO Batch Alarms</span>
         </div>
-        <div>
-            <h4 style="font-size: 1.15rem; color: var(--accent); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                <i class="ph-bold ph-squares-four"></i> FIFO Expiry Alarms
-            </h4>
-            <p style="font-size: 0.9rem; color: var(--text-secondary); line-height: 1.5;">
-                Pharmacy checkouts deduct oldest stock first (FIFO) and trigger real-time near-expiry warnings to prevent dispensing decaying stock.
-            </p>
-        </div>
+        <p class="landing-footer-copy">&copy; 2026 MediConnect &middot; Secure Healthcare Connectivity</p>
     </div>
 </div>
 {% endblock %}
+
+{% block footer_content %}{% endblock %}

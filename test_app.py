@@ -1097,6 +1097,45 @@ class MediConnectTestCase(unittest.TestCase):
             s2_check = db.session.get(MedicationSchedule, s2_id)
             self.assertEqual(s2_check.current_stock, 1)
 
+    def test_landing_page_uploaded_design(self):
+        # Test GET / renders the uploaded hero dashboard design
+        res = self.app.get('/')
+        self.assertEqual(res.status_code, 200)
+
+        # Hero content
+        self.assertIn(b'Bridging the Gap in', res.data)
+        self.assertIn(b'Healthcare Adherence', res.data)
+        self.assertIn(b'SELECT YOUR PORTAL TO GET STARTED', res.data)
+
+        # 3 Portal Cards
+        self.assertIn(b'Practitioner Portal', res.data)
+        self.assertIn(b'Doctor Log In', res.data)
+        self.assertIn(b'/login?portal=doctor', res.data)
+        self.assertIn(b'/register?role=doctor', res.data)
+
+        self.assertIn(b'Personal Health Space', res.data)
+        self.assertIn(b'Patient Log In', res.data)
+        self.assertIn(b'/login?portal=patient', res.data)
+        self.assertIn(b'/register?role=patient', res.data)
+
+        self.assertIn(b'Pharmacy Network', res.data)
+        self.assertIn(b'Pharmacy Log In', res.data)
+        self.assertIn(b'/login?portal=pharmacy', res.data)
+        self.assertIn(b'/register?role=pharmacy', res.data)
+
+        # 3 Features with uploaded images
+        self.assertIn(b'How MediConnect Protects &amp; Empowers You', res.data)
+        self.assertIn(b'Private Relations', res.data)
+        self.assertIn(b'private-relations.png', res.data)
+        self.assertIn(b'Popup Automation', res.data)
+        self.assertIn(b'popup-automation.png', res.data)
+        self.assertIn(b'FIFO Expiry Alarms', res.data)
+        self.assertIn(b'fifo-expiry-alarms.png', res.data)
+
+        # Footer
+        self.assertIn(b'Secure Healthcare Connectivity', res.data)
+
 if __name__ == '__main__':
     unittest.main()
+
 

@@ -2582,11 +2582,101 @@ body[data-page="landing"] footer {
     padding: clamp(28px, 4vh, 44px) clamp(16px, 3vw, 24px) 24px;
     background: linear-gradient(180deg, #f5fbfc 0%, #edf7fa 50%, #e4f3f7 100%);
     border-top: 1px solid rgba(215, 231, 236, 0.6);
+    overflow: hidden;
 }
 
 [data-theme="dark"] .features-container-wrap {
     background: linear-gradient(180deg, #091319 0%, #0c1a22 50%, #10212a 100%);
     border-top-color: rgba(51, 65, 85, 0.4);
+}
+
+/* ==========================================================================
+   AMBIENT 4-QUADRANT BLENDED BACKGROUND CANVAS
+   Utilizes outer flanks, margins, and inter-section spaces smoothly
+   ========================================================================== */
+.ambient-bg-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+    overflow: hidden;
+}
+
+.ambient-bg-panel {
+    position: absolute;
+    pointer-events: none;
+    background-size: cover;
+    background-repeat: no-repeat;
+    opacity: 0.25;
+    transition: opacity 0.3s ease, filter 0.3s ease;
+    filter: saturate(1.05) brightness(1.02);
+}
+
+/* Quadrant 1: Top-Left — Doctor Digital E-Prescription */
+.bg-panel-eprescription {
+    top: 0;
+    left: 0;
+    width: clamp(340px, 46vw, 680px);
+    height: clamp(340px, 48vh, 620px);
+    background-image: url('../img/bg-e-prescription.jpg');
+    background-position: top left;
+    -webkit-mask-image: radial-gradient(ellipse 90% 90% at 12% 16%, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.8) 35%, rgba(0, 0, 0, 0.25) 70%, transparent 100%);
+    mask-image: radial-gradient(ellipse 90% 90% at 12% 16%, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.8) 35%, rgba(0, 0, 0, 0.25) 70%, transparent 100%);
+}
+
+/* Quadrant 2: Top-Right — Patient Adherence & Mobile Alerts */
+.bg-panel-adherence {
+    top: 0;
+    right: 0;
+    width: clamp(340px, 46vw, 680px);
+    height: clamp(340px, 48vh, 620px);
+    background-image: url('../img/bg-patient-adherence.jpg');
+    background-position: top right;
+    -webkit-mask-image: radial-gradient(ellipse 90% 90% at 88% 16%, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.8) 35%, rgba(0, 0, 0, 0.25) 70%, transparent 100%);
+    mask-image: radial-gradient(ellipse 90% 90% at 88% 16%, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.8) 35%, rgba(0, 0, 0, 0.25) 70%, transparent 100%);
+}
+
+/* Quadrant 3: Bottom-Left — Pharmacy Medicine Inventory */
+.bg-panel-pharmacy {
+    bottom: 0;
+    left: 0;
+    width: clamp(340px, 46vw, 680px);
+    height: clamp(360px, 50vh, 660px);
+    background-image: url('../img/bg-pharmacy-stock.jpg');
+    background-position: bottom left;
+    -webkit-mask-image: radial-gradient(ellipse 90% 90% at 12% 84%, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.8) 35%, rgba(0, 0, 0, 0.25) 70%, transparent 100%);
+    mask-image: radial-gradient(ellipse 90% 90% at 12% 84%, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.8) 35%, rgba(0, 0, 0, 0.25) 70%, transparent 100%);
+}
+
+/* Quadrant 4: Bottom-Right — Medical Data Connectivity */
+.bg-panel-connectivity {
+    bottom: 0;
+    right: 0;
+    width: clamp(360px, 48vw, 720px);
+    height: clamp(360px, 52vh, 680px);
+    background-image: url('../img/bg-medical-connectivity.jpg');
+    background-position: bottom right;
+    mix-blend-mode: multiply;
+    opacity: 0.26;
+    -webkit-mask-image: radial-gradient(ellipse 90% 90% at 88% 84%, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.85) 40%, rgba(0, 0, 0, 0.3) 75%, transparent 100%);
+    mask-image: radial-gradient(ellipse 90% 90% at 88% 84%, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.85) 40%, rgba(0, 0, 0, 0.3) 75%, transparent 100%);
+}
+
+/* 🌙 Dark Mode Blending: Luminosity for Clinical Photos & Screen for Glowing Optical Connectivity */
+[data-theme="dark"] .bg-panel-eprescription,
+[data-theme="dark"] .bg-panel-adherence,
+[data-theme="dark"] .bg-panel-pharmacy {
+    opacity: 0.38;
+    mix-blend-mode: luminosity;
+    filter: brightness(0.88) contrast(1.15);
+}
+
+[data-theme="dark"] .bg-panel-connectivity {
+    opacity: 0.52;
+    mix-blend-mode: screen;
+    filter: saturate(1.25) brightness(0.95);
 }
 
 .features {
@@ -3091,6 +3181,17 @@ body[data-page="landing"] footer {
         padding-top: 36px;
         padding-bottom: 44px;
     }
+    .ambient-bg-panel {
+        opacity: 0.16;
+    }
+    [data-theme="dark"] .bg-panel-eprescription,
+    [data-theme="dark"] .bg-panel-adherence,
+    [data-theme="dark"] .bg-panel-pharmacy {
+        opacity: 0.22;
+    }
+    [data-theme="dark"] .bg-panel-connectivity {
+        opacity: 0.32;
+    }
 }
 
 @media (max-width: 600px) {
@@ -3193,6 +3294,17 @@ body[data-page="landing"] footer {
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
+    }
+    .ambient-bg-panel {
+        opacity: 0.12;
+    }
+    [data-theme="dark"] .bg-panel-eprescription,
+    [data-theme="dark"] .bg-panel-adherence,
+    [data-theme="dark"] .bg-panel-pharmacy {
+        opacity: 0.16;
+    }
+    [data-theme="dark"] .bg-panel-connectivity {
+        opacity: 0.22;
     }
 }
 

@@ -1140,6 +1140,20 @@ class MediConnectTestCase(unittest.TestCase):
         # Footer
         self.assertIn(b'Secure Healthcare Connectivity', res.data)
 
+        # Ambient 4-Quadrant Blended Backgrounds
+        self.assertIn(b'ambient-bg-canvas', res.data)
+        self.assertIn(b'bg-panel-eprescription', res.data)
+        self.assertIn(b'bg-panel-adherence', res.data)
+        self.assertIn(b'bg-panel-pharmacy', res.data)
+        self.assertIn(b'bg-panel-connectivity', res.data)
+
+    def test_ambient_background_static_assets(self):
+        # Verify all 4 background images are servable
+        for img in ['bg-e-prescription.jpg', 'bg-patient-adherence.jpg', 'bg-pharmacy-stock.jpg', 'bg-medical-connectivity.jpg']:
+            res = self.app.get(f'/static/img/{img}')
+            self.assertEqual(res.status_code, 200, f"Failed to serve {img}")
+            res.close()
+
 if __name__ == '__main__':
     unittest.main()
 

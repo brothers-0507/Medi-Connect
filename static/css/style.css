@@ -140,7 +140,7 @@ img {
 /* Background decorative glowing circles (soft healthcare ambient glows) */
 body::before, body::after {
     content: '';
-    position: absolute;
+    position: fixed;
     width: 40rem;
     height: 40rem;
     border-radius: 50%;
@@ -275,7 +275,37 @@ main {
     max-width: 1200px;
     width: 100%;
     margin: 0 auto;
-    padding: 2.5rem 2rem;
+    padding: clamp(1.75rem, 3vw, 2.5rem) clamp(1rem, 2.5vw, 2rem) 1.25rem;
+    box-sizing: border-box;
+}
+
+main > *:last-child {
+    margin-bottom: 0;
+}
+
+/* Global Portal Footer */
+footer {
+    width: 100%;
+    text-align: center;
+    padding: 1.15rem 1.5rem;
+    margin-top: auto;
+    border-top: 1px solid var(--card-border);
+    color: var(--text-secondary);
+    font-size: 0.84rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    background: transparent;
+}
+
+footer p {
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    color: inherit;
+    font-size: inherit;
+    line-height: 1.5;
 }
 
 /* Grid System */
@@ -2288,7 +2318,7 @@ body[data-page="landing"] footer {
     justify-content: center;
     padding: clamp(48px, 8vh, 75px) clamp(16px, 3vw, 24px);
     background:
-        linear-gradient(rgba(247, 252, 253, 0.20), rgba(247, 252, 253, 0.46)),
+        linear-gradient(rgba(247, 252, 253, 0.12), rgba(247, 252, 253, 0.28)),
         url("/static/img/healthcare-hero.png");
     background-size: cover;
     background-position: center;
@@ -2297,25 +2327,55 @@ body[data-page="landing"] footer {
     box-sizing: border-box;
 }
 
+/* PC Widescreen: Fixed attachment pins the background to the 16:9 viewport so zooming in never blows it outside */
+@media (min-width: 851px) and (min-aspect-ratio: 1/1) {
+    .hero {
+        background-attachment: fixed;
+        background-position: center center;
+    }
+}
+
+/* Mobile & Portrait Orientation (including Desktop Site Mode on phones):
+   Focus framing on the clinician holding the digital medical tablet */
+@media (orientation: portrait), (max-aspect-ratio: 1/1), (max-width: 850px) {
+    .hero {
+        background-attachment: scroll;
+        background-position: 18% center;
+    }
+}
+
 [data-theme="dark"] .hero {
     background:
-        linear-gradient(rgba(10, 20, 32, 0.65), rgba(10, 20, 32, 0.88)),
+        linear-gradient(rgba(8, 17, 25, 0.40), rgba(8, 17, 25, 0.65)),
         url("/static/img/healthcare-hero.png");
     background-size: cover;
-    background-position: center;
     background-repeat: no-repeat;
+}
+
+@media (min-width: 851px) and (min-aspect-ratio: 1/1) {
+    [data-theme="dark"] .hero {
+        background-attachment: fixed;
+        background-position: center center;
+    }
+}
+
+@media (orientation: portrait), (max-aspect-ratio: 1/1), (max-width: 850px) {
+    [data-theme="dark"] .hero {
+        background-attachment: scroll;
+        background-position: 18% center;
+    }
 }
 
 .hero::after {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(to bottom, transparent 65%, var(--bg, #f5fbfc) 100%);
+    background: linear-gradient(to bottom, transparent 74%, var(--bg, #f5fbfc) 100%);
     pointer-events: none;
 }
 
 [data-theme="dark"] .hero::after {
-    background: linear-gradient(to bottom, transparent 65%, #081115 100%);
+    background: linear-gradient(to bottom, transparent 74%, #081115 100%);
 }
 
 .hero-content {
@@ -2609,9 +2669,9 @@ body[data-page="landing"] footer {
     pointer-events: none;
     background-size: cover;
     background-repeat: no-repeat;
-    opacity: 0.25;
+    opacity: 0.42;
     transition: opacity 0.3s ease, filter 0.3s ease;
-    filter: saturate(1.05) brightness(1.02);
+    filter: saturate(1.08) brightness(1.02);
 }
 
 /* Quadrant 1: Top-Left — Doctor Digital E-Prescription */
@@ -2659,7 +2719,7 @@ body[data-page="landing"] footer {
     background-image: url('../img/bg-medical-connectivity.jpg');
     background-position: bottom right;
     mix-blend-mode: multiply;
-    opacity: 0.26;
+    opacity: 0.40;
     -webkit-mask-image: radial-gradient(ellipse 90% 90% at 88% 84%, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.85) 40%, rgba(0, 0, 0, 0.3) 75%, transparent 100%);
     mask-image: radial-gradient(ellipse 90% 90% at 88% 84%, rgba(0, 0, 0, 1) 0%, rgba(0, 0, 0, 0.85) 40%, rgba(0, 0, 0, 0.3) 75%, transparent 100%);
 }
@@ -2668,15 +2728,15 @@ body[data-page="landing"] footer {
 [data-theme="dark"] .bg-panel-eprescription,
 [data-theme="dark"] .bg-panel-adherence,
 [data-theme="dark"] .bg-panel-pharmacy {
-    opacity: 0.38;
+    opacity: 0.40;
     mix-blend-mode: luminosity;
-    filter: brightness(0.88) contrast(1.15);
+    filter: brightness(0.92) contrast(1.15);
 }
 
 [data-theme="dark"] .bg-panel-connectivity {
-    opacity: 0.52;
+    opacity: 0.54;
     mix-blend-mode: screen;
-    filter: saturate(1.25) brightness(0.95);
+    filter: saturate(1.25) brightness(0.96);
 }
 
 .features {
@@ -3182,15 +3242,15 @@ body[data-page="landing"] footer {
         padding-bottom: 44px;
     }
     .ambient-bg-panel {
-        opacity: 0.16;
+        opacity: 0.36;
     }
     [data-theme="dark"] .bg-panel-eprescription,
     [data-theme="dark"] .bg-panel-adherence,
     [data-theme="dark"] .bg-panel-pharmacy {
-        opacity: 0.22;
+        opacity: 0.35;
     }
     [data-theme="dark"] .bg-panel-connectivity {
-        opacity: 0.32;
+        opacity: 0.46;
     }
 }
 
@@ -3296,15 +3356,15 @@ body[data-page="landing"] footer {
         gap: 10px;
     }
     .ambient-bg-panel {
-        opacity: 0.12;
+        opacity: 0.32;
     }
     [data-theme="dark"] .bg-panel-eprescription,
     [data-theme="dark"] .bg-panel-adherence,
     [data-theme="dark"] .bg-panel-pharmacy {
-        opacity: 0.16;
+        opacity: 0.30;
     }
     [data-theme="dark"] .bg-panel-connectivity {
-        opacity: 0.22;
+        opacity: 0.40;
     }
 }
 

@@ -1132,6 +1132,11 @@ class MediConnectTestCase(unittest.TestCase):
         self.assertIn(b'FIFO Expiry Alarms', res.data)
         self.assertIn(b'fifo-expiry-alarms.png', res.data)
 
+        # Why Medi-Connect Section & Contact Info
+        self.assertIn(b'Why Medi-Connect?', res.data)
+        self.assertIn(b'mediconnectat@gmail.com', res.data)
+        self.assertIn(b'mailto:mediconnectat@gmail.com', res.data)
+
         # Footer
         self.assertIn(b'Secure Healthcare Connectivity', res.data)
 

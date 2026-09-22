@@ -71,10 +71,6 @@
 </section>
 
 <div class="features-container-wrap">
-    <!-- Decorative side flanks matching mockup: Left plant with pulse, Right wave with heart-cross -->
-    <img src="{{ url_for('static', filename='img/landing_decor_left.png') }}" class="decor-flank-left no-print" alt="" aria-hidden="true">
-    <img src="{{ url_for('static', filename='img/landing_decor_right.png') }}" class="decor-flank-right no-print" alt="" aria-hidden="true">
-
     <section class="features">
         <h2>How MediConnect Protects &amp; Empowers You</h2>
 
@@ -120,16 +116,90 @@
         </div>
     </section>
 
+    <!-- Why Medi-Connect Section -->
+    <section class="why-section">
+        <div class="why-header">
+            <span class="why-pill"><i class="ph-bold ph-shield-plus"></i> Clinical Care Redefined</span>
+            <h2>Why Medi-Connect?</h2>
+            <p class="why-subtitle">
+                A unified digital health ecosystem designed to overcome chronic adherence barriers, prevent adverse medication events, and keep healthcare practitioners, patients, and pharmacies in sync.
+            </p>
+        </div>
+
+        <div class="why-grid">
+            <article class="why-card">
+                <div class="why-icon-wrap icon-teal">
+                    <i class="ph-bold ph-stethoscope"></i>
+                </div>
+                <div class="why-card-content">
+                    <h3>Practitioner Precision</h3>
+                    <p>Doctors issue verifiable digital prescriptions, track adherence outcomes in real time, and eliminate paper-trail errors or clinic miscommunications.</p>
+                </div>
+            </article>
+
+            <article class="why-card">
+                <div class="why-icon-wrap icon-emerald">
+                    <i class="ph-bold ph-bell-ringing"></i>
+                </div>
+                <div class="why-card-content">
+                    <h3>Automated Adherence</h3>
+                    <p>Timely dosage alerts, refill countdowns, and daily adherence checker logs empower patients to remain compliant with their treatment plans.</p>
+                </div>
+            </article>
+
+            <article class="why-card">
+                <div class="why-icon-wrap icon-sky">
+                    <i class="ph-bold ph-squares-four"></i>
+                </div>
+                <div class="why-card-content">
+                    <h3>FIFO Inventory Safety</h3>
+                    <p>Pharmacies eliminate expired medication waste through automated first-in-first-out batch monitoring while bidding on patient prescription quotes.</p>
+                </div>
+            </article>
+
+            <article class="why-card">
+                <div class="why-icon-wrap icon-indigo">
+                    <i class="ph-bold ph-lock-key"></i>
+                </div>
+                <div class="why-card-content">
+                    <h3>Privacy &amp; Emergency Continuity</h3>
+                    <p>Doctor-patient connections are strictly isolated. Encrypted QR access cards allow verified emergency response teams to access vital medical profiles instantly.</p>
+                </div>
+            </article>
+        </div>
+
+        <!-- Contact Support Card -->
+        <div class="contact-card">
+            <div class="contact-info">
+                <div class="contact-icon">
+                    <i class="ph-bold ph-envelope-open"></i>
+                </div>
+                <div class="contact-text">
+                    <span class="contact-badge">Have questions or need assistance?</span>
+                    <h3 class="contact-title">Contact Our Healthcare Network Team</h3>
+                    <p class="contact-sub">Direct clinical inquiries, pharmacy partnerships, and user support: <a href="mailto:mediconnectat@gmail.com" class="contact-inline-link">mediconnectat@gmail.com</a></p>
+                </div>
+            </div>
+            <div class="contact-action">
+                <a href="mailto:mediconnectat@gmail.com" class="contact-btn">
+                    <i class="ph-bold ph-paper-plane-tilt"></i>
+                    <span>mediconnectat@gmail.com</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
     <!-- Bottom Health Network Trust Badges & Copyright inside lower background wrap -->
     <div class="landing-footer">
         <div class="landing-footer-trust">
             <span class="trust-badge"><i class="ph-bold ph-shield-check"></i> Isolated Relations</span>
             <span class="trust-badge"><i class="ph-bold ph-bell-ringing"></i> Automated Push</span>
             <span class="trust-badge"><i class="ph-bold ph-squares-four"></i> FIFO Batch Alarms</span>
+            <a href="mailto:mediconnectat@gmail.com" class="trust-badge email-badge"><i class="ph-bold ph-envelope-simple"></i> mediconnectat@gmail.com</a>
         </div>
         <p class="landing-footer-copy">&copy; 2026 MediConnect &middot; Secure Healthcare Connectivity</p>
     </div>
 </div>
 {% endblock %}
 
-{% block footer_content %}{% endblock %}
+{% block page_footer %}{% endblock %}

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}MediConnect - Centralized Pharmacy & Medi-Tracker{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -169,9 +169,11 @@
         {% block content %}{% endblock %}
     </main>
 
+    {% block page_footer %}
     <footer class="no-print">
         {% block footer_content %}<p>&copy; 2026 MediConnect. Built with Flask, SQLAlchemy & modern CSS. All rights reserved.</p>{% endblock %}
     </footer>
+    {% endblock %}
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 

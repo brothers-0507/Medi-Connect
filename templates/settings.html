@@ -49,6 +49,7 @@
                     <input type="text" id="profile-location" name="location" class="form-control" value="{{ current_user.location or '' }}" placeholder="e.g. Bengaluru, Karnataka">
                 </div>
 
+                {% if current_user.role != 'doctor' %}
                 <!-- Geolocation coordinates -->
                 <div class="geo-input-box">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
@@ -71,6 +72,7 @@
                         {% endif %}
                     </div>
                 </div>
+                {% endif %}
 
                 {% if current_user.role == 'doctor' %}
                 <div class="form-group" style="margin-top: 1.5rem; border-top: 1px solid var(--card-border); padding-top: 1.25rem;">

@@ -1,6 +1,7 @@
 import unittest
+import json
 from datetime import date, timedelta
-from app import app, db, User, Prescription, PrescriptionItem, Broadcast, PharmacyOffer, MedicationSchedule, TrackerLog, InventoryItem, DoctorPreset, PatientNotification
+from app import app, db, User, Prescription, PrescriptionItem, Broadcast, PharmacyOffer, MedicationSchedule, TrackerLog, InventoryItem, DoctorPreset, PatientNotification, PharmacyNotification
 
 class MediConnectTestCase(unittest.TestCase):
     def setUp(self):
@@ -1153,6 +1154,145 @@ class MediConnectTestCase(unittest.TestCase):
             res = self.app.get(f'/static/img/{img}')
             self.assertEqual(res.status_code, 200, f"Failed to serve {img}")
             res.close()
+
+    def test_prescription_url_alias(self):
+        with app.app_context():
+            rx = Prescription(doctor_id=self.doc_id, patient_id=self.pat_id, patient_name='Patient Test')
+            db.session.add(rx)
+            db.session.commit()
+            rx_uuid = rx.uuid
+            
+        # Test /prescription/view/<uuid>
+        res1 = self.app.get(f'/prescription/view/{rx_uuid}')
+        self.assertEqual(res1.status_code, 200)
+        
+        # Test alias /prescription/<uuid> (previously 404)
+        res2 = self.app.get(f'/prescription/{rx_uuid}')
+        self.assertEqual(res2.status_code, 200)
+
+    def test_pharmacy_notifications_on_broadcast(self):
+        # Create Rx
+        with app.app_context():
+            rx = Prescription(doctor_id=self.doc_id, patient_id=self.pat_id, patient_name='Patient Test')
+            db.session.add(rx)
+            db.session.flush()
+            item = PrescriptionItem(prescription_id=rx.id, medicine_name='Dolo 650', dosage='1_TAB', frequency='TDS', duration='3 days')
+            db.session.add(item)
+            db.session.commit()
+            rx_id = rx.id
+
+        self.login_as('test_patient')
+        # Patient broadcasts
+        res = self.app.post('/broadcast/create', data={'prescription_id': rx_id}, follow_redirects=True)
+        self.assertEqual(res.status_code, 200)
+
+        # Check Pharmacy Notification was generated
+        with app.app_context():
+            notifs = PharmacyNotification.query.filter_by(pharmacy_id=self.ph_id).all()
+            self.assertGreater(len(notifs), 0)
+            self.assertIn('Broadcast Request', notifs[0].title)
+
+        # Check Pharmacy live notification API
+        self.login_as('test_pharmacy')
+        api_res = self.app.get('/api/pharmacy/notifications/live?last_id=0')
+        self.assertEqual(api_res.status_code, 200)
+        data = json.loads(api_res.data)
+        self.assertTrue(data['success'])
+        self.assertEqual(data['unread_count'], 1)
+        self.assertEqual(len(data['notifications']), 1)
+
+        # Mark all read
+        read_res = self.app.post('/api/pharmacy/notifications/read-all')
+        self.assertEqual(read_res.status_code, 200)
+        with app.app_context():
+            unread = PharmacyNotification.query.filter_by(pharmacy_id=self.ph_id, is_read=False).count()
+            self.assertEqual(unread, 0)
+
+    def test_itemized_pricing_in_offer(self):
+        with app.app_context():
+            rx = Prescription(doctor_id=self.doc_id, patient_id=self.pat_id, patient_name='Patient Test')
+            db.session.add(rx)
+            db.session.flush()
+            item1 = PrescriptionItem(prescription_id=rx.id, medicine_name='Dolo 650', dosage='1_TAB', frequency='TDS', duration='3 days')
+            item2 = PrescriptionItem(prescription_id=rx.id, medicine_name='Pan-D', dosage='1_CAP', frequency='OD_MORNING', duration='5 days')
+            db.session.add_all([item1, item2])
+            db.session.commit()
+
+            bc = Broadcast(prescription_id=rx.id, patient_id=self.pat_id, status='active')
+            db.session.add(bc)
+            db.session.commit()
+            bc_id = bc.id
+
+        self.login_as('test_pharmacy')
+        # Submit offer with itemized pricing
+        offer_data = {
+            'broadcast_id': bc_id,
+            'price': '85.50',
+            'availability_status': 'available',
+            'notes': 'Ready for pickup',
+            'item_med_name[]': ['Dolo 650', 'Pan-D'],
+            'item_price[]': ['35.50', '50.00']
+        }
+        res = self.app.post('/broadcast/offer', data=offer_data, follow_redirects=True)
+        self.assertEqual(res.status_code, 200)
+
+        with app.app_context():
+            offer = PharmacyOffer.query.filter_by(broadcast_id=bc_id).first()
+            self.assertIsNotNone(offer)
+            self.assertEqual(offer.estimated_price, 85.50)
+            self.assertEqual(offer.get_item_price('Dolo 650'), 35.50)
+            self.assertEqual(offer.get_item_price('Pan-D'), 50.00)
+
+    def test_tracker_compare_and_auto_align(self):
+        with app.app_context():
+            rx = Prescription(doctor_id=self.doc_id, patient_id=self.pat_id, patient_name='Patient Test', is_claimed=True)
+            db.session.add(rx)
+            db.session.flush()
+            # Doctor prescribed for Bedtime (OD_NIGHT -> 22:00)
+            item = PrescriptionItem(prescription_id=rx.id, medicine_name='Cetirizine 10mg', dosage='1_TAB', frequency='OD_NIGHT', duration='5 days')
+            db.session.add(item)
+            db.session.commit()
+
+            # But in tracker, it was scheduled in the morning (08:00)
+            sched = MedicationSchedule(
+                patient_id=self.pat_id,
+                medicine_name='Cetirizine 10mg',
+                dosage='1_TAB',
+                frequency='OD_MORNING',
+                time_of_day='08:00',
+                start_date=date.today(),
+                end_date=date.today() + timedelta(days=5)
+            )
+            db.session.add(sched)
+            db.session.commit()
+            sched_id = sched.id
+
+        self.login_as('test_patient')
+
+        # 1. Test compare data endpoint
+        comp_res = self.app.get('/api/tracker/compare-data')
+        self.assertEqual(comp_res.status_code, 200)
+        data = json.loads(comp_res.data)
+        self.assertTrue(data['success'])
+        self.assertEqual(len(data['comparisons']), 1)
+        comp = data['comparisons'][0]
+        self.assertEqual(comp['status'], 'misplaced')
+        self.assertEqual(comp['current_slot'], 'morning')
+        self.assertEqual(comp['expected_slot'], 'night')
+
+        # 2. Test auto-align endpoint
+        align_res = self.app.post(f'/api/tracker/auto-align/{sched_id}', 
+                                  data=json.dumps({'frequency': 'OD_NIGHT'}),
+                                  content_type='application/json')
+        self.assertEqual(align_res.status_code, 200)
+        align_data = json.loads(align_res.data)
+        self.assertTrue(align_data['success'])
+        self.assertEqual(align_data['time_of_day'], '22:00')
+
+        # 3. Verify compare data is now aligned
+        comp_res2 = self.app.get('/api/tracker/compare-data')
+        data2 = json.loads(comp_res2.data)
+        self.assertEqual(data2['comparisons'][0]['status'], 'aligned')
 
 if __name__ == '__main__':
     unittest.main()

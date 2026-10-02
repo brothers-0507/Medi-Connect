@@ -61,9 +61,14 @@
                     <h3 style="font-size: 1.05rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
                         <i class="ph-bold ph-pill"></i> Prescribed Medicines & Regimen
                     </h3>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="addMedicationRow()">
-                        <i class="ph-bold ph-plus"></i> Add Medicine Line
-                    </button>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="resetMedicationSection()" style="display: inline-flex; align-items: center; gap: 0.35rem; color: var(--danger); border-color: rgba(239, 68, 68, 0.4);" title="Clear entered medicine details">
+                            <i class="ph-bold ph-arrow-counter-clockwise"></i> Reset Section
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="addMedicationRow()">
+                            <i class="ph-bold ph-plus"></i> Add Medicine Line
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Fast-Fill 1-Click Clinical Rx Presets -->
@@ -121,7 +126,10 @@
                             <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Instructions</label>
                             <input type="text" name="med_instructions[]" class="form-control" placeholder="e.g. After food">
                         </div>
-                        <div style="display: flex; align-items: flex-end;">
+                        <div style="display: flex; align-items: flex-end; gap: 0.35rem;">
+                            <button type="button" class="btn btn-outline btn-sm" onclick="clearMedicationRow(this)" title="Clear this row's entered details" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); border-color: var(--card-border);">
+                                <i class="ph-bold ph-arrow-counter-clockwise"></i>
+                            </button>
                             <button type="button" class="btn btn-outline btn-sm" onclick="removeMedicationRow('med-row-0')" title="Delete Medicine" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
                                 <i class="ph-bold ph-trash"></i>
                             </button>
@@ -270,7 +278,10 @@
                 <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Instructions</label>
                 <input type="text" name="med_instructions[]" class="form-control" placeholder="e.g. After meals">
             </div>
-            <div style="display: flex; align-items: flex-end;">
+            <div style="display: flex; align-items: flex-end; gap: 0.35rem;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="clearMedicationRow(this)" title="Clear this row's entered details" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); border-color: var(--card-border);">
+                    <i class="ph-bold ph-arrow-counter-clockwise"></i>
+                </button>
                 <button type="button" class="btn btn-outline btn-sm" onclick="removeMedicationRow('${newId}')" title="Delete Medicine" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
                     <i class="ph-bold ph-trash"></i>
                 </button>
@@ -289,6 +300,20 @@
         } else {
             alert("At least one medicine is required in the prescription.");
         }
+    }
+
+    function resetMedicationSection() {
+        const container = document.getElementById('medications-container');
+        container.innerHTML = '';
+        medRowCount = 0;
+        addMedicationRow();
+    }
+
+    function clearMedicationRow(btn) {
+        const row = btn.closest('.prescription-item-row');
+        if (!row) return;
+        row.querySelectorAll('input').forEach(i => i.value = '');
+        row.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
     }
 
     // Autofill patient details when typing or selecting username (WITHOUT ANY POPUP PREVIEW CARD)

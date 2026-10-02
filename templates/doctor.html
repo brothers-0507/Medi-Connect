@@ -168,9 +168,14 @@
                     <h3 style="font-size: 0.95rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
                         <i class="ph-bold ph-pill"></i> Prescribed Medicines & Regimen
                     </h3>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="addMedicationRow()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
-                        <i class="ph-bold ph-plus"></i> Add Medicine Line
-                    </button>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="resetMedicationSection()" style="display: inline-flex; align-items: center; gap: 0.35rem; color: var(--danger); border-color: rgba(239, 68, 68, 0.4);" title="Clear all entered medicines in this section">
+                            <i class="ph-bold ph-arrow-counter-clockwise"></i> Reset Section
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="addMedicationRow()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i class="ph-bold ph-plus"></i> Add Medicine Line
+                        </button>
+                    </div>
                 </div>
 
                 <div id="medications-container" style="display: flex; flex-direction: column; gap: 0.85rem;">
@@ -182,11 +187,21 @@
                         </div>
                         <div>
                             <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Dosage</label>
-                            <input type="text" name="med_dosage[]" class="form-control" placeholder="e.g. 650mg" required>
+                            <select name="med_dosage[]" class="form-control" required>
+                                <option value="" disabled selected>Select dosage</option>
+                                {% for code, label in dosage_options.items() %}
+                                <option value="{{ code }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div>
                             <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Frequency</label>
-                            <input type="text" name="med_frequency[]" class="form-control" placeholder="e.g. Twice daily (BD)" required>
+                            <select name="med_frequency[]" class="form-control" required>
+                                <option value="" disabled selected>Select frequency</option>
+                                {% for code, opt in frequency_options.items() %}
+                                <option value="{{ code }}">{{ opt.label }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div>
                             <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Duration</label>
@@ -196,7 +211,10 @@
                             <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Instructions</label>
                             <input type="text" name="med_instructions[]" class="form-control" placeholder="e.g. After food">
                         </div>
-                        <div style="display: flex; align-items: flex-end;">
+                        <div style="display: flex; align-items: flex-end; gap: 0.35rem;">
+                            <button type="button" class="btn btn-outline btn-sm" onclick="clearMedicationRow(this)" title="Clear this row's entered details" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); border-color: var(--card-border);">
+                                <i class="ph-bold ph-arrow-counter-clockwise"></i>
+                            </button>
                             <button type="button" class="btn btn-outline btn-sm" onclick="removeMedicationRow('med-row-0')" title="Delete Medicine" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
                                 <i class="ph-bold ph-trash"></i>
                             </button>
@@ -280,24 +298,46 @@
 <script>
     let medRowCount = 1;
 
-    // Default Clinical Presets
+    // Standardized options injected from server
+    const DOSAGE_OPTS = {{ dosage_options | tojson }};
+    const FREQ_OPTS = {{ frequency_options | tojson }};
+
+    function buildDosageSelect(selectedVal) {
+        let html = '<select name="med_dosage[]" class="form-control" required><option value="" disabled' + (!selectedVal ? ' selected' : '') + '>Select dosage</option>';
+        for (const [code, label] of Object.entries(DOSAGE_OPTS)) {
+            html += `<option value="${code}"${code === selectedVal ? ' selected' : ''}>${label}</option>`;
+        }
+        html += '</select>';
+        return html;
+    }
+
+    function buildFreqSelect(selectedVal) {
+        let html = '<select name="med_frequency[]" class="form-control" required><option value="" disabled' + (!selectedVal ? ' selected' : '') + '>Select frequency</option>';
+        for (const [code, opt] of Object.entries(FREQ_OPTS)) {
+            html += `<option value="${code}"${code === selectedVal ? ' selected' : ''}>${opt.label}</option>`;
+        }
+        html += '</select>';
+        return html;
+    }
+
+    // Default Clinical Presets (Standardized)
     const defaultRxPresets = {
         fever: [
-            { name: 'Dolo 650', dosage: '650mg', frequency: 'Three times daily (TDS)', duration: '3 days', instructions: 'Post-meals, only when temp > 100°F' },
-            { name: 'Cetirizine 10mg', dosage: '10mg', frequency: 'Once daily at bedtime (HS)', duration: '5 days', instructions: 'May cause mild drowsiness' }
+            { name: 'Dolo 650', dosage: '1_TAB', frequency: 'TDS', duration: '3 days', instructions: 'Post-meals, only when temp > 100°F' },
+            { name: 'Cetirizine 10mg', dosage: '1_TAB', frequency: 'OD_NIGHT', duration: '5 days', instructions: 'May cause mild drowsiness' }
         ],
         antibiotic: [
-            { name: 'Augmentin 625 Duo', dosage: '625mg', frequency: 'Twice daily (BD)', duration: '5 days', instructions: 'With food, complete full antibiotic course' },
-            { name: 'Pan-D', dosage: '40mg/30mg', frequency: 'Once daily in morning (OD)', duration: '5 days', instructions: 'Empty stomach, 30 mins before breakfast' }
+            { name: 'Augmentin 625 Duo', dosage: '1_TAB', frequency: 'BD_MORN_EVE', duration: '5 days', instructions: 'With food, complete full antibiotic course' },
+            { name: 'Pan-D', dosage: '1_CAP', frequency: 'OD_MORNING', duration: '5 days', instructions: 'Empty stomach, 30 mins before breakfast' }
         ],
         gerd: [
-            { name: 'Pan-D', dosage: '40mg/30mg', frequency: 'Once daily (OD)', duration: '14 days', instructions: 'Take 30 mins before breakfast in the morning' }
+            { name: 'Pan-D', dosage: '1_CAP', frequency: 'OD_MORNING', duration: '14 days', instructions: 'Take 30 mins before breakfast in the morning' }
         ],
         allergy: [
-            { name: 'Montair-LC', dosage: '10mg/5mg', frequency: 'Once daily at bedtime (HS)', duration: '10 days', instructions: 'Take at night after food' }
+            { name: 'Montair-LC', dosage: '1_TAB', frequency: 'OD_NIGHT', duration: '10 days', instructions: 'Take at night after food' }
         ],
         bp: [
-            { name: 'Telma 40', dosage: '40mg', frequency: 'Once daily in morning (OD)', duration: '30 days', instructions: 'Take with breakfast, monitor BP weekly' }
+            { name: 'Telma 40', dosage: '1_TAB', frequency: 'OD_MORNING', duration: '30 days', instructions: 'Take with breakfast, monitor BP weekly' }
         ]
     };
 
@@ -354,11 +394,11 @@
                 </div>
                 <div>
                     <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Dosage</label>
-                    <input type="text" name="med_dosage[]" class="form-control" value="${med.dosage || ''}" required>
+                    ${buildDosageSelect(med.dosage || '')}
                 </div>
                 <div>
                     <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Frequency</label>
-                    <input type="text" name="med_frequency[]" class="form-control" value="${med.frequency || ''}" required>
+                    ${buildFreqSelect(med.frequency || '')}
                 </div>
                 <div>
                     <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Duration</label>
@@ -368,7 +408,10 @@
                     <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Instructions</label>
                     <input type="text" name="med_instructions[]" class="form-control" value="${med.instructions || ''}">
                 </div>
-                <div style="display: flex; align-items: flex-end;">
+                <div style="display: flex; align-items: flex-end; gap: 0.35rem;">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="clearMedicationRow(this)" title="Clear this row's entered details" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); border-color: var(--card-border);">
+                        <i class="ph-bold ph-arrow-counter-clockwise"></i>
+                    </button>
                     <button type="button" class="btn btn-outline btn-sm" onclick="removeMedicationRow('${rowId}')" title="Delete Medicine" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
                         <i class="ph-bold ph-trash"></i>
                     </button>
@@ -392,11 +435,11 @@
             </div>
             <div>
                 <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Dosage</label>
-                <input type="text" name="med_dosage[]" class="form-control" placeholder="e.g. 500mg" required>
+                ${buildDosageSelect('')}
             </div>
             <div>
                 <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Frequency</label>
-                <input type="text" name="med_frequency[]" class="form-control" placeholder="e.g. Twice daily (BD)" required>
+                ${buildFreqSelect('')}
             </div>
             <div>
                 <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Duration</label>
@@ -406,7 +449,10 @@
                 <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Instructions</label>
                 <input type="text" name="med_instructions[]" class="form-control" placeholder="e.g. After food">
             </div>
-            <div style="display: flex; align-items: flex-end;">
+            <div style="display: flex; align-items: flex-end; gap: 0.35rem;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="clearMedicationRow(this)" title="Clear this row's entered details" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); border-color: var(--card-border);">
+                    <i class="ph-bold ph-arrow-counter-clockwise"></i>
+                </button>
                 <button type="button" class="btn btn-outline btn-sm" onclick="removeMedicationRow('${rowId}')" title="Delete Medicine" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
                     <i class="ph-bold ph-trash"></i>
                 </button>
@@ -424,6 +470,20 @@
         } else {
             alert("At least one medicine is required in the prescription.");
         }
+    }
+
+    function resetMedicationSection() {
+        const container = document.getElementById('medications-container');
+        container.innerHTML = '';
+        medRowCount = 0;
+        addMedicationRow();
+    }
+
+    function clearMedicationRow(btn) {
+        const row = btn.closest('.prescription-item-row');
+        if (!row) return;
+        row.querySelectorAll('input').forEach(i => i.value = '');
+        row.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
     }
 
     function resetPrescriptionForm() {

@@ -265,8 +265,12 @@
                             <ul style="padding-left: 1.25rem; font-size: 0.95rem; line-height: 1.8; color: var(--text-primary);">
                                 {% for item in info.broadcast.prescription.items %}
                                     <li>
-                                        <strong>{{ item.medicine_name }}</strong> - {{ item.dosage }} ({{ item.frequency }}, for {{ item.duration }})
-                                        {% if item.medicine_name in info.missing_meds %}
+                                        <strong>{{ item.medicine_name }}</strong> - {{ resolve_dose(item.dosage) }} ({{ resolve_freq(item.frequency) }}, for {{ item.duration }})
+                                        {% if info.item_unit_prices.get(item.medicine_name) %}
+                                            <span class="badge badge-info" style="font-size: 0.72rem; margin-left: 0.4rem; padding: 0.15rem 0.45rem;">
+                                                ₹{{ "%.2f"|format(info.item_unit_prices.get(item.medicine_name)) }} / unit
+                                            </span>
+                                        {% elif item.medicine_name in info.missing_meds %}
                                             <span style="color: var(--danger); font-size: 0.8rem; margin-left: 0.5rem; font-weight: 550;">(No Stock)</span>
                                         {% endif %}
                                     </li>
@@ -286,10 +290,32 @@
                             <form action="{{ url_for('submit_offer') }}" method="POST" style="margin:0;">
                                 <input type="hidden" name="broadcast_id" value="{{ info.broadcast.id }}">
                                 
+                                <div style="margin-bottom: 1rem;">
+                                    <label style="font-size: 0.82rem; font-weight: 650; color: var(--text-secondary); margin-bottom: 0.4rem; display: block;">
+                                        Individual Medicine Price Quotes (₹)
+                                    </label>
+                                    <div style="display: flex; flex-direction: column; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: 8px; border: 1px solid var(--card-border);">
+                                        {% for item in info.broadcast.prescription.items %}
+                                        {% set saved_p = (info.offered.get_item_price(item.medicine_name) if info.offered else None) %}
+                                        {% set default_p = saved_p if saved_p is not none else info.item_unit_prices.get(item.medicine_name, 0.0) %}
+                                        <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;">
+                                            <span style="font-size: 0.85rem; color: var(--text-primary); font-weight: 500;">
+                                                {{ item.medicine_name }}
+                                            </span>
+                                            <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                                <span style="color: var(--text-secondary); font-size: 0.85rem;">₹</span>
+                                                <input type="hidden" name="item_med_name[]" value="{{ item.medicine_name }}">
+                                                <input type="number" step="0.01" min="0" name="item_price[]" class="form-control item-price-input-{{ info.broadcast.id }}" value="{{ default_p }}" oninput="updateTotalQuote({{ info.broadcast.id }})" style="width: 110px; padding: 0.35rem 0.5rem; font-size: 0.85rem; text-align: right;" required>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="price-{{ info.broadcast.id }}">Total Price Estimate (₹)</label>
-                                        <input type="number" step="0.01" id="price-{{ info.broadcast.id }}" name="price" class="form-control" value="{% if info.offered %}{{ info.offered.estimated_price }}{% else %}{{ info.estimated_price }}{% endif %}" min="0" required>
+                                        <input type="number" step="0.01" id="price-{{ info.broadcast.id }}" name="price" class="form-control" value="{% if info.offered %}{{ info.offered.estimated_price }}{% else %}{{ info.estimated_price }}{% endif %}" min="0" required style="font-weight: 700; color: var(--secondary);">
                                     </div>
                                     
                                     <div class="form-group">
@@ -1071,5 +1097,18 @@
             stopScanner();
         }
     });
+
+    function updateTotalQuote(bcId) {
+        const inputs = document.querySelectorAll('.item-price-input-' + bcId);
+        let total = 0;
+        inputs.forEach(inp => {
+            const val = parseFloat(inp.value);
+            if (!isNaN(val)) total += val;
+        });
+        const totalInput = document.getElementById('price-' + bcId);
+        if (totalInput) {
+            totalInput.value = total.toFixed(2);
+        }
+    }
 </script>
 {% endblock %}

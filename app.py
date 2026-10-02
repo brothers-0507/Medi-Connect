@@ -7,7 +7,7 @@ import qrcode
 from flask import Flask, render_template, redirect, url_for, request, flash, session, jsonify
 from sqlalchemy import func
 from config import Config
-from models import db, User, Prescription, PrescriptionItem, Broadcast, PharmacyOffer, MedicationSchedule, TrackerLog, InventoryItem, DoctorPreset, PatientNotification
+from models import db, User, Prescription, PrescriptionItem, Broadcast, PharmacyOffer, MedicationSchedule, TrackerLog, InventoryItem, DoctorPreset, PatientNotification, PharmacyNotification
 
 # ── Standardized Prescription Frequency & Dosage Options ──────────────────────
 # These are the single source of truth used by:
@@ -106,6 +106,12 @@ def generate_qr_base64(data):
 # Create database tables and dummy admin/users if database is empty
 with app.app_context():
     db.create_all()
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(db.text("ALTER TABLE pharmacy_offers ADD COLUMN item_prices_json TEXT"))
+            conn.commit()
+    except Exception:
+        pass
     # Pre-populate demo accounts for easy access and testing
     if not User.query.filter_by(username='doctor').first():
         doc = User(username='doctor', name='Dr. Rajesh Sharma', role='doctor', contact='+91 98450 12345', location='Bengaluru, Karnataka',
@@ -542,7 +548,9 @@ def doctor_dashboard():
         total_rx=total_rx,
         active_rx=active_rx,
         dispensed_rx=dispensed_rx,
-        total_patients=total_patients
+        total_patients=total_patients,
+        frequency_options=FREQUENCY_OPTIONS,
+        dosage_options=DOSAGE_OPTIONS
     )
 
 @app.route('/doctor/prescriptions')
@@ -1086,6 +1094,121 @@ def take_slot_doses(slot_key):
         'taken_time': datetime.now().strftime('%I:%M %p')
     })
 
+@app.route('/api/tracker/compare-data', methods=['GET'])
+@login_required
+@role_required('patient')
+def tracker_compare_data():
+    patient_id = session['user_id']
+    prescriptions = Prescription.query.filter_by(patient_id=patient_id, is_claimed=True).all()
+    schedules = MedicationSchedule.query.filter_by(patient_id=patient_id).all()
+    
+    schedules_by_med = {}
+    for s in schedules:
+        schedules_by_med[s.medicine_name.lower().strip()] = s
+        
+    items_comparison = []
+    for rx in prescriptions:
+        doc_name = rx.doctor.name if rx.doctor else 'Doctor'
+        for item in rx.items:
+            med_key = item.medicine_name.lower().strip()
+            sched = schedules_by_med.get(med_key)
+            
+            expected_times, expected_per_day = resolve_frequency_times(item.frequency)
+            expected_slot = categorize_time_slot(expected_times.split(',')[0].strip()) if expected_times else 'morning'
+            
+            actual_times = sched.time_of_day if sched else None
+            actual_slot = categorize_time_slot(actual_times.split(',')[0].strip()) if actual_times else None
+            
+            if not sched:
+                status = 'missing'
+                status_label = 'Not in Tracker'
+            elif actual_slot != expected_slot:
+                status = 'misplaced'
+                status_label = f'Misplaced ({actual_slot.capitalize()} vs {expected_slot.capitalize()})'
+            else:
+                status = 'aligned'
+                status_label = 'Aligned with Rx'
+                
+            items_comparison.append({
+                'prescription_uuid': rx.uuid,
+                'doctor_name': doc_name,
+                'medicine_name': item.medicine_name,
+                'prescribed_dosage': resolve_dosage_label(item.dosage),
+                'prescribed_dosage_raw': item.dosage,
+                'prescribed_frequency': resolve_frequency_label(item.frequency),
+                'prescribed_frequency_raw': item.frequency,
+                'prescribed_duration': item.duration,
+                'prescribed_instructions': item.instructions or '',
+                'expected_times': expected_times,
+                'expected_slot': expected_slot,
+                'has_schedule': sched is not None,
+                'schedule_id': sched.id if sched else None,
+                'current_dosage': resolve_dosage_label(sched.dosage) if sched else None,
+                'current_dosage_raw': sched.dosage if sched else None,
+                'current_times': actual_times,
+                'current_slot': actual_slot,
+                'status': status,
+                'status_label': status_label
+            })
+            
+    return jsonify({
+        'success': True,
+        'comparisons': items_comparison
+    })
+
+@app.route('/api/tracker/update-schedule/<int:schedule_id>', methods=['POST'])
+@login_required
+@role_required('patient')
+def update_schedule(schedule_id):
+    patient_id = session['user_id']
+    sched = MedicationSchedule.query.filter_by(id=schedule_id, patient_id=patient_id).first()
+    if not sched:
+        return jsonify({'success': False, 'message': 'Schedule not found'}), 404
+        
+    data = request.get_json(silent=True) or request.form
+    time_of_day = data.get('time_of_day')
+    dosage = data.get('dosage')
+    frequency = data.get('frequency')
+    
+    if time_of_day:
+        sched.time_of_day = time_of_day.strip()
+    if dosage:
+        sched.dosage = dosage.strip()
+    if frequency:
+        sched.frequency = frequency.strip()
+        
+    db.session.commit()
+    return jsonify({
+        'success': True, 
+        'message': f"Updated {sched.medicine_name} timing to {sched.time_of_day}!",
+        'time_of_day': sched.time_of_day,
+        'dosage': sched.dosage
+    })
+
+@app.route('/api/tracker/auto-align/<int:schedule_id>', methods=['POST'])
+@login_required
+@role_required('patient')
+def auto_align_schedule(schedule_id):
+    patient_id = session['user_id']
+    sched = MedicationSchedule.query.filter_by(id=schedule_id, patient_id=patient_id).first()
+    if not sched:
+        return jsonify({'success': False, 'message': 'Schedule not found'}), 404
+        
+    data = request.get_json(silent=True) or request.form
+    freq_code = data.get('frequency') or sched.frequency
+    
+    times, _ = resolve_frequency_times(freq_code)
+    sched.time_of_day = times
+    if freq_code:
+        sched.frequency = freq_code
+    db.session.commit()
+    
+    return jsonify({
+        'success': True, 
+        'message': f"Successfully aligned {sched.medicine_name} to doctor timing ({times})!",
+        'time_of_day': times
+    })
+
 @app.route('/api/patient/notifications/live')
 @login_required
 @role_required('patient')
@@ -1182,6 +1305,70 @@ def clear_patient_notifications():
     PatientNotification.query.filter_by(patient_id=patient_id).delete()
     db.session.commit()
     return jsonify({'success': True})
+
+@app.route('/api/pharmacy/notifications/live', methods=['GET'])
+@login_required
+@role_required('pharmacy')
+def pharmacy_notifications_live():
+    pharmacy_id = session['user_id']
+    last_id = int(request.args.get('last_id', 0))
+    
+    notifications = PharmacyNotification.query.filter_by(pharmacy_id=pharmacy_id).order_by(PharmacyNotification.created_at.desc()).limit(25).all()
+    unread_count = PharmacyNotification.query.filter_by(pharmacy_id=pharmacy_id, is_read=False).count()
+    
+    new_notifs = [n for n in notifications if n.id > last_id]
+    
+    return jsonify({
+        'success': True,
+        'unread_count': unread_count,
+        'notifications': [{
+            'id': n.id,
+            'title': n.title,
+            'message': n.message,
+            'broadcast_id': n.broadcast_id,
+            'prescription_uuid': n.prescription_uuid,
+            'time_ago': n.time_ago,
+            'is_read': n.is_read
+        } for n in notifications],
+        'new_notifications': [{
+            'id': n.id,
+            'title': n.title,
+            'message': n.message,
+            'broadcast_id': n.broadcast_id,
+            'prescription_uuid': n.prescription_uuid,
+            'time_ago': n.time_ago
+        } for n in new_notifs]
+    })
+
+@app.route('/api/pharmacy/notifications/<int:notif_id>/read', methods=['POST'])
+@login_required
+@role_required('pharmacy')
+def mark_pharmacy_notification_read(notif_id):
+    pharmacy_id = session['user_id']
+    notif = PharmacyNotification.query.filter_by(id=notif_id, pharmacy_id=pharmacy_id).first()
+    if notif:
+        notif.is_read = True
+        db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/pharmacy/notifications/read-all', methods=['POST'])
+@login_required
+@role_required('pharmacy')
+def mark_all_pharmacy_notifications_read():
+    pharmacy_id = session['user_id']
+    PharmacyNotification.query.filter_by(pharmacy_id=pharmacy_id, is_read=False).update({'is_read': True})
+    db.session.commit()
+    return jsonify({'success': True})
+
+@app.route('/api/pharmacy/notifications/clear', methods=['POST'])
+@login_required
+@role_required('pharmacy')
+def clear_pharmacy_notifications():
+    pharmacy_id = session['user_id']
+    PharmacyNotification.query.filter_by(pharmacy_id=pharmacy_id).delete()
+    db.session.commit()
+    return jsonify({'success': True})
+
 
 
 @app.route('/prescription/claim', methods=['POST'])
@@ -1409,6 +1596,37 @@ def refill_stock(schedule_id):
         
     return redirect(url_for('patient_dashboard'))
 
+def notify_pharmacies_about_broadcast(bc):
+    try:
+        rx = bc.prescription
+        pat = bc.patient
+        pat_name = pat.name if pat else (rx.patient_name if rx else 'Patient')
+        items_count = len(rx.items) if rx else 0
+        med_names = [i.medicine_name for i in rx.items] if rx else []
+        med_summary = ', '.join(med_names[:3]) + ('...' if len(med_names) > 3 else '')
+        
+        pharmacies_to_notify = []
+        if bc.target_pharmacy_id:
+            ph = User.query.get(bc.target_pharmacy_id)
+            if ph:
+                pharmacies_to_notify.append(ph)
+        else:
+            pharmacies_to_notify = User.query.filter_by(role='pharmacy').all()
+            
+        for ph in pharmacies_to_notify:
+            notif = PharmacyNotification(
+                pharmacy_id=ph.id,
+                broadcast_id=bc.id,
+                prescription_uuid=rx.uuid if rx else None,
+                title=f"New Broadcast Request from {pat_name}",
+                message=f"Patient {pat_name} requested stock & price quotes for Prescription #{rx.uuid[:8] if rx else ''} ({items_count} medications: {med_summary}).",
+                is_read=False
+            )
+            db.session.add(notif)
+        db.session.commit()
+    except Exception as e:
+        print(f"Error notifying pharmacies: {e}")
+
 @app.route('/broadcast/create', methods=['POST'])
 @login_required
 @role_required('patient')
@@ -1440,6 +1658,8 @@ def create_broadcast():
     )
     db.session.add(bc)
     db.session.commit()
+    
+    notify_pharmacies_about_broadcast(bc)
     
     flash('Prescription broadcasted to verified local pharmacies! Awaiting estimates.', 'success')
     return redirect(url_for('patient_dashboard'))
@@ -1574,6 +1794,8 @@ def broadcast_target_nearest():
     db.session.add(bc)
     db.session.commit()
     
+    notify_pharmacies_about_broadcast(bc)
+    
     msg = "Broadcast sent to selected in-stock pharmacy!" if target_id_val else "Broadcast sent to nearest in-stock pharmacies!"
     return jsonify({'success': True, 'message': msg, 'broadcast_id': bc.id})
 
@@ -1613,6 +1835,7 @@ def pharmacy_dashboard():
         missing_meds = []
         matching_meds = []
         total_matched_cost = 0.0
+        item_unit_prices = {}
         for item in bc.prescription.items:
             # Search matches in inventory
             inv_match = InventoryItem.query.filter_by(
@@ -1621,9 +1844,12 @@ def pharmacy_dashboard():
             ).first()
             if inv_match and inv_match.stock_level > 0:
                 matching_meds.append(item)
-                total_matched_cost += inv_match.price
+                item_price_val = round(inv_match.price, 2)
+                item_unit_prices[item.medicine_name] = item_price_val
+                total_matched_cost += item_price_val
             else:
                 missing_meds.append(item.medicine_name)
+                item_unit_prices[item.medicine_name] = 0.0
                 
         status_calc = 'available' if not missing_meds else ('partial' if matching_meds else 'unavailable')
         
@@ -1631,8 +1857,9 @@ def pharmacy_dashboard():
             'broadcast': bc,
             'offered': already_offered,
             'status_calc': status_calc,
-            'estimated_price': total_matched_cost,
-            'missing_meds': missing_meds
+            'estimated_price': round(total_matched_cost, 2),
+            'missing_meds': missing_meds,
+            'item_unit_prices': item_unit_prices
         })
         
     # KPI Stats
@@ -1725,11 +1952,24 @@ def submit_offer():
     status = request.form['availability_status']
     notes = request.form.get('notes', '')
     
+    # Collect itemized pricing
+    item_med_names = request.form.getlist('item_med_name[]')
+    item_prices_list = request.form.getlist('item_price[]')
+    prices_dict = {}
+    for i, name in enumerate(item_med_names):
+        if i < len(item_prices_list):
+            try:
+                prices_dict[name] = round(float(item_prices_list[i]), 2)
+            except (ValueError, TypeError):
+                prices_dict[name] = 0.0
+    item_prices_json = json.dumps(prices_dict) if prices_dict else None
+
     # Check if offer exists
     existing = PharmacyOffer.query.filter_by(broadcast_id=broadcast_id, pharmacy_id=pharmacy_id).first()
     if existing:
         existing.estimated_price = price
         existing.availability_status = status
+        existing.item_prices_json = item_prices_json
         existing.notes = notes
         existing.created_at = datetime.utcnow()
     else:
@@ -1738,6 +1978,7 @@ def submit_offer():
             pharmacy_id=pharmacy_id,
             estimated_price=price,
             availability_status=status,
+            item_prices_json=item_prices_json,
             notes=notes
         )
         db.session.add(offer)
@@ -1930,6 +2171,7 @@ def checkout_sale():
 # ----------------- PUBLIC VIEWING & SECURE ACCESS -----------------
 
 @app.route('/prescription/view/<string:rx_uuid>')
+@app.route('/prescription/<string:rx_uuid>')
 def view_prescription(rx_uuid):
     prescription = Prescription.query.filter_by(uuid=rx_uuid).first_or_404()
     

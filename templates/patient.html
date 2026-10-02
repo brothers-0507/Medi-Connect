@@ -31,12 +31,16 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <form action="{{ url_for('accept_prescription', rx_id=rx.id) }}" method="POST" style="margin: 0;">
-                        <button type="submit" class="btn btn-secondary btn-sm" style="box-shadow: 0 4px 15px rgba(20, 184, 166, 0.3);">
-                            <i class="ph-bold ph-check"></i> Accept & Import
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+                        <form action="{{ url_for('accept_prescription', rx_id=rx.id) }}" method="POST" style="margin: 0;">
+                            <button type="submit" class="btn btn-secondary btn-sm" style="box-shadow: 0 4px 15px rgba(20, 184, 166, 0.3);">
+                                <i class="ph-bold ph-check"></i> Accept & Import
+                            </button>
+                        </form>
+                        <button type="button" onclick="this.closest('.alert').style.display='none'" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.3rem; line-height: 1; padding: 0.25rem;" title="Dismiss">
+                            <i class="ph-bold ph-x"></i>
                         </button>
-                    </form>
+                    </div>
                 </div>
             {% endfor %}
         {% endif %}
@@ -54,8 +58,13 @@
                         Organized into Morning, Afternoon, Evening, and Night compartments.
                     </p>
                 </div>
-                <div class="tracker-date-pill">
-                    <i class="ph-bold ph-clock"></i> {{ current_slot_key|capitalize }} Routine Active
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="openTrackerCompareModal()" style="font-size: 0.82rem; padding: 0.35rem 0.75rem; display: inline-flex; align-items: center; gap: 0.4rem; color: var(--accent); border-color: rgba(139, 92, 246, 0.4); background: rgba(139, 92, 246, 0.08);">
+                        <i class="ph-bold ph-git-diff"></i> Compare with Prescription
+                    </button>
+                    <div class="tracker-date-pill">
+                        <i class="ph-bold ph-clock"></i> {{ current_slot_key|capitalize }} Routine Active
+                    </div>
                 </div>
             </div>
 
@@ -428,26 +437,52 @@
                             {% if bc.offers %}
                                 <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">
                                     {% for offer in bc.offers %}
-                                        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 10px; padding: 1rem; transition: var(--transition);">
-                                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
-                                                <strong style="color: var(--text-primary);">{{ offer.pharmacy.name }}</strong>
-                                                <span style="font-size: 1.2rem; font-weight: 700; color: var(--secondary);">₹{{ "%.2f"|format(offer.estimated_price) }}</span>
+                                        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 10px; padding: 1.15rem; transition: var(--transition);">
+                                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.6rem;">
+                                                <div>
+                                                    <strong style="color: var(--text-primary); font-size: 1rem; display: block;">{{ offer.pharmacy.name }}</strong>
+                                                    <div style="margin-top: 0.25rem;">
+                                                        {% if offer.availability_status == 'available' %}
+                                                            <span class="badge badge-success"><i class="ph-bold ph-check"></i> In Stock</span>
+                                                        {% elif offer.availability_status == 'partial' %}
+                                                            <span class="badge badge-warning"><i class="ph-bold ph-warning"></i> Partial Stock</span>
+                                                        {% else %}
+                                                            <span class="badge badge-danger"><i class="ph-bold ph-x"></i> Out of Stock</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div style="text-align: right;">
+                                                    <span style="font-size: 1.25rem; font-weight: 700; color: var(--secondary); display: block;">₹{{ "%.2f"|format(offer.estimated_price) }}</span>
+                                                    <span style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Total Estimate</span>
+                                                </div>
                                             </div>
-                                            <div style="margin-bottom: 0.5rem;">
-                                                {% if offer.availability_status == 'available' %}
-                                                    <span class="badge badge-success"><i class="ph-bold ph-check"></i> In Stock</span>
-                                                {% elif offer.availability_status == 'partial' %}
-                                                    <span class="badge badge-warning"><i class="ph-bold ph-warning"></i> Partial Stock</span>
-                                                {% else %}
-                                                    <span class="badge badge-danger"><i class="ph-bold ph-x"></i> Out of Stock</span>
-                                                {% endif %}
+
+                                            <!-- Prescribed Medicines Individual Prices -->
+                                            <div style="margin: 0.75rem 0; padding: 0.6rem 0.75rem; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--card-border); border-radius: 8px;">
+                                                <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 650; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.35rem;">
+                                                    <i class="ph-bold ph-tag" style="color: var(--accent);"></i> Prescribed Medicines Alone Price:
+                                                </div>
+                                                {% for item in bc.prescription.items %}
+                                                    {% set item_price = offer.get_item_price(item.medicine_name) %}
+                                                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0; font-size: 0.82rem; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                                        <span style="color: var(--text-primary); font-weight: 500;">{{ item.medicine_name }}</span>
+                                                        <strong style="color: var(--secondary);">
+                                                            {% if item_price is not none %}
+                                                                ₹{{ "%.2f"|format(item_price) }}
+                                                            {% else %}
+                                                                ₹{{ "%.2f"|format(offer.estimated_price / (bc.prescription.items|length or 1)) }}
+                                                            {% endif %}
+                                                        </strong>
+                                                    </div>
+                                                {% endfor %}
                                             </div>
+
                                             {% if offer.notes %}
-                                                <p style="font-size: 0.85rem; color: var(--text-secondary); background: rgba(0,0,0,0.15); padding: 0.5rem; border-radius: 6px; margin-bottom: 0.5rem;">
+                                                <p style="font-size: 0.82rem; color: var(--text-secondary); background: rgba(0,0,0,0.15); padding: 0.5rem 0.65rem; border-radius: 6px; margin-bottom: 0.5rem;">
                                                     <strong>Note:</strong> {{ offer.notes }}
                                                 </p>
                                             {% endif %}
-                                            <div style="font-size: 0.8rem; color: var(--text-secondary);">
+                                            <div style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.35rem;">
                                                 <i class="ph ph-phone"></i> {{ offer.pharmacy.contact or 'No contact number' }}
                                             </div>
                                         </div>
@@ -503,6 +538,55 @@
             <button type="button" class="btn btn-secondary" id="btn-broadcast-all" style="width: 100%;">
                 <i class="ph-bold ph-broadcast"></i> Broadcast to All In-Stock Pharmacies in Range
             </button>
+        </div>
+<!-- Modal for Medi-Tracker vs Prescription Comparison & Misplaced Resolution -->
+<div id="tracker-compare-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center; padding: 1rem;">
+    <div class="card" style="max-width: 960px; width: 100%; max-height: 92vh; overflow-y: auto; position: relative; padding: 2rem; border-color: var(--accent); box-shadow: 0 10px 40px rgba(0,0,0,0.4);">
+        <button type="button" onclick="closeTrackerCompareModal()" style="position: absolute; top: 1.25rem; right: 1.25rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.5rem;" title="Close">
+            <i class="ph-bold ph-x"></i>
+        </button>
+        
+        <div style="margin-bottom: 1.25rem; border-bottom: 1px solid var(--card-border); padding-bottom: 1rem;">
+            <h2 class="card-title" style="margin-bottom: 0.35rem;">
+                <span><i class="ph-bold ph-git-diff card-title-icon" style="color: var(--accent);"></i> Compare Routine Tracker vs Prescriptions</span>
+            </h2>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0;">
+                Cross-reference your daily medication tracker compartments with your doctor's clinical prescriptions. If a medicine is misplaced (e.g. Bedtime medicine placed in Morning), you can fix it here with 1 click.
+            </p>
+        </div>
+
+        <div id="compare-modal-feedback" style="display: none; margin-bottom: 1rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.88rem;" class="alert alert-success"></div>
+
+        <div id="compare-loading" style="text-align: center; padding: 3rem 1rem;">
+            <i class="ph-bold ph-spinner ph-spin" style="font-size: 2.5rem; color: var(--accent); margin-bottom: 1rem;"></i>
+            <p style="color: var(--text-secondary);">Analyzing your active prescriptions against Medi-Tracker schedules...</p>
+        </div>
+
+        <div id="compare-content" style="display: none;">
+            <!-- Summary KPI Chips -->
+            <div id="compare-kpi-bar" style="display: flex; gap: 0.75rem; margin-bottom: 1.25rem; flex-wrap: wrap;"></div>
+
+            <!-- Comparison Table -->
+            <div style="overflow-x: auto; border: 1px solid var(--card-border); border-radius: 10px; background: rgba(0,0,0,0.15);">
+                <table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.84rem;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--card-border); background: rgba(255,255,255,0.02); text-align: left;">
+                            <th style="padding: 0.75rem 0.85rem; color: var(--text-secondary); font-weight: 650;">Prescribed Medicine</th>
+                            <th style="padding: 0.75rem 0.85rem; color: var(--text-secondary); font-weight: 650;">Doctor's Regimen</th>
+                            <th style="padding: 0.75rem 0.85rem; color: var(--text-secondary); font-weight: 650;">Current Tracker Routine</th>
+                            <th style="padding: 0.75rem 0.85rem; color: var(--text-secondary); font-weight: 650;">Alignment Status</th>
+                            <th style="padding: 0.75rem 0.85rem; color: var(--text-secondary); font-weight: 650; text-align: right;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="compare-table-body"></tbody>
+                </table>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 1.5rem;">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="closeTrackerCompareModal()">
+                    <i class="ph-bold ph-check"></i> Done & Return to Routine
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -915,5 +999,282 @@
             }
         });
     }
+
+    // ── Tracker vs Prescription Compare & Reconcile Logic ──────────────────────
+    let trackerCompareNeedsReload = false;
+
+    function openTrackerCompareModal() {
+        const modal = document.getElementById('tracker-compare-modal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+        document.getElementById('compare-loading').style.display = 'block';
+        document.getElementById('compare-content').style.display = 'none';
+        document.getElementById('compare-modal-feedback').style.display = 'none';
+        trackerCompareNeedsReload = false;
+        loadTrackerCompareData();
+    }
+
+    function closeTrackerCompareModal() {
+        const modal = document.getElementById('tracker-compare-modal');
+        if (modal) modal.style.display = 'none';
+        if (trackerCompareNeedsReload) {
+            window.location.reload();
+        }
+    }
+
+    function loadTrackerCompareData() {
+        fetch('/api/tracker/compare-data')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('compare-loading').style.display = 'none';
+                document.getElementById('compare-content').style.display = 'block';
+                if (!data.success || !data.comparisons || data.comparisons.length === 0) {
+                    document.getElementById('compare-table-body').innerHTML = `
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 3rem 1rem; color: var(--text-secondary);">
+                                <i class="ph-bold ph-prescription" style="font-size: 2.5rem; margin-bottom: 0.5rem; display: block; opacity: 0.5;"></i>
+                                No active clinical prescriptions linked yet to compare with routine tracker.
+                            </td>
+                        </tr>
+                    `;
+                    document.getElementById('compare-kpi-bar').innerHTML = '';
+                    return;
+                }
+
+                const comps = data.comparisons;
+                const totalMeds = comps.length;
+                const alignedCount = comps.filter(c => c.status === 'aligned').length;
+                const misplacedCount = comps.filter(c => c.status === 'misplaced').length;
+                const missingCount = comps.filter(c => c.status === 'missing').length;
+
+                // KPI Bar
+                document.getElementById('compare-kpi-bar').innerHTML = `
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); padding: 0.5rem 0.85rem; border-radius: 8px; font-size: 0.82rem;">
+                        Prescribed Medicines: <strong style="color: var(--text-primary);">${totalMeds}</strong>
+                    </div>
+                    <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.5rem 0.85rem; border-radius: 8px; font-size: 0.82rem; color: #10b981;">
+                        <i class="ph-bold ph-check"></i> Aligned: <strong>${alignedCount}</strong>
+                    </div>
+                    ${misplacedCount > 0 ? `
+                    <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); padding: 0.5rem 0.85rem; border-radius: 8px; font-size: 0.82rem; color: #f59e0b;">
+                        <i class="ph-bold ph-warning"></i> Misplaced: <strong>${misplacedCount}</strong>
+                    </div>
+                    ` : ''}
+                    ${missingCount > 0 ? `
+                    <div style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); padding: 0.5rem 0.85rem; border-radius: 8px; font-size: 0.82rem; color: var(--primary);">
+                        <i class="ph-bold ph-info"></i> Not in Tracker: <strong>${missingCount}</strong>
+                    </div>
+                    ` : ''}
+                `;
+
+                // Table Rows
+                let rowsHtml = '';
+                comps.forEach((c, idx) => {
+                    let statusBadge = '';
+                    if (c.status === 'aligned') {
+                        statusBadge = '<span class="badge badge-success" style="font-size: 0.74rem;"><i class="ph-bold ph-check"></i> Aligned with Rx</span>';
+                    } else if (c.status === 'misplaced') {
+                        statusBadge = `<span class="badge badge-warning" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 0.74rem;"><i class="ph-bold ph-warning"></i> Misplaced Routine</span>`;
+                    } else {
+                        statusBadge = '<span class="badge badge-info" style="font-size: 0.74rem;">Not in Routine</span>';
+                    }
+
+                    let actionHtml = '';
+                    if (c.has_schedule) {
+                        actionHtml = `
+                            <div style="display: flex; flex-direction: column; gap: 0.3rem; align-items: flex-end;">
+                                ${c.status === 'misplaced' ? `
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="autoAlignTrackerSchedule(${c.schedule_id}, '${c.prescribed_frequency_raw}')" style="font-size: 0.75rem; padding: 0.25rem 0.55rem; white-space: nowrap; box-shadow: 0 2px 10px rgba(20, 184, 166, 0.2);">
+                                    <i class="ph-bold ph-magic-wand"></i> Auto-Align to ${c.expected_slot.toUpperCase()}
+                                </button>
+                                ` : ''}
+                                <button type="button" class="btn btn-outline btn-sm" onclick="toggleEditScheduleInline(${idx})" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; white-space: nowrap;">
+                                    <i class="ph-bold ph-sliders"></i> Edit Routine Slot
+                                </button>
+                            </div>
+                        `;
+                    } else {
+                        actionHtml = `<span style="font-size: 0.78rem; color: var(--text-secondary); font-style: italic;">Accept Rx to import</span>`;
+                    }
+
+                    rowsHtml += `
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.04);">
+                            <td style="padding: 0.85rem; vertical-align: top;">
+                                <strong style="color: var(--text-primary); font-size: 0.92rem;">${c.medicine_name}</strong>
+                                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                                    Prescribed by ${c.doctor_name}
+                                </div>
+                                ${c.prescribed_instructions ? `<div style="font-size: 0.75rem; color: var(--accent); margin-top: 0.2rem; font-style: italic;">"${c.prescribed_instructions}"</div>` : ''}
+                            </td>
+                            <td style="padding: 0.85rem; vertical-align: top;">
+                                <div style="font-weight: 550; color: var(--text-primary);">${c.prescribed_dosage}</div>
+                                <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.15rem;">${c.prescribed_frequency}</div>
+                                <div style="margin-top: 0.35rem;">
+                                    <span class="badge badge-info" style="font-size: 0.7rem; padding: 0.15rem 0.45rem;">
+                                        <i class="ph-bold ph-clock"></i> Target: ${c.expected_slot.toUpperCase()} (${c.expected_times})
+                                    </span>
+                                </div>
+                            </td>
+                            <td style="padding: 0.85rem; vertical-align: top;">
+                                ${c.has_schedule ? `
+                                    <div style="font-weight: 600; color: var(--text-primary); display: flex; align-items: center; gap: 0.35rem;">
+                                        <i class="ph-bold ph-calendar-check" style="color: ${c.status === 'misplaced' ? '#f59e0b' : 'var(--secondary)'};"></i>
+                                        <span>${c.current_slot.toUpperCase()}</span>
+                                    </div>
+                                    <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                                        Times: <code style="color: var(--accent);">${c.current_times}</code>
+                                    </div>
+                                    <div style="font-size: 0.74rem; color: var(--text-secondary); margin-top: 0.15rem;">
+                                        Dose: ${c.current_dosage || 'Standard'}
+                                    </div>
+                                ` : `
+                                    <span style="color: var(--text-secondary); font-style: italic;">Not tracked in routine</span>
+                                `}
+                            </td>
+                            <td style="padding: 0.85rem; vertical-align: top;">
+                                ${statusBadge}
+                                ${c.status === 'misplaced' ? `
+                                    <div style="font-size: 0.72rem; color: #f59e0b; margin-top: 0.3rem; line-height: 1.3;">
+                                        In tracker as <strong>${c.current_slot}</strong>, but doctor prescribed for <strong>${c.expected_slot}</strong>.
+                                    </div>
+                                ` : ''}
+                            </td>
+                            <td style="padding: 0.85rem; vertical-align: top; text-align: right;">
+                                ${actionHtml}
+                            </td>
+                        </tr>
+                        <!-- Inline Edit Drawer for this row -->
+                        ${c.has_schedule ? `
+                        <tr id="edit-schedule-inline-${idx}" style="display: none; background: rgba(0,0,0,0.3); border-bottom: 2px solid var(--accent);">
+                            <td colspan="5" style="padding: 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                                    <span style="font-size: 0.85rem; font-weight: 650; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
+                                        <i class="ph-bold ph-pencil" style="color: var(--accent);"></i> Adjust Daily Routine Compartment for ${c.medicine_name}:
+                                    </span>
+                                    <button type="button" onclick="toggleEditScheduleInline(${idx})" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer;">
+                                        &times; Close
+                                    </button>
+                                </div>
+                                <div style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
+                                    <div style="flex: 1; min-width: 180px;">
+                                        <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Routine Slot / Time</label>
+                                        <select id="edit-slot-select-${c.schedule_id}" class="form-control" style="font-size: 0.82rem; padding: 0.4rem 0.6rem;" onchange="onSlotSelectChange(${c.schedule_id})">
+                                            <option value="08:00" ${c.current_slot === 'morning' ? 'selected' : ''}>Morning (08:00 AM)</option>
+                                            <option value="14:00" ${c.current_slot === 'afternoon' ? 'selected' : ''}>Afternoon (02:00 PM)</option>
+                                            <option value="18:00" ${c.current_slot === 'evening' ? 'selected' : ''}>Evening (06:00 PM)</option>
+                                            <option value="22:00" ${c.current_slot === 'night' ? 'selected' : ''}>Bedtime / Night (10:00 PM)</option>
+                                            <option value="08:00, 18:00">Twice daily — Morning & Evening</option>
+                                            <option value="08:00, 22:00">Twice daily — Morning & Bedtime</option>
+                                            <option value="08:00, 14:00, 20:00">Three times daily (TDS)</option>
+                                            <option value="custom">Custom Time...</option>
+                                        </select>
+                                    </div>
+                                    <div id="edit-custom-time-wrap-${c.schedule_id}" style="display: none; width: 140px;">
+                                        <label style="font-size: 0.75rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Custom Time (HH:MM)</label>
+                                        <input type="text" id="edit-custom-time-${c.schedule_id}" class="form-control" placeholder="e.g. 21:30" value="${c.current_times}" style="font-size: 0.82rem; padding: 0.4rem 0.6rem;">
+                                    </div>
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="saveUpdatedSchedule(${c.schedule_id})" style="padding: 0.45rem 1rem; font-size: 0.82rem;">
+                                        <i class="ph-bold ph-check"></i> Save & Apply
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        ` : ''}
+                    `;
+                });
+
+                document.getElementById('compare-table-body').innerHTML = rowsHtml;
+            })
+            .catch(err => {
+                console.error(err);
+                document.getElementById('compare-loading').innerHTML = '<p style="color: var(--danger);">Failed to load comparison data. Please try again.</p>';
+            });
+    }
+
+    function toggleEditScheduleInline(idx) {
+        const row = document.getElementById('edit-schedule-inline-' + idx);
+        if (!row) return;
+        row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+    }
+
+    function onSlotSelectChange(schedId) {
+        const select = document.getElementById('edit-slot-select-' + schedId);
+        const wrap = document.getElementById('edit-custom-time-wrap-' + schedId);
+        if (select && wrap) {
+            wrap.style.display = select.value === 'custom' ? 'block' : 'none';
+        }
+    }
+
+    function autoAlignTrackerSchedule(scheduleId, freqCode) {
+        fetch('/api/tracker/auto-align/' + scheduleId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ frequency: freqCode })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showCompareFeedback(data.message || 'Schedule aligned with prescription!');
+                trackerCompareNeedsReload = true;
+                loadTrackerCompareData();
+            } else {
+                alert(data.message || 'Error auto-aligning schedule');
+            }
+        })
+        .catch(err => console.error(err));
+    }
+
+    function saveUpdatedSchedule(scheduleId) {
+        const select = document.getElementById('edit-slot-select-' + scheduleId);
+        const customInput = document.getElementById('edit-custom-time-' + scheduleId);
+        let chosenTime = select ? select.value : '';
+        if (chosenTime === 'custom' && customInput) {
+            chosenTime = customInput.value.trim();
+        }
+        if (!chosenTime) {
+            alert('Please select or enter a valid scheduled time.');
+            return;
+        }
+
+        fetch('/api/tracker/update-schedule/' + scheduleId, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ time_of_day: chosenTime })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                showCompareFeedback(data.message || 'Schedule updated successfully!');
+                trackerCompareNeedsReload = true;
+                loadTrackerCompareData();
+            } else {
+                alert(data.message || 'Error updating schedule');
+            }
+        })
+        .catch(err => console.error(err));
+    }
+
+    function showCompareFeedback(msg) {
+        const fb = document.getElementById('compare-modal-feedback');
+        if (fb) {
+            fb.textContent = msg;
+            fb.style.display = 'block';
+            setTimeout(() => { fb.style.display = 'none'; }, 4000);
+        }
+    }
+
+    // Dismiss modal on backdrop click or Escape key
+    window.addEventListener('click', function(e) {
+        const compareModal = document.getElementById('tracker-compare-modal');
+        if (e.target === compareModal) {
+            closeTrackerCompareModal();
+        }
+    });
+
+    window.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeTrackerCompareModal();
+        }
+    });
 </script>
 {% endblock %}

@@ -1,5 +1,6 @@
 from datetime import datetime, date
 import uuid
+import json
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -180,12 +181,38 @@ class PharmacyOffer(db.Model):
     pharmacy_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     estimated_price = db.Column(db.Float, nullable=False)
     availability_status = db.Column(db.String(20), nullable=False)  # 'available', 'partial', 'unavailable'
+    item_prices_json = db.Column(db.Text, nullable=True)  # JSON {med_name: price}
     notes = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
     broadcast = db.relationship('Broadcast', back_populates='offers')
     pharmacy = db.relationship('User', back_populates='offers')
+
+    @property
+    def item_prices(self):
+        if not self.item_prices_json:
+            return {}
+        try:
+            return json.loads(self.item_prices_json)
+        except Exception:
+            return {}
+
+    def get_item_price(self, med_name, default=None):
+        prices = self.item_prices
+        if med_name in prices:
+            try:
+                return float(prices[med_name])
+            except (ValueError, TypeError):
+                pass
+        med_lower = med_name.lower().strip()
+        for k, v in prices.items():
+            if k.lower().strip() == med_lower:
+                try:
+                    return float(v)
+                except (ValueError, TypeError):
+                    pass
+        return default
 
 class MedicationSchedule(db.Model):
     __tablename__ = 'medication_schedules'
@@ -261,4 +288,36 @@ class PatientNotification(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     patient = db.relationship('User', back_populates='notifications')
+
+class PharmacyNotification(db.Model):
+    __tablename__ = 'pharmacy_notifications'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    pharmacy_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    broadcast_id = db.Column(db.Integer, db.ForeignKey('broadcasts.id'), nullable=True)
+    prescription_uuid = db.Column(db.String(36), nullable=True)
+    title = db.Column(db.String(150), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    
+    pharmacy = db.relationship('User', foreign_keys=[pharmacy_id])
+    broadcast = db.relationship('Broadcast', foreign_keys=[broadcast_id])
+
+    @property
+    def time_ago(self):
+        diff = datetime.now() - self.created_at
+        secs = int(diff.total_seconds())
+        if secs < 60:
+            return 'Just now'
+        elif secs < 3600:
+            mins = max(1, secs // 60)
+            return f'{mins}m ago'
+        elif secs < 86400:
+            hours = secs // 3600
+            return f'{hours}h ago'
+        else:
+            days = secs // 86400
+            return f'{days}d ago'
+
 

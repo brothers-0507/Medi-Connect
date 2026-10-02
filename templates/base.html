@@ -43,7 +43,7 @@
                     })();
                 </script>
                 {% if current_user %}
-                    {% if current_user.role == 'patient' %}
+                    {% if current_user.role in ['patient', 'pharmacy'] %}
                     <!-- Notification Bell & Unread Badge -->
                     <button type="button" id="nav-notif-btn" class="nav-notification-btn" onclick="toggleNotificationDrawer()" title="Notification Center" aria-label="Notification Center">
                         <i class="ph-bold ph-bell"></i>
@@ -110,7 +110,7 @@
         </div>
     </header>
 
-    {% if current_user and current_user.role == 'patient' %}
+    {% if current_user and current_user.role in ['patient', 'pharmacy'] %}
     <!-- Slide-out Persistent Notification Center -->
     <div id="patient-notification-drawer" class="notification-drawer no-print">
         <div class="notif-header">
@@ -229,26 +229,30 @@
             }
         });
 
-        function showRealtimeToast(title, message, acceptUrl, viewUrl) {
+        function showRealtimeToast(title, message, acceptUrl, viewUrl, actionType) {
             const container = document.getElementById('realtime-toast-container');
             if (!container) return;
 
             const toast = document.createElement('div');
             toast.className = 'realtime-toast';
-            toast.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
-                    <div style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--text-primary); font-size: 0.92rem;">
-                        <i class="ph-bold ph-bell-ringing" style="color: var(--accent); font-size: 1.15rem;"></i>
-                        <span>${title}</span>
-                    </div>
-                    <button type="button" onclick="this.closest('.realtime-toast').remove()" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.1rem; line-height: 1;">
-                        &times;
+            
+            let actionsHtml = '';
+            if (actionType === 'pharmacy_broadcast') {
+                actionsHtml = `
+                    <button type="button" onclick="if(window.switchPharmacyTab){switchPharmacyTab('broadcasts-tab');}else{window.location.href='/dashboard/pharmacy#broadcasts-tab';} this.closest('.realtime-toast').remove();" class="btn btn-secondary btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.65rem;">
+                        <i class="ph-bold ph-tag"></i> View & Quote
                     </button>
-                </div>
-                <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4;">
-                    ${message}
-                </div>
-                <div style="display: flex; gap: 0.5rem; margin-top: 0.35rem; align-items: center;">
+                    ${viewUrl ? `
+                        <a href="${viewUrl}" target="_blank" class="btn btn-outline btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.65rem;">
+                            <i class="ph-bold ph-eye"></i> View Sheet
+                        </a>
+                    ` : ''}
+                    <button type="button" onclick="this.closest('.realtime-toast').remove()" class="btn btn-outline btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.65rem;">
+                        Dismiss
+                    </button>
+                `;
+            } else {
+                actionsHtml = `
                     ${acceptUrl ? `
                         <form action="${acceptUrl}" method="POST" style="margin: 0;">
                             <button type="submit" class="btn btn-secondary btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.65rem;">
@@ -261,6 +265,27 @@
                             <i class="ph-bold ph-eye"></i> View Sheet
                         </a>
                     ` : ''}
+                    <button type="button" onclick="this.closest('.realtime-toast').remove()" class="btn btn-outline btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.65rem;">
+                        Dismiss
+                    </button>
+                `;
+            }
+
+            toast.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--text-primary); font-size: 0.92rem;">
+                        <i class="ph-bold ${actionType === 'pharmacy_broadcast' ? 'ph-broadcast' : 'ph-bell-ringing'}" style="color: var(--accent); font-size: 1.15rem;"></i>
+                        <span>${title}</span>
+                    </div>
+                    <button type="button" onclick="this.closest('.realtime-toast').remove()" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.2rem; line-height: 1;" title="Dismiss">
+                        &times;
+                    </button>
+                </div>
+                <div style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.4; margin: 0.35rem 0;">
+                    ${message}
+                </div>
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.35rem; align-items: center; flex-wrap: wrap;">
+                    ${actionsHtml}
                 </div>
             `;
             container.appendChild(toast);
@@ -290,6 +315,33 @@
                 } else if (n.category === 'refill') {
                     iconClass = 'ph-bold ph-warning';
                     wrapClass += ' refill';
+                } else if (n.broadcast_id) {
+                    iconClass = 'ph-bold ph-broadcast';
+                    wrapClass += ' quote';
+                }
+
+                let actionsHtml = '';
+                if (n.broadcast_id) {
+                    actionsHtml = `
+                        <div style="display: flex; gap: 0.4rem; margin-top: 0.35rem;">
+                            <button type="button" onclick="if(window.switchPharmacyTab){switchPharmacyTab('broadcasts-tab');}else{window.location.href='/dashboard/pharmacy#broadcasts-tab';} toggleNotificationDrawer();" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;">
+                                <i class="ph-bold ph-tag"></i> View & Quote
+                            </button>
+                            ${n.prescription_uuid ? `
+                                <a href="/prescription/view/${n.prescription_uuid}" target="_blank" class="btn btn-outline btn-sm" style="font-size: 0.72rem; padding: 0.15rem 0.5rem;">
+                                    View Rx
+                                </a>
+                            ` : ''}
+                        </div>
+                    `;
+                } else if (n.prescription_uuid) {
+                    actionsHtml = `
+                        <div style="display: flex; gap: 0.4rem; margin-top: 0.35rem;">
+                            <a href="/prescription/view/${n.prescription_uuid}" target="_blank" class="btn btn-outline btn-sm" style="font-size: 0.72rem; padding: 0.15rem 0.45rem;">
+                                View Prescription
+                            </a>
+                        </div>
+                    `;
                 }
 
                 html += `
@@ -302,14 +354,8 @@
                                 <strong style="font-size: 0.85rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${n.title}</strong>
                                 <span style="font-size: 0.7rem; color: var(--text-secondary); flex-shrink: 0;">${n.time_ago}</span>
                             </div>
-                            <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 0.2rem 0 0.4rem 0; line-height: 1.35;">${n.message}</p>
-                            ${n.prescription_uuid ? `
-                                <div style="display: flex; gap: 0.4rem;">
-                                    <a href="/prescription/${n.prescription_uuid}" target="_blank" class="btn btn-outline btn-sm" style="font-size: 0.72rem; padding: 0.15rem 0.45rem;">
-                                        View Prescription
-                                    </a>
-                                </div>
-                            ` : ''}
+                            <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 0.2rem 0 0.2rem 0; line-height: 1.35;">${n.message}</p>
+                            ${actionsHtml}
                         </div>
                     </div>
                 `;
@@ -317,7 +363,64 @@
             list.innerHTML = html;
         }
 
+        const currentUserRole = "{{ current_user.role if current_user else '' }}";
+
         function fetchNotificationsLive() {
+            if (currentUserRole === 'pharmacy') {
+                fetchPharmacyNotificationsLive();
+            } else if (currentUserRole === 'patient') {
+                fetchPatientNotificationsLive();
+            }
+        }
+
+        function fetchPharmacyNotificationsLive() {
+            fetch(`/api/pharmacy/notifications/live?last_id=${lastSeenNotifId}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (!data.success) return;
+
+                    const badge = document.getElementById('global-notif-badge');
+                    const drawerCount = document.getElementById('drawer-notif-count');
+                    if (badge) {
+                        if (data.unread_count > 0) {
+                            badge.textContent = data.unread_count;
+                            badge.style.display = 'block';
+                        } else {
+                            badge.style.display = 'none';
+                        }
+                    }
+                    if (drawerCount) {
+                        drawerCount.textContent = data.unread_count;
+                    }
+
+                    renderDrawerNotifications(data.notifications);
+
+                    if (data.new_notifications && data.new_notifications.length > 0) {
+                        data.new_notifications.forEach(n => {
+                            if (!isFirstPoll) {
+                                playNotificationChime();
+                                showRealtimeToast(
+                                    n.title,
+                                    n.message,
+                                    '/dashboard/pharmacy#broadcasts-tab',
+                                    n.prescription_uuid ? `/prescription/view/${n.prescription_uuid}` : null,
+                                    'pharmacy_broadcast'
+                                );
+                            }
+                        });
+                    }
+
+                    if (data.notifications && data.notifications.length > 0) {
+                        const maxId = Math.max(...data.notifications.map(n => n.id));
+                        if (maxId > lastSeenNotifId) lastSeenNotifId = maxId;
+                    }
+
+                    isFirstPoll = false;
+                })
+                .catch(err => console.log('Pharmacy notification poller error:', err));
+        }
+
+        function fetchPatientNotificationsLive() {
             fetch(`/api/patient/notifications/live?last_id=${lastSeenNotifId}`)
                 .then(res => res.json())
                 .then(data => {
@@ -353,7 +456,7 @@
                                         `New Prescription from ${p.doctor_name}`,
                                         `A digital prescription (${p.items_count} medicines) has arrived. Link to your Medi-Tracker now.`,
                                         `/prescription/accept/${p.id}`,
-                                        `/prescription/${p.uuid}`
+                                        `/prescription/view/${p.uuid}`
                                     );
 
                                     // If user is currently on patient dashboard, dynamically inject the alert banner
@@ -372,11 +475,16 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                            <form action="/prescription/accept/${p.id}" method="POST" style="margin: 0;">
-                                                <button type="submit" class="btn btn-secondary btn-sm" style="box-shadow: 0 4px 15px rgba(20, 184, 166, 0.3);">
-                                                    <i class="ph-bold ph-check"></i> Accept & Import
+                                            <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+                                                <form action="/prescription/accept/${p.id}" method="POST" style="margin: 0;">
+                                                    <button type="submit" class="btn btn-secondary btn-sm" style="box-shadow: 0 4px 15px rgba(20, 184, 166, 0.3);">
+                                                        <i class="ph-bold ph-check"></i> Accept & Import
+                                                    </button>
+                                                </form>
+                                                <button type="button" onclick="this.closest('.alert').style.display='none'" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.3rem; line-height: 1; padding: 0.25rem;" title="Dismiss">
+                                                    <i class="ph-bold ph-x"></i>
                                                 </button>
-                                            </form>
+                                            </div>
                                         `;
                                         bannerWrap.prepend(newBanner);
                                     }
@@ -396,14 +504,16 @@
         }
 
         function markAllNotificationsRead() {
-            fetch('/api/patient/notifications/read-all', { method: 'POST' })
+            const endpoint = currentUserRole === 'pharmacy' ? '/api/pharmacy/notifications/read-all' : '/api/patient/notifications/read-all';
+            fetch(endpoint, { method: 'POST' })
                 .then(res => res.json())
                 .then(() => fetchNotificationsLive());
         }
 
         function clearAllNotifications() {
             if (!confirm('Clear all stored notification history?')) return;
-            fetch('/api/patient/notifications/clear', { method: 'POST' })
+            const endpoint = currentUserRole === 'pharmacy' ? '/api/pharmacy/notifications/clear' : '/api/patient/notifications/clear';
+            fetch(endpoint, { method: 'POST' })
                 .then(res => res.json())
                 .then(() => fetchNotificationsLive());
         }

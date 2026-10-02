@@ -206,8 +206,142 @@
             <a href="mailto:mediconnectat@gmail.com" class="trust-badge email-badge"><i class="ph-bold ph-envelope-simple"></i> mediconnectat@gmail.com</a>
         </div>
         <p class="landing-footer-copy">&copy; 2026 MediConnect &middot; Secure Healthcare Connectivity</p>
+
+        <!-- Watermark Academic Project Attribution Strip -->
+        <div class="watermark-project-strip" id="watermark-project-strip">
+            <button type="button" class="watermark-badge" onclick="toggleProjectCreditsModal(true)" aria-haspopup="dialog" aria-expanded="false" title="Click to view Project Team &amp; Guide Details">
+                <span class="watermark-seal">
+                    <i class="ph-bold ph-graduation-cap"></i>
+                </span>
+                <span class="watermark-text-group">
+                    <span class="watermark-label">ACADEMIC PROJECT</span>
+                    <span class="watermark-divider">|</span>
+                    <span class="watermark-meta">Team: <strong>Ashir S John</strong> &bull; <strong>Tony S Kingsly</strong></span>
+                    <span class="watermark-divider">|</span>
+                    <span class="watermark-guide">Guide: <strong>Dr Julia Roberts</strong></span>
+                </span>
+                <span class="watermark-action-pill">
+                    <i class="ph-bold ph-arrow-up-right"></i> View Details
+                </span>
+            </button>
+        </div>
     </div>
 </div>
+
+<!-- Floating Project Details Trigger Button -->
+<button type="button" class="floating-project-btn no-print" onclick="toggleProjectCreditsModal(true)" title="View Project Team &amp; Guide Details" aria-label="Open Project Team &amp; Guide Information">
+    <i class="ph-bold ph-graduation-cap"></i>
+    <span class="floating-btn-text">Project Details</span>
+</button>
+
+<!-- Project Team & Guide Floatable Popup Modal -->
+<div id="project-credits-modal" class="credits-modal-backdrop no-print" role="dialog" aria-modal="true" aria-labelledby="credits-modal-title" style="display: none;" onclick="handleCreditsModalBackdrop(event)">
+    <div class="credits-modal-card">
+        <button type="button" class="credits-modal-close" onclick="toggleProjectCreditsModal(false)" aria-label="Close Project Details">
+            <i class="ph-bold ph-x"></i>
+        </button>
+
+        <div class="credits-modal-header">
+            <div class="credits-modal-badge">
+                <i class="ph-bold ph-certificate"></i> Project Attribution &amp; Credits
+            </div>
+            <h2 id="credits-modal-title" class="credits-modal-heading">
+                MediConnect System
+            </h2>
+            <p class="credits-modal-sub">
+                Centralized Healthcare Adherence &amp; Pharmacy Network Platform
+            </p>
+        </div>
+
+        <!-- Project Guide Section -->
+        <div class="credits-guide-card">
+            <div class="guide-header-label">
+                <i class="ph-bold ph-chalkboard-teacher"></i> Project Guide
+            </div>
+            <div class="guide-profile">
+                <div class="guide-avatar">
+                    <i class="ph-bold ph-user-circle-gear"></i>
+                </div>
+                <div class="guide-info">
+                    <h3 class="guide-name">Dr Julia Roberts</h3>
+                    <p class="guide-role">Project Guide &amp; Technical Supervisor</p>
+                    <span class="guide-dept-badge"><i class="ph-bold ph-seal-check"></i> Project Mentor</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Project Team Members Section -->
+        <div class="credits-team-section">
+            <div class="team-header-label">
+                <i class="ph-bold ph-users-three"></i> Project Team Members
+            </div>
+            <div class="team-cards-grid">
+                <!-- Member 1 -->
+                <div class="member-card">
+                    <div class="member-avatar avatar-ashir">
+                        <span>A</span>
+                    </div>
+                    <div class="member-info">
+                        <h4 class="member-name">Ashir S John</h4>
+                        <span class="member-role-tag">Team Member</span>
+                        <p class="member-desc">BCA Final Year</p>
+                    </div>
+                </div>
+
+                <!-- Member 2 -->
+                <div class="member-card">
+                    <div class="member-avatar avatar-tony">
+                        <span>T</span>
+                    </div>
+                    <div class="member-info">
+                        <h4 class="member-name">Tony S Kingsly</h4>
+                        <span class="member-role-tag">Team Member</span>
+                        <p class="member-desc">BCA Final Year</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer / Technical Summary -->
+        <div class="credits-modal-footer">
+            <div class="credits-tech-pills">
+                <span class="tech-pill"><i class="ph-bold ph-code"></i> Python / Flask</span>
+                <span class="tech-pill"><i class="ph-bold ph-database"></i> SQLite &amp; SQLAlchemy</span>
+                <span class="tech-pill"><i class="ph-bold ph-browsers"></i> 2D Accessibility</span>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleProjectCreditsModal(false)" style="margin-top: 0.75rem; width: 100%;">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleProjectCreditsModal(show) {
+        var modal = document.getElementById('project-credits-modal');
+        if (!modal) return;
+        if (show) {
+            modal.style.display = 'flex';
+        } else {
+            modal.style.display = 'none';
+        }
+    }
+
+    function handleCreditsModalBackdrop(e) {
+        if (e.target.id === 'project-credits-modal') {
+            toggleProjectCreditsModal(false);
+        }
+    }
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            var modal = document.getElementById('project-credits-modal');
+            if (modal && modal.style.display === 'flex') {
+                toggleProjectCreditsModal(false);
+            }
+        }
+    });
+</script>
 {% endblock %}
 
 {% block page_footer %}{% endblock %}

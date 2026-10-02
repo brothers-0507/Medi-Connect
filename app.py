@@ -17,14 +17,18 @@ from models import db, User, Prescription, PrescriptionItem, Broadcast, Pharmacy
 
 FREQUENCY_OPTIONS = {
     'OD_MORNING':    {'label': 'Once daily — Morning',               'times': '08:00',              'per_day': 1},
-    'OD_AFTERNOON':  {'label': 'Once daily — Afternoon',             'times': '14:00',              'per_day': 1},
-    'OD_EVENING':    {'label': 'Once daily — Evening',               'times': '18:00',              'per_day': 1},
     'OD_NIGHT':      {'label': 'Once daily — Bedtime',               'times': '22:00',              'per_day': 1},
     'BD_MORN_EVE':   {'label': 'Twice daily — Morning & Evening',    'times': '08:00, 18:00',       'per_day': 2},
-    'BD_MORN_NIGHT': {'label': 'Twice daily — Morning & Bedtime',    'times': '08:00, 22:00',       'per_day': 2},
     'TDS':           {'label': 'Three times daily (TDS)',            'times': '08:00, 14:00, 20:00','per_day': 3},
-    'QDS':           {'label': 'Four times daily (QDS)',             'times': '08:00, 12:00, 16:00, 20:00', 'per_day': 4},
     'SOS':           {'label': 'As needed (SOS)',                    'times': '08:00',              'per_day': 1},
+}
+
+ALL_FREQUENCY_LOOKUP = {
+    **FREQUENCY_OPTIONS,
+    'OD_AFTERNOON':  {'label': 'Once daily — Afternoon',             'times': '14:00',              'per_day': 1},
+    'OD_EVENING':    {'label': 'Once daily — Evening',               'times': '18:00',              'per_day': 1},
+    'BD_MORN_NIGHT': {'label': 'Twice daily — Morning & Bedtime',    'times': '08:00, 22:00',       'per_day': 2},
+    'QDS':           {'label': 'Four times daily (QDS)',             'times': '08:00, 12:00, 16:00, 20:00', 'per_day': 4},
     'STAT':          {'label': 'Single dose — Immediately',          'times': '08:00',              'per_day': 1},
 }
 
@@ -32,9 +36,13 @@ DOSAGE_OPTIONS = {
     '1_TAB':    '1 Tablet',
     '2_TAB':    '2 Tablets',
     'HALF_TAB': '½ Tablet',
+    '1_CAP':    '1 Capsule',
     '5ML':      '5 mL (1 tsp)',
     '10ML':     '10 mL (2 tsp)',
-    '1_CAP':    '1 Capsule',
+}
+
+ALL_DOSAGE_LOOKUP = {
+    **DOSAGE_OPTIONS,
     '2_CAP':    '2 Capsules',
     '1_SACHET': '1 Sachet',
     'APPLY':    'Apply topically',
@@ -46,16 +54,16 @@ DOSAGE_OPTIONS = {
 
 def resolve_frequency_label(code):
     """Returns the human-readable label for a frequency code, or the code itself as fallback."""
-    opt = FREQUENCY_OPTIONS.get(code)
+    opt = ALL_FREQUENCY_LOOKUP.get(code)
     return opt['label'] if opt else code
 
 def resolve_dosage_label(code):
     """Returns the human-readable label for a dosage code, or the code itself as fallback."""
-    return DOSAGE_OPTIONS.get(code, code)
+    return ALL_DOSAGE_LOOKUP.get(code, code)
 
 def resolve_frequency_times(code):
     """Returns the time_of_day string for a frequency code, with fallback heuristic for legacy data."""
-    opt = FREQUENCY_OPTIONS.get(code)
+    opt = ALL_FREQUENCY_LOOKUP.get(code)
     if opt:
         return opt['times'], opt['per_day']
     # Fallback heuristic for legacy free-text data
@@ -426,23 +434,25 @@ def update_settings():
     user.name = name
     user.username = username
     user.contact = contact
-    user.location = location
+    if 'location' in request.form:
+        user.location = request.form['location'].strip()
     
-    address = request.form.get('address', '').strip()
-    lat_val = request.form.get('latitude', '').strip()
-    lng_val = request.form.get('longitude', '').strip()
-    if address:
-        user.address = address
-    if lat_val:
-        try:
-            user.latitude = float(lat_val)
-        except ValueError:
-            pass
-    if lng_val:
-        try:
-            user.longitude = float(lng_val)
-        except ValueError:
-            pass
+    if 'address' in request.form:
+        user.address = request.form['address'].strip()
+    if 'latitude' in request.form:
+        lat_val = request.form.get('latitude', '').strip()
+        if lat_val:
+            try:
+                user.latitude = float(lat_val)
+            except ValueError:
+                pass
+    if 'longitude' in request.form:
+        lng_val = request.form.get('longitude', '').strip()
+        if lng_val:
+            try:
+                user.longitude = float(lng_val)
+            except ValueError:
+                pass
     
     if user.role == 'doctor':
         if 'doctor_badges_json' in request.form and request.form['doctor_badges_json'].strip():
@@ -631,7 +641,8 @@ def doctor_presets_api():
         doctor_id=doctor_id,
         name=name,
         icon=icon,
-        medications_json=json.dumps(meds)
+        medications_json=json.dumps(meds),
+        created_at=datetime.now()
     )
     db.session.add(preset)
     db.session.commit()
@@ -719,7 +730,8 @@ def create_prescription():
         patient_age=int(patient_age) if patient_age else None,
         patient_contact=patient_contact,
         instructions=instructions,
-        is_claimed=False
+        is_claimed=False,
+        created_at=datetime.now()
     )
     
     db.session.add(prescription)
@@ -755,7 +767,8 @@ def create_prescription():
         title=f"New Prescription from {doc_name}",
         message=f"{doc_name} issued prescription #{prescription.uuid[:8]} with {items_created} prescribed medication(s). Accept to link with your Medi-Tracker.",
         prescription_uuid=prescription.uuid,
-        is_read=False
+        is_read=False,
+        created_at=datetime.now()
     )
     db.session.add(notif)
     
@@ -1083,7 +1096,7 @@ def take_slot_doses(slot_key):
                     if idx >= current_logged:
                         if sched.current_stock > 0:
                             sched.current_stock -= 1
-                        log = TrackerLog(schedule_id=sched.id, status='taken')
+                        log = TrackerLog(schedule_id=sched.id, status='taken', taken_at=datetime.now())
                         db.session.add(log)
                         logged_count += 1
                         current_logged += 1
@@ -1234,15 +1247,17 @@ def patient_live_notifications():
     new_notifs = [n for n in all_notifs if n.id > last_id] if last_id > 0 else []
     
     def time_ago_str(dt):
-        diff = datetime.utcnow() - dt
+        if not dt:
+            return "Just now"
+        diff = datetime.now() - dt
         secs = int(diff.total_seconds())
         if secs < 60:
             return "Just now"
         elif secs < 3600:
-            return f"{secs // 60}m ago"
+            return f"{max(1, secs // 60)}m ago"
         elif secs < 86400:
             return f"{secs // 3600}h ago"
-        return dt.strftime('%d %b %Y')
+        return dt.strftime('%d %b %Y, %I:%M %p')
 
     return jsonify({
         'success': True,
@@ -1561,7 +1576,7 @@ def log_dose(schedule_id):
         if sched.current_stock > 0:
             sched.current_stock -= 1
             
-    log = TrackerLog(schedule_id=sched.id, status=action)
+    log = TrackerLog(schedule_id=sched.id, status=action, taken_at=datetime.now())
     db.session.add(log)
     db.session.commit()
     
@@ -1614,13 +1629,19 @@ def notify_pharmacies_about_broadcast(bc):
             pharmacies_to_notify = User.query.filter_by(role='pharmacy').all()
             
         for ph in pharmacies_to_notify:
+            if not bc.target_pharmacy_id and pat:
+                ph_loc = (ph.location or "").strip().lower()
+                pat_loc = (pat.location or "").strip().lower()
+                if ph_loc and pat_loc and ph_loc != pat_loc:
+                    continue
             notif = PharmacyNotification(
                 pharmacy_id=ph.id,
                 broadcast_id=bc.id,
                 prescription_uuid=rx.uuid if rx else None,
                 title=f"New Broadcast Request from {pat_name}",
                 message=f"Patient {pat_name} requested stock & price quotes for Prescription #{rx.uuid[:8] if rx else ''} ({items_count} medications: {med_summary}).",
-                is_read=False
+                is_read=False,
+                created_at=datetime.now()
             )
             db.session.add(notif)
         db.session.commit()
@@ -1654,7 +1675,8 @@ def create_broadcast():
         patient_id=patient_id,
         target_pharmacy_id=int(target_pharmacy_id) if target_pharmacy_id else None,
         patient_lat=float(patient_lat) if patient_lat else None,
-        patient_lng=float(patient_lng) if patient_lng else None
+        patient_lng=float(patient_lng) if patient_lng else None,
+        created_at=datetime.now()
     )
     db.session.add(bc)
     db.session.commit()
@@ -1837,11 +1859,22 @@ def pharmacy_dashboard():
         total_matched_cost = 0.0
         item_unit_prices = {}
         for item in bc.prescription.items:
-            # Search matches in inventory
-            inv_match = InventoryItem.query.filter_by(
-                pharmacy_id=pharmacy_id, 
-                medicine_name=item.medicine_name
+            # Search matches in inventory (case-insensitive and trimmed)
+            clean_name = item.medicine_name.strip().lower()
+            inv_match = InventoryItem.query.filter(
+                InventoryItem.pharmacy_id == pharmacy_id,
+                db.func.lower(InventoryItem.medicine_name) == clean_name,
+                InventoryItem.stock_level > 0
             ).first()
+            if not inv_match:
+                inv_match = InventoryItem.query.filter(
+                    InventoryItem.pharmacy_id == pharmacy_id,
+                    InventoryItem.stock_level > 0,
+                    db.or_(
+                        db.func.lower(InventoryItem.medicine_name).like(f"{clean_name}%"),
+                        db.func.lower(InventoryItem.medicine_name).like(f"%{clean_name}%")
+                    )
+                ).first()
             if inv_match and inv_match.stock_level > 0:
                 matching_meds.append(item)
                 item_price_val = round(inv_match.price, 2)
@@ -1971,7 +2004,7 @@ def submit_offer():
         existing.availability_status = status
         existing.item_prices_json = item_prices_json
         existing.notes = notes
-        existing.created_at = datetime.utcnow()
+        existing.created_at = datetime.now()
     else:
         offer = PharmacyOffer(
             broadcast_id=broadcast_id,
@@ -1979,7 +2012,8 @@ def submit_offer():
             estimated_price=price,
             availability_status=status,
             item_prices_json=item_prices_json,
-            notes=notes
+            notes=notes,
+            created_at=datetime.now()
         )
         db.session.add(offer)
         
@@ -1993,7 +2027,8 @@ def submit_offer():
             title=f"New Quote from {ph_user.name}",
             message=f"{ph_user.name} submitted an estimate of ₹{price:.2f} ({status.title()}) for Prescription #{broadcast.prescription.uuid[:8]}.",
             prescription_uuid=broadcast.prescription.uuid,
-            is_read=False
+            is_read=False,
+            created_at=datetime.now()
         )
         db.session.add(notif)
         

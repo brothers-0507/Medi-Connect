@@ -39,18 +39,18 @@
                     <input type="text" id="profile-contact" name="contact" class="form-control" value="{{ current_user.contact }}" required>
                 </div>
 
+                {% if current_user.role == 'pharmacy' %}
                 <div class="form-group">
                     <label for="profile-address">Street Address / Locality</label>
                     <input type="text" id="profile-address" name="address" class="form-control" value="{{ current_user.address or '' }}" placeholder="e.g. 100ft Road, Indiranagar, Bengaluru">
                 </div>
 
                 <div class="form-group">
-                    <label for="profile-location">City / State</label>
+                    <label for="profile-location">City / State (Service Location)</label>
                     <input type="text" id="profile-location" name="location" class="form-control" value="{{ current_user.location or '' }}" placeholder="e.g. Bengaluru, Karnataka">
                 </div>
 
-                {% if current_user.role != 'doctor' %}
-                <!-- Geolocation coordinates -->
+                <!-- Geolocation coordinates (For Broadcasting) -->
                 <div class="geo-input-box">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
                         <label style="font-size: 0.8rem; font-weight: 650; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.35rem;">

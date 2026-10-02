@@ -42,8 +42,8 @@
                     <div style="font-size: 0.8rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Age</div>
                     <div style="font-size: 1.15rem; font-weight: 700; color: #0f172a;">{{ prescription.patient_age or 'N/A' }}</div>
                     
-                    <div style="margin-top: 0.75rem; font-size: 0.8rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Date Issued</div>
-                    <div style="font-size: 0.95rem; font-weight: 550; color: #334155;">{{ prescription.created_at.strftime('%d %b %Y') }}</div>
+                    <div style="margin-top: 0.75rem; font-size: 0.8rem; text-transform: uppercase; color: #64748b; font-weight: 600;">Date & Time Issued</div>
+                    <div style="font-size: 0.95rem; font-weight: 550; color: #334155;">{{ prescription.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
                 </div>
             </div>
 

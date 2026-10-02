@@ -100,23 +100,29 @@
                             <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Medicine Name</label>
                             <input type="text" name="med_name[]" class="form-control" placeholder="e.g. Dolo 650" required>
                         </div>
-                        <div>
+                        <div class="dosage-wrap">
                             <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Dosage</label>
-                            <select name="med_dosage[]" class="form-control" required>
+                            <select class="form-control med-dosage-select" onchange="handleSelectChange(this, 'dosage')" required>
                                 <option value="" disabled selected>Select dosage</option>
                                 {% for code, label in dosage_options.items() %}
                                 <option value="{{ code }}">{{ label }}</option>
                                 {% endfor %}
+                                <option value="__custom__">Custom...</option>
                             </select>
+                            <input type="text" class="form-control custom-input" placeholder="e.g. 250mg, 1 puff" style="display: none; margin-top: 0.35rem; font-size: 0.85rem;" oninput="handleCustomInput(this, 'dosage')">
+                            <input type="hidden" name="med_dosage[]" class="final-dosage-val" required>
                         </div>
-                        <div>
+                        <div class="freq-wrap">
                             <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Frequency</label>
-                            <select name="med_frequency[]" class="form-control" required>
+                            <select class="form-control med-freq-select" onchange="handleSelectChange(this, 'freq')" required>
                                 <option value="" disabled selected>Select frequency</option>
                                 {% for code, opt in frequency_options.items() %}
                                 <option value="{{ code }}">{{ opt.label }}</option>
                                 {% endfor %}
+                                <option value="__custom__">Custom...</option>
                             </select>
+                            <input type="text" class="form-control custom-input" placeholder="e.g. Every 8 hours" style="display: none; margin-top: 0.35rem; font-size: 0.85rem;" oninput="handleCustomInput(this, 'freq')">
+                            <input type="hidden" name="med_frequency[]" class="final-freq-val" required>
                         </div>
                         <div>
                             <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Duration</label>
@@ -167,21 +173,62 @@
     const FREQ_OPTS = {{ frequency_options | tojson }};
 
     function buildDosageSelect(selectedVal) {
-        let html = '<select name="med_dosage[]" class="form-control" required><option value="" disabled' + (!selectedVal ? ' selected' : '') + '>Select dosage</option>';
+        const isCustom = selectedVal && !DOSAGE_OPTS[selectedVal];
+        let html = `
+        <div class="dosage-wrap">
+            <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Dosage</label>
+            <select class="form-control med-dosage-select" onchange="handleSelectChange(this, 'dosage')" required>
+                <option value="" disabled${!selectedVal ? ' selected' : ''}>Select dosage</option>`;
         for (const [code, label] of Object.entries(DOSAGE_OPTS)) {
             html += `<option value="${code}"${code === selectedVal ? ' selected' : ''}>${label}</option>`;
         }
-        html += '</select>';
+        html += `<option value="__custom__"${isCustom ? ' selected' : ''}>Custom...</option>
+            </select>
+            <input type="text" class="form-control custom-input" placeholder="e.g. 250mg, 1 puff" value="${isCustom ? selectedVal : ''}" style="${isCustom ? 'display: block;' : 'display: none;'} margin-top: 0.35rem; font-size: 0.85rem;" oninput="handleCustomInput(this, 'dosage')">
+            <input type="hidden" name="med_dosage[]" class="final-dosage-val" value="${selectedVal || ''}" required>
+        </div>`;
         return html;
     }
 
     function buildFreqSelect(selectedVal) {
-        let html = '<select name="med_frequency[]" class="form-control" required><option value="" disabled' + (!selectedVal ? ' selected' : '') + '>Select frequency</option>';
+        const isCustom = selectedVal && !FREQ_OPTS[selectedVal];
+        let html = `
+        <div class="freq-wrap">
+            <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Frequency</label>
+            <select class="form-control med-freq-select" onchange="handleSelectChange(this, 'freq')" required>
+                <option value="" disabled${!selectedVal ? ' selected' : ''}>Select frequency</option>`;
         for (const [code, opt] of Object.entries(FREQ_OPTS)) {
             html += `<option value="${code}"${code === selectedVal ? ' selected' : ''}>${opt.label}</option>`;
         }
-        html += '</select>';
+        html += `<option value="__custom__"${isCustom ? ' selected' : ''}>Custom...</option>
+            </select>
+            <input type="text" class="form-control custom-input" placeholder="e.g. Every 8 hours" value="${isCustom ? selectedVal : ''}" style="${isCustom ? 'display: block;' : 'display: none;'} margin-top: 0.35rem; font-size: 0.85rem;" oninput="handleCustomInput(this, 'freq')">
+            <input type="hidden" name="med_frequency[]" class="final-freq-val" value="${selectedVal || ''}" required>
+        </div>`;
         return html;
+    }
+
+    function handleSelectChange(selectElem, type) {
+        const parent = selectElem.closest(type === 'dosage' ? '.dosage-wrap' : '.freq-wrap');
+        const customInput = parent.querySelector('.custom-input');
+        const hiddenInput = parent.querySelector(type === 'dosage' ? '.final-dosage-val' : '.final-freq-val');
+        
+        if (selectElem.value === '__custom__') {
+            customInput.style.display = 'block';
+            customInput.required = true;
+            customInput.focus();
+            hiddenInput.value = customInput.value.trim();
+        } else {
+            customInput.style.display = 'none';
+            customInput.required = false;
+            hiddenInput.value = selectElem.value;
+        }
+    }
+
+    function handleCustomInput(inputElem, type) {
+        const parent = inputElem.closest(type === 'dosage' ? '.dosage-wrap' : '.freq-wrap');
+        const hiddenInput = parent.querySelector(type === 'dosage' ? '.final-dosage-val' : '.final-freq-val');
+        hiddenInput.value = inputElem.value.trim();
     }
 
     // Presets definitions — now using standardized codes
@@ -223,14 +270,8 @@
                     <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Medicine Name</label>
                     <input type="text" name="med_name[]" class="form-control" value="${med.name}" required>
                 </div>
-                <div>
-                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Dosage</label>
-                    ${buildDosageSelect(med.dosage)}
-                </div>
-                <div>
-                    <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Frequency</label>
-                    ${buildFreqSelect(med.frequency)}
-                </div>
+                ${buildDosageSelect(med.dosage)}
+                ${buildFreqSelect(med.frequency)}
                 <div>
                     <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Duration</label>
                     <input type="text" name="med_duration[]" class="form-control" value="${med.duration}" required>
@@ -262,14 +303,8 @@
                 <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Medicine Name</label>
                 <input type="text" name="med_name[]" class="form-control" placeholder="e.g. Amoxicillin" required>
             </div>
-            <div>
-                <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Dosage</label>
-                ${buildDosageSelect('')}
-            </div>
-            <div>
-                <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Frequency</label>
-                ${buildFreqSelect('')}
-            </div>
+            ${buildDosageSelect('')}
+            ${buildFreqSelect('')}
             <div>
                 <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Duration</label>
                 <input type="text" name="med_duration[]" class="form-control" placeholder="e.g. 7 days" required>
@@ -312,8 +347,13 @@
     function clearMedicationRow(btn) {
         const row = btn.closest('.prescription-item-row');
         if (!row) return;
-        row.querySelectorAll('input').forEach(i => i.value = '');
+        row.querySelectorAll('input:not([type="hidden"])').forEach(i => i.value = '');
+        row.querySelectorAll('input[type="hidden"]').forEach(h => h.value = '');
         row.querySelectorAll('select').forEach(s => s.selectedIndex = 0);
+        row.querySelectorAll('.custom-input').forEach(ci => {
+            ci.style.display = 'none';
+            ci.required = false;
+        });
     }
 
     // Autofill patient details when typing or selecting username (WITHOUT ANY POPUP PREVIEW CARD)

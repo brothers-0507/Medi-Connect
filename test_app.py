@@ -1,6 +1,6 @@
 import unittest
 import json
-from datetime import date, timedelta
+from datetime import datetime, date, timedelta
 from app import app, db, User, Prescription, PrescriptionItem, Broadcast, PharmacyOffer, MedicationSchedule, TrackerLog, InventoryItem, DoctorPreset, PatientNotification, PharmacyNotification
 
 class MediConnectTestCase(unittest.TestCase):
@@ -1071,8 +1071,8 @@ class MediConnectTestCase(unittest.TestCase):
         self.assertIn(b'Afternoon Routine', res.data)
         self.assertIn(b'Evening Routine', res.data)
         self.assertIn(b'Night / Bedtime', res.data)
-        self.assertIn(b"Today's Adherence", res.data)
-        self.assertIn(b'Stock & Refill Watchdog', res.data)
+        self.assertIn(b"Doctor's Prescription", res.data)
+        self.assertIn(b'Compare with Prescription', res.data)
         self.assertIn(b'Add Custom Medication', res.data)
         self.assertIn(b'Dolo 650', res.data)
         self.assertIn(b'Pan-D', res.data)
@@ -1293,6 +1293,59 @@ class MediConnectTestCase(unittest.TestCase):
         comp_res2 = self.app.get('/api/tracker/compare-data')
         data2 = json.loads(comp_res2.data)
         self.assertEqual(data2['comparisons'][0]['status'], 'aligned')
+
+    def test_location_option_in_settings_only_for_pharmacy(self):
+        # 1. Patient settings: location and geolocation options MUST NOT be rendered
+        self.login_as('test_patient')
+        pat_res = self.app.get('/settings')
+        self.assertEqual(pat_res.status_code, 200)
+        self.assertNotIn(b'Real-Time Geolocation (Latitude & Longitude)', pat_res.data)
+        self.assertNotIn(b'Service Location', pat_res.data)
+
+        # 2. Doctor settings: location and geolocation options MUST NOT be rendered
+        self.login_as('test_doctor')
+        doc_res = self.app.get('/settings')
+        self.assertEqual(doc_res.status_code, 200)
+        self.assertNotIn(b'Real-Time Geolocation (Latitude & Longitude)', doc_res.data)
+        self.assertNotIn(b'Service Location', doc_res.data)
+
+        # 3. Pharmacy settings: location and geolocation options MUST be rendered
+        self.login_as('test_pharmacy')
+        ph_res = self.app.get('/settings')
+        self.assertEqual(ph_res.status_code, 200)
+        self.assertIn(b'Real-Time Geolocation (Latitude & Longitude)', ph_res.data)
+        self.assertIn(b'Service Location', ph_res.data)
+
+    def test_local_timezone_processing(self):
+        # Verify timestamps match local machine time (datetime.now()) and not UTC
+        before = datetime.now()
+        self.login_as('test_doctor')
+        rx_res = self.app.post('/prescription/create', data={
+            'patient_username': 'test_patient',
+            'patient_name': 'Patient Test',
+            'patient_age': '30',
+            'patient_contact': '555-9988',
+            'instructions': 'Take after meals',
+            'med_name[]': ['Dolo 650'],
+            'med_dosage[]': ['1_TAB'],
+            'med_frequency[]': ['OD_MORNING'],
+            'med_duration[]': ['5 days'],
+            'med_instructions[]': ['Morning after food']
+        }, follow_redirects=True)
+        after = datetime.now()
+        self.assertEqual(rx_res.status_code, 200)
+
+        with app.app_context():
+            rx = Prescription.query.filter_by(patient_name='Patient Test').order_by(Prescription.created_at.desc()).first()
+            self.assertIsNotNone(rx)
+            # Timestamp must be within 5 seconds of local datetime.now(), proving local timezone time
+            self.assertTrue(before - timedelta(seconds=2) <= rx.created_at <= after + timedelta(seconds=2))
+
+            # View prescription sheet includes formatted date and time
+            view_res = self.app.get(f'/prescription/view/{rx.uuid}')
+            self.assertEqual(view_res.status_code, 200)
+            self.assertIn(b'Date & Time Issued', view_res.data)
+            self.assertIn(rx.created_at.strftime('%d %b %Y, %I:%M %p').encode(), view_res.data)
 
 if __name__ == '__main__':
     unittest.main()

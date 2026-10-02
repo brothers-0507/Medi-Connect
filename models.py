@@ -131,7 +131,7 @@ class Prescription(db.Model):
     patient_name = db.Column(db.String(120), nullable=False)
     patient_age = db.Column(db.Integer, nullable=True)
     patient_contact = db.Column(db.String(50), nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     instructions = db.Column(db.Text, nullable=True)
     is_claimed = db.Column(db.Boolean, default=False, nullable=False)
     
@@ -165,7 +165,7 @@ class Broadcast(db.Model):
     target_pharmacy_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     patient_lat = db.Column(db.Float, nullable=True)
     patient_lng = db.Column(db.Float, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     
     # Relationships
     prescription = db.relationship('Prescription', back_populates='broadcasts')
@@ -183,7 +183,7 @@ class PharmacyOffer(db.Model):
     availability_status = db.Column(db.String(20), nullable=False)  # 'available', 'partial', 'unavailable'
     item_prices_json = db.Column(db.Text, nullable=True)  # JSON {med_name: price}
     notes = db.Column(db.Text, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     
     # Relationships
     broadcast = db.relationship('Broadcast', back_populates='offers')
@@ -271,7 +271,7 @@ class DoctorPreset(db.Model):
     name = db.Column(db.String(100), nullable=False)
     icon = db.Column(db.String(50), default='💊')
     medications_json = db.Column(db.Text, nullable=False)  # JSON list of dicts
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     
     doctor = db.relationship('User', back_populates='doctor_presets')
 
@@ -285,9 +285,27 @@ class PatientNotification(db.Model):
     message = db.Column(db.Text, nullable=False)
     prescription_uuid = db.Column(db.String(36), nullable=True)
     is_read = db.Column(db.Boolean, default=False, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=datetime.now)
     
     patient = db.relationship('User', back_populates='notifications')
+
+    @property
+    def time_ago(self):
+        if not self.created_at:
+            return 'Just now'
+        diff = datetime.now() - self.created_at
+        secs = int(diff.total_seconds())
+        if secs < 60:
+            return 'Just now'
+        elif secs < 3600:
+            mins = max(1, secs // 60)
+            return f'{mins}m ago'
+        elif secs < 86400:
+            hours = secs // 3600
+            return f'{hours}h ago'
+        else:
+            days = secs // 86400
+            return f'{days}d ago'
 
 class PharmacyNotification(db.Model):
     __tablename__ = 'pharmacy_notifications'

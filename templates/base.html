@@ -177,7 +177,7 @@
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 
-    {% if current_user and current_user.role == 'patient' %}
+    {% if current_user and current_user.role in ['patient', 'pharmacy'] %}
     <script>
         // Real-Time Notification Poller & Instant Push Engine
         let lastSeenNotifId = 0;
@@ -518,10 +518,10 @@
                 .then(() => fetchNotificationsLive());
         }
 
-        // Start live polling every 3.5 seconds
+        // Start live polling every 2.5 seconds
         document.addEventListener('DOMContentLoaded', function() {
             fetchNotificationsLive();
-            setInterval(fetchNotificationsLive, 3500);
+            setInterval(fetchNotificationsLive, 2500);
         });
     </script>
     {% endif %}

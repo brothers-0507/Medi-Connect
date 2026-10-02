@@ -110,17 +110,49 @@ html {
     margin: 0;
     padding: 0;
     -webkit-text-size-adjust: 100%;
-    overflow-x: clip;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: auto;
     overflow-y: auto;
-    width: 100%;
     box-sizing: border-box;
+    scrollbar-width: auto;
+    scrollbar-color: var(--primary, #0d9488) rgba(148, 163, 184, 0.25);
+}
+
+/* Styled Accessible Sliding Panels: Side Scroll Sliding (Vertical) & Bottom Sliding Panel (Horizontal) */
+::-webkit-scrollbar {
+    width: 13px;  /* Side scroll sliding width */
+    height: 13px; /* Bottom sliding panel height */
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.6);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--primary, #0d9488);
+    border-radius: 7px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-hover, #0b7a70);
+    border: 2px solid transparent;
+    background-clip: padding-box;
 }
 
 body {
-    width: 100%;
     margin: 0;
     padding: 0;
+    min-width: 1024px;
     background-color: var(--bg-dark);
+    background-attachment: fixed;
+    background-size: cover;
     color: var(--text-primary);
     font-family: var(--font-sans);
     line-height: 1.6;
@@ -129,7 +161,22 @@ body {
     display: flex;
     flex-direction: column;
     position: relative;
+    z-index: 1;
     box-sizing: border-box;
+}
+
+/* Stationary Fixed Background Underlay (stationary on both axes during zoom/scroll) */
+.fixed-bg-underlay {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    pointer-events: none;
+    overflow: hidden;
+    background-color: var(--bg-dark);
+    background-attachment: fixed;
+    background-size: cover;
 }
 
 img {
@@ -137,7 +184,7 @@ img {
     height: auto;
 }
 
-/* Background decorative glowing circles (soft healthcare ambient glows) */
+/* Background decorative glowing circles (soft healthcare ambient glows, fixed on both axes) */
 body::before, body::after {
     content: '';
     position: fixed;
@@ -180,10 +227,13 @@ header {
     position: sticky;
     top: 0;
     z-index: 100;
+    width: 100%;
+    min-width: 1024px;
 }
 
 .nav-container {
     max-width: 1200px;
+    min-width: 1024px;
     margin: 0 auto;
     padding: 1.1rem 2rem;
     display: flex;
@@ -274,9 +324,12 @@ main {
     flex: 1;
     max-width: 1200px;
     width: 100%;
+    min-width: 1024px;
     margin: 0 auto;
     padding: clamp(1.75rem, 3vw, 2.5rem) clamp(1rem, 2.5vw, 2rem) 1.25rem;
     box-sizing: border-box;
+    position: relative;
+    z-index: 1;
 }
 
 main > *:last-child {
@@ -286,6 +339,7 @@ main > *:last-child {
 /* Global Portal Footer */
 footer {
     width: 100%;
+    min-width: 1024px;
     text-align: center;
     padding: 1.15rem 1.5rem;
     margin-top: auto;
@@ -297,6 +351,8 @@ footer {
     align-items: center;
     box-sizing: border-box;
     background: transparent;
+    position: relative;
+    z-index: 1;
 }
 
 footer p {
@@ -2271,6 +2327,7 @@ body[data-page="landing"] .register-menu-btn:hover {
 body[data-page="landing"] {
     min-height: 100vh;
     min-height: 100dvh;
+    min-width: 1024px;
     display: flex;
     flex-direction: column;
     margin: 0;
@@ -2297,6 +2354,7 @@ body[data-page="landing"] main {
     display: flex;
     flex-direction: column;
     width: 100%;
+    min-width: 1024px;
     max-width: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -2312,7 +2370,7 @@ body[data-page="landing"] footer {
     min-height: 100vh;
     min-height: 100dvh;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2324,6 +2382,7 @@ body[data-page="landing"] footer {
     background-position: center;
     background-repeat: no-repeat;
     width: 100%;
+    min-width: 1024px;
     box-sizing: border-box;
 }
 
@@ -2380,6 +2439,7 @@ body[data-page="landing"] footer {
 
 .hero-content {
     width: 100%;
+    min-width: 980px;
     max-width: min(1360px, 94vw);
     margin: 0 auto;
     position: relative;
@@ -2461,6 +2521,7 @@ body[data-page="landing"] footer {
     grid-template-columns: repeat(3, 1fr);
     gap: 20px;
     text-align: center;
+    min-width: 960px;
 }
 
 .portal-card {
@@ -2635,6 +2696,7 @@ body[data-page="landing"] footer {
     flex: 1 0 auto;
     position: relative;
     width: 100%;
+    min-width: 1024px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -2644,7 +2706,7 @@ body[data-page="landing"] footer {
     padding: clamp(28px, 4vh, 44px) clamp(16px, 3vw, 32px) 28px;
     background: linear-gradient(180deg, #f0f8fa 0%, #e4f3f7 45%, #d8edf3 100%);
     border-top: 1px solid rgba(215, 231, 236, 0.7);
-    overflow: hidden;
+    overflow: visible;
 }
 
 [data-theme="dark"] .features-container-wrap {
@@ -2788,6 +2850,7 @@ body[data-page="landing"] footer {
     grid-template-columns: repeat(3, 1fr);
     gap: 18px;
     width: 100%;
+    min-width: 960px;
     box-sizing: border-box;
 }
 
@@ -2872,6 +2935,7 @@ body[data-page="landing"] footer {
 /* WHY MEDI-CONNECT SECTION */
 .why-section {
     width: 100%;
+    min-width: 980px;
     max-width: min(1360px, 94vw);
     margin: 0 auto;
     background: rgba(255, 255, 255, 0.94);
@@ -2952,6 +3016,7 @@ body[data-page="landing"] footer {
     gap: 16px;
     margin-bottom: 28px;
     width: 100%;
+    min-width: 960px;
     box-sizing: border-box;
 }
 
@@ -3225,27 +3290,6 @@ body[data-page="landing"] footer {
 
 /* RESPONSIVE BREAKPOINTS */
 @media (max-width: 850px) {
-    .portals,
-    .feature-grid,
-    .why-grid {
-        grid-template-columns: 1fr;
-        gap: 18px;
-    }
-    .portal-card {
-        max-width: 470px;
-        width: 100%;
-        margin: 0 auto;
-    }
-    .feature {
-        max-width: 560px;
-        margin: 0 auto;
-        width: 100%;
-    }
-    .why-card {
-        max-width: 560px;
-        margin: 0 auto;
-        width: 100%;
-    }
     .hero {
         padding-top: 36px;
         padding-bottom: 44px;

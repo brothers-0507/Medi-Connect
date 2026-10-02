@@ -7,7 +7,7 @@
 <div class="clinical-banner no-print">
     <div class="clinical-banner-left">
         <div class="clinical-avatar">
-            {{ current_user.name[4] if current_user.name|length > 4 else 'D' }}
+            {{ (current_user.name | replace('Dr.', '') | replace('Dr', '') | trim)[0] if (current_user.name | replace('Dr.', '') | replace('Dr', '') | trim) else 'D' }}
         </div>
         <div class="clinical-info">
             <h1>

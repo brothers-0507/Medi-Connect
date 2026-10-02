@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}MediConnect - Centralized Pharmacy & Medi-Tracker{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,6 +23,8 @@
     </script>
 </head>
 <body data-role="{{ current_user.role if current_user else 'guest' }}" {% block body_attrs %}{% endblock %}>
+    <!-- Stationary Fixed Background Underlay (stationary on both axes during zoom/scroll) -->
+    <div class="fixed-bg-underlay" aria-hidden="true"></div>
     <header class="no-print">
         <div class="nav-container">
             <a href="{{ url_for('index') }}" class="logo">

@@ -122,12 +122,12 @@ with app.app_context():
         pass
     # Pre-populate demo accounts for easy access and testing
     if not User.query.filter_by(username='doctor').first():
-        doc = User(username='doctor', name='Dr. Rajesh Sharma', role='doctor', contact='+91 98450 12345', location='Bengaluru, Karnataka',
+        doc = User(username='doctor', name='Dr Tony', role='doctor', contact='+91 98450 12345', location='Bengaluru, Karnataka',
                    latitude=12.9716, longitude=77.5946, address='Fortis Hospital, Cunningham Road, Bengaluru, Karnataka 560052')
         doc.set_password('password')
         db.session.add(doc)
         
-        pat = User(username='patient', name='Rahul Verma', role='patient', contact='+91 98765 43210', location='Bengaluru, Karnataka',
+        pat = User(username='patient', name='Ashir', role='patient', contact='+91 98765 43210', location='Bengaluru, Karnataka',
                    latitude=12.9784, longitude=77.6408, address='12th Main Road, HAL 2nd Stage, Indiranagar, Bengaluru, Karnataka 560038')
         pat.set_password('password')
         db.session.add(pat)
@@ -157,6 +157,17 @@ with app.app_context():
         db.session.add(InventoryItem(pharmacy_id=ph2.id, medicine_name='Dolo 650', stock_level=120, price=30.00, batch_number='DOL-802', expiry_date=today + timedelta(days=450)))
         db.session.add(InventoryItem(pharmacy_id=ph2.id, medicine_name='Telma 40', stock_level=40, price=92.00, batch_number='TEL-701', expiry_date=today + timedelta(days=320)))
         db.session.add(InventoryItem(pharmacy_id=ph2.id, medicine_name='Montair-LC', stock_level=55, price=165.00, batch_number='MON-601', expiry_date=today + timedelta(days=365)))
+        db.session.commit()
+    else:
+        # Update existing database records to 'Dr Tony' and 'Ashir'
+        existing_doc = User.query.filter_by(username='doctor').first()
+        if existing_doc and existing_doc.name != 'Dr Tony':
+            existing_doc.name = 'Dr Tony'
+        existing_pat = User.query.filter_by(username='patient').first()
+        if existing_pat and existing_pat.name != 'Ashir':
+            existing_pat.name = 'Ashir'
+            for rx in Prescription.query.filter_by(patient_id=existing_pat.id).all():
+                rx.patient_name = 'Ashir'
         db.session.commit()
 
 # Context processor to make current_user globally available in templates
@@ -760,7 +771,7 @@ def create_prescription():
             
     # Auto-create instant patient notification
     doc_user = User.query.get(doctor_id)
-    doc_name = doc_user.name if doc_user else 'Dr. Rajesh Sharma'
+    doc_name = doc_user.name if doc_user else 'Dr Tony'
     notif = PatientNotification(
         patient_id=pat_user.id,
         category='prescription',

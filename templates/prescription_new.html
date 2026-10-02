@@ -97,11 +97,21 @@
                         </div>
                         <div>
                             <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Dosage</label>
-                            <input type="text" name="med_dosage[]" class="form-control" placeholder="e.g. 650mg" required>
+                            <select name="med_dosage[]" class="form-control" required>
+                                <option value="" disabled selected>Select dosage</option>
+                                {% for code, label in dosage_options.items() %}
+                                <option value="{{ code }}">{{ label }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div>
                             <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Frequency</label>
-                            <input type="text" name="med_frequency[]" class="form-control" placeholder="e.g. Twice daily (BD)" required>
+                            <select name="med_frequency[]" class="form-control" required>
+                                <option value="" disabled selected>Select frequency</option>
+                                {% for code, opt in frequency_options.items() %}
+                                <option value="{{ code }}">{{ opt.label }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
                         <div>
                             <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Duration</label>
@@ -144,24 +154,46 @@
 <script>
     let medRowCount = 1;
 
-    // Presets definitions
+    // Standardized options injected from server
+    const DOSAGE_OPTS = {{ dosage_options | tojson }};
+    const FREQ_OPTS = {{ frequency_options | tojson }};
+
+    function buildDosageSelect(selectedVal) {
+        let html = '<select name="med_dosage[]" class="form-control" required><option value="" disabled' + (!selectedVal ? ' selected' : '') + '>Select dosage</option>';
+        for (const [code, label] of Object.entries(DOSAGE_OPTS)) {
+            html += `<option value="${code}"${code === selectedVal ? ' selected' : ''}>${label}</option>`;
+        }
+        html += '</select>';
+        return html;
+    }
+
+    function buildFreqSelect(selectedVal) {
+        let html = '<select name="med_frequency[]" class="form-control" required><option value="" disabled' + (!selectedVal ? ' selected' : '') + '>Select frequency</option>';
+        for (const [code, opt] of Object.entries(FREQ_OPTS)) {
+            html += `<option value="${code}"${code === selectedVal ? ' selected' : ''}>${opt.label}</option>`;
+        }
+        html += '</select>';
+        return html;
+    }
+
+    // Presets definitions — now using standardized codes
     const rxPresets = {
         fever: [
-            { name: 'Dolo 650', dosage: '650mg', frequency: 'Three times daily (TDS)', duration: '3 days', instructions: 'Post-meals, only when temperature exceeds 100°F' },
-            { name: 'Cetirizine 10mg', dosage: '10mg', frequency: 'Once daily at bedtime (HS)', duration: '5 days', instructions: 'May cause mild drowsiness' }
+            { name: 'Dolo 650', dosage: '1_TAB', frequency: 'TDS', duration: '3 days', instructions: 'Post-meals, only when temperature exceeds 100°F' },
+            { name: 'Cetirizine 10mg', dosage: '1_TAB', frequency: 'OD_NIGHT', duration: '5 days', instructions: 'May cause mild drowsiness' }
         ],
         antibiotic: [
-            { name: 'Augmentin 625 Duo', dosage: '625mg', frequency: 'Twice daily (BD)', duration: '5 days', instructions: 'With food, complete full antibiotic course' },
-            { name: 'Pan-D', dosage: '40mg/30mg', frequency: 'Once daily in morning (OD)', duration: '5 days', instructions: 'Empty stomach, 30 mins before breakfast' }
+            { name: 'Augmentin 625 Duo', dosage: '1_TAB', frequency: 'BD_MORN_EVE', duration: '5 days', instructions: 'With food, complete full antibiotic course' },
+            { name: 'Pan-D', dosage: '1_CAP', frequency: 'OD_MORNING', duration: '5 days', instructions: 'Empty stomach, 30 mins before breakfast' }
         ],
         gerd: [
-            { name: 'Pan-D', dosage: '40mg/30mg', frequency: 'Once daily (OD)', duration: '14 days', instructions: 'Take 30 mins before breakfast in the morning' }
+            { name: 'Pan-D', dosage: '1_CAP', frequency: 'OD_MORNING', duration: '14 days', instructions: 'Take 30 mins before breakfast in the morning' }
         ],
         allergy: [
-            { name: 'Montair-LC', dosage: '10mg/5mg', frequency: 'Once daily at bedtime (HS)', duration: '10 days', instructions: 'Take at night after food' }
+            { name: 'Montair-LC', dosage: '1_TAB', frequency: 'OD_NIGHT', duration: '10 days', instructions: 'Take at night after food' }
         ],
         bp: [
-            { name: 'Telma 40', dosage: '40mg', frequency: 'Once daily in morning (OD)', duration: '30 days', instructions: 'Take with breakfast, monitor BP weekly' }
+            { name: 'Telma 40', dosage: '1_TAB', frequency: 'OD_MORNING', duration: '30 days', instructions: 'Take with breakfast, monitor BP weekly' }
         ]
     };
 
@@ -185,11 +217,11 @@
                 </div>
                 <div>
                     <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Dosage</label>
-                    <input type="text" name="med_dosage[]" class="form-control" value="${med.dosage}" required>
+                    ${buildDosageSelect(med.dosage)}
                 </div>
                 <div>
                     <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Frequency</label>
-                    <input type="text" name="med_frequency[]" class="form-control" value="${med.frequency}" required>
+                    ${buildFreqSelect(med.frequency)}
                 </div>
                 <div>
                     <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Duration</label>
@@ -224,11 +256,11 @@
             </div>
             <div>
                 <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Dosage</label>
-                <input type="text" name="med_dosage[]" class="form-control" placeholder="e.g. 500mg" required>
+                ${buildDosageSelect('')}
             </div>
             <div>
                 <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Frequency</label>
-                <input type="text" name="med_frequency[]" class="form-control" placeholder="e.g. Twice daily" required>
+                ${buildFreqSelect('')}
             </div>
             <div>
                 <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Duration</label>

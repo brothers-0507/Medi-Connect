@@ -9,6 +9,71 @@ from sqlalchemy import func
 from config import Config
 from models import db, User, Prescription, PrescriptionItem, Broadcast, PharmacyOffer, MedicationSchedule, TrackerLog, InventoryItem, DoctorPreset, PatientNotification
 
+# ── Standardized Prescription Frequency & Dosage Options ──────────────────────
+# These are the single source of truth used by:
+#   1. Doctor's prescription generator (dropdown menus)
+#   2. Medi-Tracker import (exact time-slot mapping)
+#   3. Patient's custom medication form
+
+FREQUENCY_OPTIONS = {
+    'OD_MORNING':    {'label': 'Once daily — Morning',               'times': '08:00',              'per_day': 1},
+    'OD_AFTERNOON':  {'label': 'Once daily — Afternoon',             'times': '14:00',              'per_day': 1},
+    'OD_EVENING':    {'label': 'Once daily — Evening',               'times': '18:00',              'per_day': 1},
+    'OD_NIGHT':      {'label': 'Once daily — Bedtime',               'times': '22:00',              'per_day': 1},
+    'BD_MORN_EVE':   {'label': 'Twice daily — Morning & Evening',    'times': '08:00, 18:00',       'per_day': 2},
+    'BD_MORN_NIGHT': {'label': 'Twice daily — Morning & Bedtime',    'times': '08:00, 22:00',       'per_day': 2},
+    'TDS':           {'label': 'Three times daily (TDS)',            'times': '08:00, 14:00, 20:00','per_day': 3},
+    'QDS':           {'label': 'Four times daily (QDS)',             'times': '08:00, 12:00, 16:00, 20:00', 'per_day': 4},
+    'SOS':           {'label': 'As needed (SOS)',                    'times': '08:00',              'per_day': 1},
+    'STAT':          {'label': 'Single dose — Immediately',          'times': '08:00',              'per_day': 1},
+}
+
+DOSAGE_OPTIONS = {
+    '1_TAB':    '1 Tablet',
+    '2_TAB':    '2 Tablets',
+    'HALF_TAB': '½ Tablet',
+    '5ML':      '5 mL (1 tsp)',
+    '10ML':     '10 mL (2 tsp)',
+    '1_CAP':    '1 Capsule',
+    '2_CAP':    '2 Capsules',
+    '1_SACHET': '1 Sachet',
+    'APPLY':    'Apply topically',
+    '1_DROP':   '1 Drop',
+    '2_DROPS':  '2 Drops',
+    '1_PUFF':   '1 Puff',
+    '2_PUFFS':  '2 Puffs',
+}
+
+def resolve_frequency_label(code):
+    """Returns the human-readable label for a frequency code, or the code itself as fallback."""
+    opt = FREQUENCY_OPTIONS.get(code)
+    return opt['label'] if opt else code
+
+def resolve_dosage_label(code):
+    """Returns the human-readable label for a dosage code, or the code itself as fallback."""
+    return DOSAGE_OPTIONS.get(code, code)
+
+def resolve_frequency_times(code):
+    """Returns the time_of_day string for a frequency code, with fallback heuristic for legacy data."""
+    opt = FREQUENCY_OPTIONS.get(code)
+    if opt:
+        return opt['times'], opt['per_day']
+    # Fallback heuristic for legacy free-text data
+    c = (code or '').lower()
+    if 'twice' in c or 'bd' in c or 'bid' in c or '2' in c:
+        return '08:00, 20:00', 2
+    elif 'three' in c or 'tds' in c or 'tid' in c or '3' in c:
+        return '08:00, 14:00, 20:00', 3
+    elif 'four' in c or 'qds' in c or 'qid' in c or '4' in c:
+        return '08:00, 12:00, 16:00, 20:00', 4
+    elif 'night' in c or 'bedtime' in c or 'hs' in c:
+        return '22:00', 1
+    elif 'evening' in c:
+        return '18:00', 1
+    elif 'afternoon' in c:
+        return '14:00', 1
+    return '09:00', 1
+
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
@@ -84,13 +149,18 @@ with app.app_context():
 @app.context_processor
 def inject_user():
     user_id = session.get('user_id')
+    ctx = dict(
+        current_user=None,
+        resolve_freq=resolve_frequency_label,
+        resolve_dose=resolve_dosage_label
+    )
     if user_id:
         user = User.query.get(user_id)
         if user:
-            return dict(current_user=user)
+            ctx['current_user'] = user
         else:
             session.clear()
-    return dict(current_user=None)
+    return ctx
 
 # Decorator to restrict access to authenticated users
 def login_required(f):
@@ -705,7 +775,7 @@ def new_prescription():
         return create_prescription()
     patients = User.query.filter_by(role='patient').order_by(User.name.asc()).all()
     custom_presets = DoctorPreset.query.filter_by(doctor_id=session['user_id']).order_by(DoctorPreset.created_at.asc()).all()
-    return render_template('prescription_new.html', patients=patients, custom_presets=custom_presets)
+    return render_template('prescription_new.html', patients=patients, custom_presets=custom_presets, frequency_options=FREQUENCY_OPTIONS, dosage_options=DOSAGE_OPTIONS)
 
 @app.route('/prescription/<int:rx_id>/delete', methods=['POST'])
 @login_required
@@ -1169,18 +1239,8 @@ def accept_prescription(rx_id):
             except ValueError:
                 pass
                 
-        freq_str = item.frequency.lower()
-        times = "09:00"
-        doses_per_day = 1
-        if 'twice' in freq_str or '2 times' in freq_str or 'bid' in freq_str:
-            times = "09:00, 21:00"
-            doses_per_day = 2
-        elif 'three' in freq_str or '3 times' in freq_str or 'tid' in freq_str:
-            times = "08:00, 14:00, 20:00"
-            doses_per_day = 3
-        elif 'four' in freq_str or '4 times' in freq_str or 'qid' in freq_str:
-            times = "08:00, 12:00, 16:00, 20:00"
-            doses_per_day = 4
+        # Resolve frequency → exact time slots using standardized options
+        times, doses_per_day = resolve_frequency_times(item.frequency)
             
         total_doses = doses_per_day * duration_days
         
@@ -1237,19 +1297,8 @@ def import_prescription_to_tracker(rx_id):
             except ValueError:
                 pass
                 
-        # Simple frequency to time mapper
-        freq_str = item.frequency.lower()
-        times = "09:00"
-        doses_per_day = 1
-        if 'twice' in freq_str or '2 times' in freq_str or 'bid' in freq_str:
-            times = "09:00, 21:00"
-            doses_per_day = 2
-        elif 'three' in freq_str or '3 times' in freq_str or 'tid' in freq_str:
-            times = "08:00, 14:00, 20:00"
-            doses_per_day = 3
-        elif 'four' in freq_str or '4 times' in freq_str or 'qid' in freq_str:
-            times = "08:00, 12:00, 16:00, 20:00"
-            doses_per_day = 4
+        # Resolve frequency → exact time slots using standardized options
+        times, doses_per_day = resolve_frequency_times(item.frequency)
             
         total_doses = doses_per_day * duration_days
         

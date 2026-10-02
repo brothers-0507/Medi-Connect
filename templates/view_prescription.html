@@ -67,8 +67,8 @@
                         {% for item in prescription.items %}
                             <tr style="border-bottom: 1px solid #e2e8f0;">
                                 <td style="padding: 1rem 0.5rem; font-weight: 700; color: #0f172a;">{{ item.medicine_name }}</td>
-                                <td style="padding: 1rem 0.5rem;">{{ item.dosage }}</td>
-                                <td style="padding: 1rem 0.5rem;">{{ item.frequency }}</td>
+                                <td style="padding: 1rem 0.5rem;">{{ resolve_dose(item.dosage) }}</td>
+                                <td style="padding: 1rem 0.5rem;">{{ resolve_freq(item.frequency) }}</td>
                                 <td style="padding: 1rem 0.5rem;">{{ item.duration }}</td>
                                 <td style="padding: 1rem 0.5rem; font-style: italic; font-size: 0.9rem; color: #64748b;">{{ item.instructions or '-' }}</td>
                             </tr>

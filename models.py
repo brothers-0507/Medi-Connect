@@ -210,7 +210,7 @@ class TrackerLog(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     schedule_id = db.Column(db.Integer, db.ForeignKey('medication_schedules.id'), nullable=False)
-    taken_at = db.Column(db.DateTime, default=datetime.utcnow)
+    taken_at = db.Column(db.DateTime, default=datetime.now)
     status = db.Column(db.String(20), default='taken') # 'taken', 'skipped'
     
     # Relationships

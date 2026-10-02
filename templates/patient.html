@@ -159,7 +159,7 @@
                                             <div class="med-details-wrap">
                                                 <div class="med-headline">
                                                     <span class="med-name">{{ item.medicine_name }}</span>
-                                                    <span class="badge badge-info" style="font-size: 0.72rem; padding: 0.15rem 0.45rem;">{{ item.dosage }}</span>
+                                                    <span class="badge badge-info" style="font-size: 0.72rem; padding: 0.15rem 0.45rem;">{{ resolve_dose(item.dosage) }}</span>
                                                     <span class="routine-time-badge"><i class="ph ph-clock"></i> {{ item.scheduled_time }}</span>
                                                 </div>
                                                 
@@ -334,23 +334,7 @@
 
 <!-- ================= TAB: PRESCRIPTIONS ================= -->
 <div id="prescriptions-tab" class="tab-content">
-    <div class="grid-container">
-        <!-- Claim Prescription -->
-        <div class="card" style="grid-column: 1 / -1;">
-            <h2 class="card-title">
-                <span><i class="ph-bold ph-plus-circle card-title-icon"></i> Link a Digital Prescription</span>
-            </h2>
-            <form action="{{ url_for('claim_prescription') }}" method="POST" style="display: flex; gap: 1rem; align-items: flex-end;">
-                <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                    <label for="prescription_code">Prescription Code / Secure Key (UUID)</label>
-                    <input type="text" id="prescription_code" name="prescription_code" class="form-control" placeholder="e.g. xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required>
-                </div>
-                <button type="submit" class="btn btn-secondary" style="height: 43px;">
-                    <i class="ph ph-link"></i> Claim & Link
-                </button>
-            </form>
-        </div>
-    </div>
+
 
     <div class="card">
         <h2 class="card-title">
@@ -380,7 +364,7 @@
                             <div style="display: flex; flex-wrap: wrap; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">
                                 {% for item in rx.items %}
                                     <span style="background: rgba(255,255,255,0.05); padding: 0.25rem 0.5rem; border-radius: 4px; border: 1px solid rgba(255,255,255,0.02);">
-                                        {{ item.medicine_name }} ({{ item.dosage }} - {{ item.duration }})
+                                        {{ item.medicine_name }} ({{ resolve_dose(item.dosage) }} - {{ item.duration }})
                                     </span>
                                 {% endfor %}
                             </div>
@@ -406,8 +390,8 @@
         {% else %}
             <div style="text-align: center; padding: 4rem 1rem; color: var(--text-secondary);">
                 <i class="ph ph-prescription" style="font-size: 4rem; margin-bottom: 1rem; color: var(--card-border);"></i>
-                <p>You haven't claimed any prescriptions yet.</p>
-                <p style="font-size: 0.85rem; margin-top: 0.5rem;">Enter a prescription UUID code above to claim it.</p>
+                <p>No prescriptions linked yet.</p>
+                <p style="font-size: 0.85rem; margin-top: 0.5rem;">Your doctor's prescriptions will appear here automatically once accepted.</p>
             </div>
         {% endif %}
     </div>

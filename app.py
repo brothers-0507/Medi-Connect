@@ -2044,8 +2044,164 @@ def submit_offer():
         db.session.add(notif)
         
     db.session.commit()
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+        return jsonify({
+            'success': True,
+            'message': 'Price estimate and availability submitted successfully!',
+            'broadcast_id': broadcast_id,
+            'price': price,
+            'status': status
+        })
+
     flash('Price estimate and availability submitted successfully!', 'success')
     return redirect(url_for('pharmacy_dashboard'))
+
+@app.route('/api/pharmacy/active-broadcasts', methods=['GET'])
+@login_required
+@role_required('pharmacy')
+def api_pharmacy_active_broadcasts():
+    pharmacy_id = session['user_id']
+    pharmacy_user = db.session.get(User, pharmacy_id)
+    pharmacy_loc = (pharmacy_user.location or "").strip().lower() if pharmacy_user else ""
+    inventory = InventoryItem.query.filter_by(pharmacy_id=pharmacy_id).all()
+    inv_map = {}
+    for item in inventory:
+        key = item.medicine_name.lower().strip()
+        if key not in inv_map:
+            inv_map[key] = []
+        inv_map[key].append(item)
+
+    all_broadcasts = Broadcast.query.filter_by(status='active').order_by(Broadcast.created_at.desc()).all()
+    results = []
+    for bc in all_broadcasts:
+        if bc.target_pharmacy_id and bc.target_pharmacy_id != pharmacy_id:
+            continue
+        patient_user = bc.patient
+        patient_loc = (patient_user.location or "").strip().lower() if patient_user else ""
+        if pharmacy_loc and patient_loc and pharmacy_loc != patient_loc:
+            continue
+
+        already_offered = PharmacyOffer.query.filter_by(broadcast_id=bc.id, pharmacy_id=pharmacy_id).first()
+        rx = bc.prescription
+        meds = []
+        total_matched_cost = 0.0
+        in_stock_count = 0
+        for m in (rx.items if rx else []):
+            med_key = m.medicine_name.lower().strip()
+            matched_items = inv_map.get(med_key, [])
+            total_stock = sum(it.stock_level for it in matched_items)
+            unit_price = matched_items[0].price if matched_items else 0.0
+            is_in_stock = total_stock > 0
+            if is_in_stock:
+                in_stock_count += 1
+                total_matched_cost += unit_price
+            meds.append({
+                'name': m.medicine_name,
+                'dosage': m.dosage or '',
+                'frequency': m.frequency or '',
+                'duration': m.duration or '',
+                'instructions': m.instructions or '',
+                'stock': total_stock,
+                'unit_price': unit_price,
+                'is_in_stock': is_in_stock
+            })
+
+        total_meds = len(rx.items) if rx else 0
+        if in_stock_count == total_meds and total_meds > 0:
+            status_calc = 'available'
+        elif in_stock_count > 0:
+            status_calc = 'partial'
+        else:
+            status_calc = 'unavailable'
+
+        offered_dict = None
+        if already_offered:
+            item_prices = {}
+            if already_offered.item_prices_json:
+                try:
+                    item_prices = json.loads(already_offered.item_prices_json)
+                except Exception:
+                    pass
+            offered_dict = {
+                'id': already_offered.id,
+                'price': already_offered.estimated_price,
+                'status': already_offered.availability_status,
+                'notes': already_offered.notes or '',
+                'item_prices': item_prices,
+                'created_at_fmt': already_offered.created_at.strftime('%d %b %Y, %I:%M %p')
+            }
+
+        results.append({
+            'id': bc.id,
+            'rx_uuid': rx.uuid if rx else '',
+            'doctor_name': rx.doctor.name if rx and rx.doctor else 'Doctor',
+            'patient_name': (rx.patient_name if rx and rx.patient_name else (patient_user.name if patient_user else 'Patient')),
+            'patient_age': rx.patient_age if rx else None,
+            'patient_contact': rx.patient_contact if rx else (patient_user.contact if patient_user else None),
+            'patient_location': patient_user.location or 'Bengaluru' if patient_user else 'Bengaluru',
+            'created_at_fmt': bc.created_at.strftime('%d %b %Y, %I:%M %p'),
+            'medications': meds,
+            'status_calc': status_calc,
+            'estimated_price': round(total_matched_cost, 2),
+            'offered': offered_dict
+        })
+
+    return jsonify({'success': True, 'broadcasts': results, 'total': len(results)})
+
+@app.route('/api/patient/broadcast-quotes', methods=['GET'])
+@login_required
+@role_required('patient')
+def api_patient_broadcast_quotes():
+    patient_id = session['user_id']
+    broadcasts = Broadcast.query.filter_by(patient_id=patient_id).order_by(Broadcast.created_at.desc()).all()
+    results = []
+    for bc in broadcasts:
+        rx = bc.prescription
+        meds = []
+        for m in (rx.items if rx else []):
+            meds.append({
+                'name': m.medicine_name,
+                'dosage': m.dosage or '',
+                'frequency': m.frequency or '',
+                'duration': m.duration or '',
+                'instructions': m.instructions or ''
+            })
+
+        offers_list = []
+        for off in bc.offers:
+            ph = off.pharmacy
+            item_prices = {}
+            if off.item_prices_json:
+                try:
+                    item_prices = json.loads(off.item_prices_json)
+                except Exception:
+                    pass
+            offers_list.append({
+                'id': off.id,
+                'pharmacy_name': ph.name if ph else 'Pharmacy',
+                'pharmacy_location': ph.location or 'Local' if ph else 'Local',
+                'pharmacy_address': ph.address or '' if ph else '',
+                'pharmacy_contact': ph.contact or '' if ph else '',
+                'estimated_price': off.estimated_price,
+                'availability_status': off.availability_status,
+                'notes': off.notes or '',
+                'item_prices': item_prices,
+                'created_at_fmt': off.created_at.strftime('%d %b %Y, %I:%M %p')
+            })
+
+        results.append({
+            'id': bc.id,
+            'rx_uuid': rx.uuid if rx else '',
+            'doctor_name': rx.doctor.name if rx and rx.doctor else 'Doctor',
+            'status': bc.status,
+            'created_at_fmt': bc.created_at.strftime('%d %b %Y, %I:%M %p'),
+            'medications': meds,
+            'offers': offers_list,
+            'total_offers': len(offers_list)
+        })
+
+    return jsonify({'success': True, 'broadcasts': results, 'total': len(results)})
 
 @app.route('/checkout', methods=['POST'])
 @login_required

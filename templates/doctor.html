@@ -132,14 +132,7 @@
                         <label for="patient_username" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; display: block;">
                             Patient Registered Username (Autofills Profile)
                         </label>
-                        <input type="text" id="patient_username" name="patient_username" class="form-control" list="patient-list" placeholder="Enter patient username (e.g. patient)..." autocomplete="off" required>
-                        {% if patients %}
-                        <datalist id="patient-list">
-                            {% for p in patients %}
-                                <option value="{{ p.username }}">{{ p.name }} ({{ p.username }})</option>
-                            {% endfor %}
-                        </datalist>
-                        {% endif %}
+                        <input type="text" id="patient_username" name="patient_username" class="form-control" placeholder="Enter patient username (e.g. patient)..." autocomplete="off" required>
                         <div id="patient-lookup-status" style="font-size: 0.8rem; margin-top: 0.35rem; min-height: 1.2rem;"></div>
                     </div>
                     <div class="form-group" style="margin: 0;">

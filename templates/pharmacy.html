@@ -235,8 +235,9 @@
             <span><i class="ph-bold ph-broadcast card-title-icon"></i> Patient Prescription Broadcasts</span>
         </h2>
         
+        <div id="pharmacy-broadcasts-container">
         {% if broadcasts_info %}
-            <div style="display: flex; flex-direction: column; gap: 2rem;">
+            <div id="pharmacy-broadcasts-list" style="display: flex; flex-direction: column; gap: 2rem;">
                 {% for info in broadcasts_info %}
                     <div style="border: 1px solid var(--card-border); background: rgba(255,255,255,0.01); border-radius: 12px; padding: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                         
@@ -287,7 +288,7 @@
                                 </div>
                             {% endif %}
                             
-                            <form action="{{ url_for('submit_offer') }}" method="POST" style="margin:0;">
+                            <form action="{{ url_for('submit_offer') }}" method="POST" style="margin:0;" onsubmit="submitPharmacyOfferAJAX(event, this)">
                                 <input type="hidden" name="broadcast_id" value="{{ info.broadcast.id }}">
                                 
                                 <div style="margin-bottom: 1rem;">
@@ -366,6 +367,7 @@
                 <p style="font-size: 0.85rem; margin-top: 0.5rem;">Patient broadcasts requesting stock availability and price estimates will show up here.</p>
             </div>
         {% endif %}
+        </div>
     </div>
 </div>
 
@@ -1128,5 +1130,232 @@
             totalInput.value = total.toFixed(2);
         }
     }
+
+    // Real-Time Pharmacy Broadcasts Polling & Instant AJAX Quotes
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function submitPharmacyOfferAJAX(e, form) {
+        e.preventDefault();
+        const btn = form.querySelector('button[type="submit"]');
+        const originalBtn = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph-bold ph-spinner ph-spin"></i> Submitting Quote...';
+        }
+        const formData = new FormData(form);
+        fetch(form.action, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: formData
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="ph-bold ph-check"></i> Quote Submitted!';
+                    setTimeout(() => { btn.innerHTML = '<i class="ph ph-paper-plane-tilt"></i> Update Price Quote'; }, 2000);
+                }
+                pollPharmacyBroadcasts(true);
+            } else {
+                alert('Error: ' + (data.message || 'Could not submit quote.'));
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalBtn;
+                }
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert('Network error while submitting quote.');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalBtn;
+            }
+        });
+    }
+
+    let lastPharmacyBroadcastsHash = '';
+    function renderPharmacyBroadcasts(broadcasts) {
+        const container = document.getElementById('pharmacy-broadcasts-container');
+        if (!container) return;
+
+        if (!broadcasts || broadcasts.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 4rem 1rem; color: var(--text-secondary);">
+                    <i class="ph ph-broadcast" style="font-size: 3rem; margin-bottom: 1rem; color: var(--card-border);"></i>
+                    <p>No active prescription broadcasts from patients.</p>
+                    <p style="font-size: 0.85rem; margin-top: 0.5rem;">Patient broadcasts requesting stock availability and price estimates will show up here.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '<div id="pharmacy-broadcasts-list" style="display: flex; flex-direction: column; gap: 2rem;">';
+        broadcasts.forEach(info => {
+            let statusBadge = '';
+            if (info.status_calc === 'available') {
+                statusBadge = '<span class="badge badge-success">In Stock</span>';
+            } else if (info.status_calc === 'partial') {
+                statusBadge = '<span class="badge badge-warning">Partial Stock</span>';
+            } else {
+                statusBadge = '<span class="badge badge-danger">Out of Stock</span>';
+            }
+
+            let medsListHtml = '';
+            let medPriceRowsHtml = '';
+            (info.medications || []).forEach(m => {
+                let medBadge = '';
+                if (m.unit_price > 0 && m.is_in_stock) {
+                    medBadge = `<span class="badge badge-info" style="font-size: 0.72rem; margin-left: 0.4rem; padding: 0.15rem 0.45rem;">₹${Number(m.unit_price).toFixed(2)} / unit</span>`;
+                } else {
+                    medBadge = '<span style="color: var(--danger); font-size: 0.8rem; margin-left: 0.5rem; font-weight: 550;">(No Stock)</span>';
+                }
+                medsListHtml += `
+                    <li>
+                        <strong>${escapeHtml(m.name)}</strong> - ${escapeHtml(m.dosage)} (${escapeHtml(m.frequency)}, for ${escapeHtml(m.duration)})
+                        ${medBadge}
+                    </li>
+                `;
+
+                medPriceRowsHtml += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.25rem 0; border-bottom: 1px dashed rgba(255,255,255,0.06);">
+                        <div>
+                            <span style="font-size: 0.85rem; color: var(--text-primary); font-weight: 550;">${escapeHtml(m.name)}</span>
+                            <div style="font-size: 0.72rem; color: var(--text-secondary);">${escapeHtml(m.dosage)} &bull; ${escapeHtml(m.duration)}</div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.35rem;">
+                            <input type="hidden" name="item_med_name[]" value="${escapeHtml(m.name)}">
+                            <input type="hidden" name="item_price[]" value="${m.unit_price}">
+                            ${m.unit_price > 0 && m.is_in_stock ? `<span class="badge badge-success" style="font-size: 0.82rem; font-weight: 650; padding: 0.25rem 0.55rem;">₹${Number(m.unit_price).toFixed(2)}</span>` : `<span class="badge badge-danger" style="font-size: 0.75rem; padding: 0.2rem 0.5rem;">No Stock</span>`}
+                        </div>
+                    </div>
+                `;
+            });
+
+            let previouslyOfferedHtml = '';
+            let currentPriceVal = info.estimated_price || '0.00';
+            let currentStatusVal = info.status_calc;
+            let currentNotesVal = '';
+            if (info.offered) {
+                currentPriceVal = info.offered.price;
+                currentStatusVal = info.offered.status;
+                currentNotesVal = info.offered.notes || '';
+                previouslyOfferedHtml = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                        <h4 style="font-size: 0.9rem; margin: 0; color: var(--text-secondary);"><i class="ph ph-check-circle"></i> Offered Previously</h4>
+                        <span class="badge badge-info">₹${Number(info.offered.price).toFixed(2)}</span>
+                    </div>
+                `;
+            }
+
+            html += `
+                <div style="border: 1px solid var(--card-border); background: rgba(255,255,255,0.01); border-radius: 12px; padding: 1.5rem; display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                    <!-- Left pane: Prescription requirements -->
+                    <div>
+                        <div style="margin-bottom: 1rem;">
+                            <h3 style="font-size: 1.1rem; margin: 0; display: flex; gap: 0.5rem; align-items: center; width: 100%;">
+                                Prescription #${info.rx_uuid ? info.rx_uuid.substring(0,8) : ''}...
+                                ${statusBadge}
+                                <a href="/prescription/view/${info.rx_uuid}" target="_blank" style="margin-left: auto; font-size: 0.8rem; color: var(--secondary); display: inline-flex; align-items: center; gap: 0.25rem; text-decoration: none;" title="View official prescription sheet">
+                                    <i class="ph-bold ph-eye"></i> View Full Sheet
+                                </a>
+                            </h3>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                Patient: <strong>${escapeHtml(info.patient_name || 'Patient')}</strong> (Age: ${info.patient_age || 'N/A'}) | Request Sent: ${info.created_at_fmt}
+                            </p>
+                        </div>
+                        <h4 style="font-size: 0.85rem; color: var(--secondary); text-transform: uppercase; margin-bottom: 0.5rem;">Medications Prescribed</h4>
+                        <ul style="padding-left: 1.25rem; font-size: 0.95rem; line-height: 1.8; color: var(--text-primary);">
+                            ${medsListHtml}
+                        </ul>
+                    </div>
+
+                    <!-- Right pane: Bid submission -->
+                    <div style="background: rgba(255,255,255,0.02); padding: 1.25rem; border-radius: 8px; border: 1px solid var(--card-border);">
+                        ${previouslyOfferedHtml}
+                        <form action="/broadcast/offer" method="POST" style="margin:0;" onsubmit="submitPharmacyOfferAJAX(event, this)">
+                            <input type="hidden" name="broadcast_id" value="${info.id}">
+                            <div style="margin-bottom: 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+                                    <label style="font-size: 0.82rem; font-weight: 650; color: var(--text-secondary); margin-bottom: 0; display: block;">
+                                        Prescribed Medicine Prices (from Stock)
+                                    </label>
+                                    <span style="font-size: 0.72rem; color: var(--secondary);"><i class="ph-bold ph-shield-check"></i> Verified Stock Rates</span>
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--card-border);">
+                                    ${medPriceRowsHtml}
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="price-${info.id}">Total Stock Estimate (₹)</label>
+                                    <input type="number" step="0.01" id="price-${info.id}" name="price" class="form-control" value="${Number(currentPriceVal).toFixed(2)}" min="0" readonly required style="font-weight: 700; color: var(--secondary); background: rgba(255,255,255,0.03);">
+                                    <small style="font-size: 0.7rem; color: var(--text-secondary); display: block; margin-top: 0.2rem;">
+                                        <i class="ph-bold ph-lock-key"></i> Added exactly from active stock prices
+                                    </small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="status-${info.id}">Availability Status</label>
+                                    <select id="status-${info.id}" name="availability_status" class="form-control" style="background-color: #12131e; color: white;" required>
+                                        <option value="available" ${currentStatusVal === 'available' ? 'selected' : ''}>Fully In Stock</option>
+                                        <option value="partial" ${currentStatusVal === 'partial' ? 'selected' : ''}>Partial Stock</option>
+                                        <option value="unavailable" ${currentStatusVal === 'unavailable' ? 'selected' : ''}>Out of Stock</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="notes-${info.id}">Additional Notes</label>
+                                <textarea id="notes-${info.id}" name="notes" class="form-control" rows="2" placeholder="e.g. ready for pickup in 15 mins...">${escapeHtml(currentNotesVal)}</textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-secondary btn-sm" style="width: 100%;">
+                                <i class="ph ph-paper-plane-tilt"></i> ${info.offered ? 'Update Price Quote' : 'Submit Price Quote'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    function pollPharmacyBroadcasts(force = false) {
+        fetch('/api/pharmacy/active-broadcasts')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+                const badge = document.getElementById('badge-broadcasts');
+                if (badge) badge.textContent = data.total;
+
+                const serialized = JSON.stringify(data.broadcasts);
+                if (serialized === lastPharmacyBroadcastsHash && !force) {
+                    return;
+                }
+
+                const container = document.getElementById('pharmacy-broadcasts-container');
+                if (!container) return;
+
+                if (!force && document.activeElement && container.contains(document.activeElement)) {
+                    return;
+                }
+
+                lastPharmacyBroadcastsHash = serialized;
+                renderPharmacyBroadcasts(data.broadcasts);
+            })
+            .catch(err => console.log('Pharmacy broadcast poll error:', err));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Start polling active patient broadcasts every 3.5 seconds
+        setInterval(() => pollPharmacyBroadcasts(false), 3500);
+    });
 </script>
 {% endblock %}

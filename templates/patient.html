@@ -421,8 +421,9 @@
             <span><i class="ph-bold ph-broadcast card-title-icon"></i> Active Broadcasts & Pharmacy Offers</span>
         </h2>
         
+        <div id="patient-broadcasts-container">
         {% if broadcasts %}
-            <div style="display: flex; flex-direction: column; gap: 2rem;">
+            <div id="patient-broadcasts-list" style="display: flex; flex-direction: column; gap: 2rem;">
                 {% for bc in broadcasts %}
                     <div style="border: 1px solid var(--card-border); background: rgba(255,255,255,0.01); border-radius: 12px; padding: 1.5rem;">
                         <!-- Broadcast Header -->
@@ -518,6 +519,7 @@
                 <p style="font-size: 0.85rem; margin-top: 0.5rem;">Go to "My Prescriptions" and click "Broadcast" on any prescription to request pharmacy estimates.</p>
             </div>
         {% endif %}
+        </div>
     </div>
 </div>
 
@@ -938,9 +940,14 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                alert(data.message || `Broadcast sent to ${pharmacyName}!`);
                 closePharmacyModal();
-                window.location.reload();
+                if (typeof showRealtimeToast === 'function') {
+                    showRealtimeToast('Broadcast Sent', data.message || `Broadcast sent to ${pharmacyName}!`, 'broadcast');
+                } else {
+                    alert(data.message || `Broadcast sent to ${pharmacyName}!`);
+                }
+                switchPatientTabDirect('broadcasts-tab');
+                pollPatientBroadcastQuotes(true);
             } else {
                 alert(data.message || 'Error sending broadcast.');
             }
@@ -982,5 +989,165 @@
         const target = document.getElementById(panelId);
         if (target) target.style.display = 'block';
     }
+
+    function switchPatientTabDirect(tabName) {
+        const tabcontent = document.getElementsByClassName("tab-content");
+        for (let i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].classList.remove("active");
+        }
+        const tablinks = document.getElementsByClassName("tab-btn");
+        for (let i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove("active");
+            if (tablinks[i].getAttribute('onclick') && tablinks[i].getAttribute('onclick').includes(tabName)) {
+                tablinks[i].classList.add("active");
+            }
+        }
+        const target = document.getElementById(tabName);
+        if (target) target.classList.add("active");
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    let lastPatientBroadcastsHash = '';
+    function renderPatientBroadcastQuotes(broadcasts) {
+        const container = document.getElementById('patient-broadcasts-container');
+        if (!container) return;
+
+        if (!broadcasts || broadcasts.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 4rem 1rem; color: var(--text-secondary);">
+                    <i class="ph ph-broadcast" style="font-size: 4rem; margin-bottom: 1rem; color: var(--card-border);"></i>
+                    <p>No active broadcasts.</p>
+                    <p style="font-size: 0.85rem; margin-top: 0.5rem;">Go to "My Prescriptions" and click "Find Nearest In-Stock Pharmacy" to request instant price estimates.</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '<div id="patient-broadcasts-list" style="display: flex; flex-direction: column; gap: 2rem;">';
+        broadcasts.forEach(bc => {
+            let offersHtml = '';
+            if (bc.offers && bc.offers.length > 0) {
+                offersHtml += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem;">';
+                bc.offers.forEach(offer => {
+                    let badgeHtml = '';
+                    if (offer.availability_status === 'available') {
+                        badgeHtml = '<span class="badge badge-success"><i class="ph-bold ph-check"></i> In Stock</span>';
+                    } else if (offer.availability_status === 'partial') {
+                        badgeHtml = '<span class="badge badge-warning"><i class="ph-bold ph-warning"></i> Partial Stock</span>';
+                    } else {
+                        badgeHtml = '<span class="badge badge-danger"><i class="ph-bold ph-x"></i> Out of Stock</span>';
+                    }
+
+                    let medRowsHtml = '';
+                    (bc.medications || []).forEach(m => {
+                        let itemPrice = (offer.item_prices && offer.item_prices[m.name] !== undefined)
+                            ? offer.item_prices[m.name]
+                            : null;
+                        let priceDisplay = itemPrice !== null ? `₹${Number(itemPrice).toFixed(2)}` : `₹${(offer.estimated_price / (bc.medications.length || 1)).toFixed(2)}`;
+                        medRowsHtml += `
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.25rem 0; font-size: 0.82rem; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                <span style="color: var(--text-primary); font-weight: 500;">${escapeHtml(m.name)}</span>
+                                <strong style="color: var(--secondary);">${priceDisplay}</strong>
+                            </div>
+                        `;
+                    });
+
+                    offersHtml += `
+                        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 10px; padding: 1.15rem; transition: var(--transition);">
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.6rem;">
+                                <div>
+                                    <strong style="color: var(--text-primary); font-size: 1rem; display: block;">${escapeHtml(offer.pharmacy_name)}</strong>
+                                    <div style="margin-top: 0.25rem;">
+                                        ${badgeHtml}
+                                    </div>
+                                </div>
+                                <div style="text-align: right;">
+                                    <span style="font-size: 1.25rem; font-weight: 700; color: var(--secondary); display: block;">₹${Number(offer.estimated_price).toFixed(2)}</span>
+                                    <span style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">Total Estimate</span>
+                                </div>
+                            </div>
+
+                            <!-- Prescribed Medicines Individual Prices -->
+                            <div style="margin: 0.75rem 0; padding: 0.6rem 0.75rem; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--card-border); border-radius: 8px;">
+                                <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); font-weight: 650; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.35rem;">
+                                    <i class="ph-bold ph-tag" style="color: var(--accent);"></i> Prescribed Medicines Alone Price:
+                                </div>
+                                ${medRowsHtml}
+                            </div>
+
+                            ${offer.notes ? `<p style="font-size: 0.82rem; color: var(--text-secondary); background: rgba(0,0,0,0.15); padding: 0.5rem 0.65rem; border-radius: 6px; margin-bottom: 0.5rem;"><strong>Note:</strong> ${escapeHtml(offer.notes)}</p>` : ''}
+
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.4rem; font-size: 0.78rem; color: var(--text-secondary); flex-wrap: wrap; gap: 0.5rem;">
+                                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                    <i class="ph ph-phone"></i> ${escapeHtml(offer.pharmacy_contact || 'No contact number')}
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                                    <i class="ph ph-clock"></i> Quoted: ${offer.created_at_fmt}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                offersHtml += '</div>';
+            } else {
+                offersHtml = `
+                    <div style="text-align: center; padding: 2rem; background: rgba(0,0,0,0.1); border-radius: 10px; color: var(--text-secondary); font-size: 0.9rem;">
+                        <i class="ph ph-dots-three-circle-horizontal" style="font-size: 2rem; margin-bottom: 0.5rem; display: block; color: var(--card-border);"></i>
+                        Awaiting price estimates from local pharmacies...
+                    </div>
+                `;
+            }
+
+            html += `
+                <div style="border: 1px solid var(--card-border); background: rgba(255,255,255,0.01); border-radius: 12px; padding: 1.5rem;">
+                    <!-- Broadcast Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 1rem; margin-bottom: 1rem;">
+                        <div>
+                            <h3 style="font-size: 1.1rem; margin: 0;">Broadcast for Prescription #${bc.rx_uuid ? bc.rx_uuid.substring(0,8) : ''}...</h3>
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                                Doctor: ${escapeHtml(bc.doctor_name || 'Doctor')} | Broadcasted: ${bc.created_at_fmt}
+                            </p>
+                        </div>
+                        <span class="badge ${bc.status === 'active' ? 'badge-success' : 'badge-info'}">
+                            ${escapeHtml(bc.status)}
+                        </span>
+                    </div>
+
+                    <!-- Offers Received -->
+                    <div style="margin-top: 1rem;">
+                        <h4 style="font-size: 0.9rem; color: var(--secondary); text-transform: uppercase; margin-bottom: 0.75rem;">Offers Received (${bc.offers.length})</h4>
+                        ${offersHtml}
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        container.innerHTML = html;
+    }
+
+    function pollPatientBroadcastQuotes(force = false) {
+        fetch('/api/patient/broadcast-quotes')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+                const serialized = JSON.stringify(data.broadcasts);
+                if (serialized === lastPatientBroadcastsHash && !force) {
+                    return;
+                }
+                lastPatientBroadcastsHash = serialized;
+                renderPatientBroadcastQuotes(data.broadcasts);
+            })
+            .catch(err => console.log('Patient quotes poller error:', err));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // Poll for incoming pharmacy quotes every 3.5 seconds
+        setInterval(() => pollPatientBroadcastQuotes(false), 3500);
+    });
 </script>
 {% endblock %}

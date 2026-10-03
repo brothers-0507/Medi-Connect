@@ -1149,8 +1149,8 @@ class MediConnectTestCase(unittest.TestCase):
         self.assertIn(b'bg-panel-connectivity', res.data)
 
     def test_ambient_background_static_assets(self):
-        # Verify all 4 background images are servable
-        for img in ['bg-e-prescription.jpg', 'bg-patient-adherence.jpg', 'bg-pharmacy-stock.jpg', 'bg-medical-connectivity.jpg']:
+        # Verify all background images are servable
+        for img in ['bg-e-prescription.jpg', 'bg-patient-adherence.jpg', 'bg-pharmacy-stock.jpg', 'bg-medical-connectivity.jpg', 'bg-doctor-portal.jpg', 'bg-patient-portal.jpg', 'bg-pharmacy-portal.jpg']:
             res = self.app.get(f'/static/img/{img}')
             self.assertEqual(res.status_code, 200, f"Failed to serve {img}")
             res.close()

@@ -168,15 +168,213 @@ body {
 /* Stationary Fixed Background Underlay (stationary on both axes during zoom/scroll) */
 .fixed-bg-underlay {
     position: fixed;
-    inset: 0;
-    width: 100vw;
-    height: 100vh;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
     z-index: -1;
     pointer-events: none;
     overflow: hidden;
     background-color: var(--bg-dark);
-    background-attachment: fixed;
+}
+
+.fixed-bg-underlay::before,
+.fixed-bg-underlay::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Ensure body allows underlay to show cleanly without solid background occlusion */
+body[data-role="doctor"],
+body[data-role="patient"],
+body[data-role="pharmacy"] {
+    background-color: transparent !important;
+}
+
+/* Hide background glowing blurred circles for authentic photographic fidelity */
+body[data-role="doctor"]::before,
+body[data-role="doctor"]::after,
+body[data-role="patient"]::before,
+body[data-role="patient"]::after,
+body[data-role="pharmacy"]::before,
+body[data-role="pharmacy"]::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* ==========================================================================
+   1. DOCTOR PORTAL BACKGROUND & OVERLAY
+   Combines doctor holding stethoscope & glowing hexagons (left) with
+   clinician & digital health icons (right) - adjusted fit, enhanced visibility & dual theme blending
+   ========================================================================== */
+body[data-role="doctor"] .fixed-bg-underlay {
+    background-color: #0b1a28;
+}
+
+body[data-role="doctor"] .fixed-bg-underlay::before {
+    background-image: url('../img/bg-doctor-portal.jpg');
     background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    transform: scale(1.02);
+    opacity: 0.86;
+    filter: saturate(1.15) contrast(1.08) brightness(1.02);
+}
+
+body[data-role="doctor"] .fixed-bg-underlay::after {
+    /* Central area softly brightened for prescription form legibility; edges transparent to reveal doctors & medical hexagons */
+    background: radial-gradient(ellipse 75% 85% at 50% 50%, rgba(255, 255, 255, 0.82) 0%, rgba(240, 253, 250, 0.62) 48%, rgba(204, 251, 241, 0.22) 88%, rgba(224, 242, 254, 0.12) 100%),
+                linear-gradient(90deg, rgba(240, 253, 250, 0.15) 0%, rgba(255, 255, 255, 0.65) 26%, rgba(255, 255, 255, 0.72) 74%, rgba(224, 242, 254, 0.15) 100%);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+/* 🌙 Doctor Portal Night Mode */
+[data-theme="dark"] body[data-role="doctor"] .fixed-bg-underlay {
+    background-color: #061118;
+}
+
+[data-theme="dark"] body[data-role="doctor"] .fixed-bg-underlay::before {
+    opacity: 0.58;
+    filter: brightness(0.95) contrast(1.18) saturate(1.22);
+}
+
+[data-theme="dark"] body[data-role="doctor"] .fixed-bg-underlay::after {
+    background: radial-gradient(ellipse 75% 85% at 50% 50%, rgba(8, 20, 27, 0.82) 0%, rgba(7, 18, 24, 0.65) 48%, rgba(5, 14, 18, 0.28) 100%),
+                linear-gradient(90deg, rgba(6, 16, 21, 0.25) 0%, rgba(8, 20, 27, 0.72) 25%, rgba(8, 20, 27, 0.72) 75%, rgba(6, 16, 21, 0.25) 100%);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+/* ==========================================================================
+   2. PATIENT PORTAL BACKGROUND & OVERLAY
+   Combines compassionate doctor holding patient's hands (left) with
+   consultation desk & stethoscope (right) - adjusted fit, empathetic tone & dual theme blending
+   ========================================================================== */
+body[data-role="patient"] .fixed-bg-underlay {
+    background-color: #eaf6f4;
+}
+
+body[data-role="patient"] .fixed-bg-underlay::before {
+    background-image: url('../img/bg-patient-portal.jpg');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    transform: scale(1.02);
+    opacity: 0.84;
+    filter: saturate(1.12) contrast(1.06) brightness(1.02);
+}
+
+body[data-role="patient"] .fixed-bg-underlay::after {
+    /* Soft white/teal overlay preserving visibility of caring hands on left and stethoscope on right */
+    background: radial-gradient(ellipse 80% 85% at 50% 50%, rgba(255, 255, 255, 0.82) 0%, rgba(240, 253, 250, 0.60) 50%, rgba(204, 251, 241, 0.20) 100%),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.30) 0%, rgba(240, 253, 250, 0.55) 45%, rgba(230, 248, 245, 0.40) 100%);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+/* 🌙 Patient Portal Night Mode */
+[data-theme="dark"] body[data-role="patient"] .fixed-bg-underlay {
+    background-color: #061214;
+}
+
+[data-theme="dark"] body[data-role="patient"] .fixed-bg-underlay::before {
+    opacity: 0.52;
+    filter: brightness(0.78) contrast(1.18) saturate(1.12);
+}
+
+[data-theme="dark"] body[data-role="patient"] .fixed-bg-underlay::after {
+    background: radial-gradient(ellipse 80% 85% at 50% 50%, rgba(8, 21, 23, 0.82) 0%, rgba(7, 18, 20, 0.65) 50%, rgba(5, 14, 16, 0.30) 100%),
+                linear-gradient(180deg, rgba(8, 21, 23, 0.35) 0%, rgba(8, 21, 23, 0.65) 40%, rgba(6, 17, 19, 0.50) 100%);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+/* ==========================================================================
+   3. PHARMACY PORTAL BACKGROUND & OVERLAY
+   Pill capsules & medicine beaker (left) + glowing pharmacy cross & network (right) -
+   adjusted fit, high inventory table legibility & dual theme blending
+   ========================================================================== */
+body[data-role="pharmacy"] .fixed-bg-underlay {
+    background-color: #061928;
+}
+
+body[data-role="pharmacy"] .fixed-bg-underlay::before {
+    background-image: url('../img/bg-pharmacy-portal.jpg');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    transform: scale(1.02);
+    opacity: 0.88;
+    filter: saturate(1.18) contrast(1.08) brightness(1.02);
+}
+
+body[data-role="pharmacy"] .fixed-bg-underlay::after {
+    /* Clean pharmacy atmosphere: vibrant colorful pills & cross visible on sides, soft bright center for inventory table */
+    background: radial-gradient(ellipse 78% 85% at 50% 50%, rgba(255, 255, 255, 0.84) 0%, rgba(240, 249, 255, 0.64) 48%, rgba(224, 242, 254, 0.20) 100%),
+                linear-gradient(90deg, rgba(240, 249, 255, 0.18) 0%, rgba(255, 255, 255, 0.70) 25%, rgba(255, 255, 255, 0.70) 75%, rgba(224, 242, 254, 0.18) 100%);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+/* 🌙 Pharmacy Portal Night Mode */
+[data-theme="dark"] body[data-role="pharmacy"] .fixed-bg-underlay {
+    background-color: #051119;
+}
+
+[data-theme="dark"] body[data-role="pharmacy"] .fixed-bg-underlay::before {
+    opacity: 0.68;
+    filter: brightness(0.96) contrast(1.20) saturate(1.24);
+}
+
+[data-theme="dark"] body[data-role="pharmacy"] .fixed-bg-underlay::after {
+    background: radial-gradient(ellipse 75% 85% at 50% 50%, rgba(7, 19, 26, 0.80) 0%, rgba(7, 18, 24, 0.60) 48%, rgba(5, 13, 18, 0.25) 100%),
+                linear-gradient(90deg, rgba(6, 15, 21, 0.25) 0%, rgba(7, 19, 26, 0.65) 25%, rgba(7, 19, 26, 0.65) 75%, rgba(6, 15, 21, 0.25) 100%);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
+}
+
+/* ==========================================================================
+   FROSTED GLASS EFFECT & SUBTLE TRANSPARENCY ACROSS PORTAL UI CARDS
+   Soft frosted glass, subtle white transparency, light teal gradient overlay, gentle blur, low contrast
+   ========================================================================== */
+body[data-role="doctor"] .card,
+body[data-role="doctor"] .rx-form-card,
+body[data-role="doctor"] .clinical-banner,
+body[data-role="patient"] .card,
+body[data-role="patient"] .clinical-banner,
+body[data-role="patient"] .tracker-header-bar,
+body[data-role="pharmacy"] .card,
+body[data-role="pharmacy"] .pharmacy-nav-toolbar {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(226, 238, 243, 0.88);
+    box-shadow: 0 8px 30px rgba(13, 148, 136, 0.06), 0 2px 8px rgba(15, 23, 42, 0.03);
+}
+
+[data-theme="dark"] body[data-role="doctor"] .card,
+[data-theme="dark"] body[data-role="doctor"] .rx-form-card,
+[data-theme="dark"] body[data-role="doctor"] .clinical-banner,
+[data-theme="dark"] body[data-role="patient"] .card,
+[data-theme="dark"] body[data-role="patient"] .clinical-banner,
+[data-theme="dark"] body[data-role="patient"] .tracker-header-bar,
+[data-theme="dark"] body[data-role="pharmacy"] .card,
+[data-theme="dark"] body[data-role="pharmacy"] .pharmacy-nav-toolbar {
+    background: rgba(14, 28, 35, 0.88);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(51, 65, 85, 0.65);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
 }
 
 img {
@@ -536,7 +734,7 @@ textarea.form-control {
     flex: 1;
 }
 
-/* Custom Tabs */
+/* Custom Tabs (Clean toolbar without vertical scrollbar/stepper arrows) */
 .tabs {
     display: flex;
     gap: 0.75rem;
@@ -544,15 +742,16 @@ textarea.form-control {
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     padding-bottom: 0.5rem;
     overflow-x: auto;
+    overflow-y: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
 }
 .tabs::-webkit-scrollbar {
-    height: 4px;
-}
-.tabs::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.05);
-    border-radius: 4px;
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
 }
 
 .tab-btn {

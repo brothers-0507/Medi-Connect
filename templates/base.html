@@ -22,7 +22,7 @@
         })();
     </script>
 </head>
-<body data-role="{{ current_user.role if current_user else 'guest' }}" {% block body_attrs %}{% endblock %}>
+<body data-role="{{ current_user.role if current_user else (portal if portal else 'guest') }}" {% block body_attrs %}{% endblock %}>
     <!-- Stationary Fixed Background Underlay (stationary on both axes during zoom/scroll) -->
     <div class="fixed-bg-underlay" aria-hidden="true"></div>
     <header class="no-print">

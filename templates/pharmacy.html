@@ -339,7 +339,7 @@
                                     
                                     <div class="form-group">
                                         <label for="status-{{ info.broadcast.id }}">Availability Status</label>
-                                        <select id="status-{{ info.broadcast.id }}" name="availability_status" class="form-control" style="background-color: #12131e; color: white;" required>
+                                        <select id="status-{{ info.broadcast.id }}" name="availability_status" class="form-control" required>
                                             <option value="available" {% if (info.offered and info.offered.availability_status == 'available') or (not info.offered and info.status_calc == 'available') %}selected{% endif %}>Fully In Stock</option>
                                             <option value="partial" {% if (info.offered and info.offered.availability_status == 'partial') or (not info.offered and info.status_calc == 'partial') %}selected{% endif %}>Partial Stock</option>
                                             <option value="unavailable" {% if (info.offered and info.offered.availability_status == 'unavailable') or (not info.offered and info.status_calc == 'unavailable') %}selected{% endif %}>Out of Stock</option>
@@ -1302,7 +1302,7 @@
                                 </div>
                                 <div class="form-group">
                                     <label for="status-${info.id}">Availability Status</label>
-                                    <select id="status-${info.id}" name="availability_status" class="form-control" style="background-color: #12131e; color: white;" required>
+                                    <select id="status-${info.id}" name="availability_status" class="form-control" required>
                                         <option value="available" ${currentStatusVal === 'available' ? 'selected' : ''}>Fully In Stock</option>
                                         <option value="partial" ${currentStatusVal === 'partial' ? 'selected' : ''}>Partial Stock</option>
                                         <option value="unavailable" ${currentStatusVal === 'unavailable' ? 'selected' : ''}>Out of Stock</option>

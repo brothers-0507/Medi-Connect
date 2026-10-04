@@ -18,11 +18,11 @@
         {% if portal %}
         <div style="text-align: center; margin-bottom: 1.75rem; padding: 0.75rem 1rem; border-radius: 12px; font-size: 0.95rem; font-weight: 600;
             {% if portal == 'doctor' %}
-                background: rgba(2, 132, 199, 0.1); color: #0284c7; border: 1px solid rgba(2, 132, 199, 0.25);
+                background: rgba(2, 132, 199, 0.15); color: var(--accent); border: 1px solid rgba(2, 132, 199, 0.3);
             {% elif portal == 'patient' %}
-                background: rgba(13, 148, 136, 0.1); color: #0d9488; border: 1px solid rgba(13, 148, 136, 0.25);
+                background: rgba(13, 148, 136, 0.15); color: var(--primary); border: 1px solid rgba(13, 148, 136, 0.3);
             {% elif portal == 'pharmacy' %}
-                background: rgba(99, 102, 241, 0.1); color: #6366f1; border: 1px solid rgba(99, 102, 241, 0.25);
+                background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);
             {% endif %}
         ">
             {% if portal == 'doctor' %}

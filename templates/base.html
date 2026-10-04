@@ -6,7 +6,7 @@
     <title>{% block title %}MediConnect - Centralized Pharmacy & Medi-Tracker{% endblock %}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@300;400;550;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <!-- Phosphor Icons for modern slick icons -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -235,6 +235,12 @@
             const container = document.getElementById('realtime-toast-container');
             if (!container) return;
 
+            // Normalize broadcast notifications
+            if (acceptUrl === 'broadcast' || actionType === 'broadcast') {
+                actionType = 'broadcast';
+                acceptUrl = null;
+            }
+
             const toast = document.createElement('div');
             toast.className = 'realtime-toast';
             
@@ -253,9 +259,26 @@
                         Dismiss
                     </button>
                 `;
-            } else {
+            } else if (actionType === 'broadcast') {
+                // Patient Broadcast sent/received notification: strictly View Broadcasts + Dismiss (NO Accept & Import)
                 actionsHtml = `
-                    ${acceptUrl ? `
+                    <button type="button" onclick="if(window.switchPatientTabDirect){switchPatientTabDirect('broadcasts-tab');}else{window.location.href='/dashboard/patient#broadcasts-tab';} this.closest('.realtime-toast').remove();" class="btn btn-secondary btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.65rem;">
+                        <i class="ph-bold ph-broadcast"></i> View Broadcasts
+                    </button>
+                    ${viewUrl ? `
+                        <a href="${viewUrl}" target="_blank" class="btn btn-outline btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.65rem;">
+                            <i class="ph-bold ph-eye"></i> View Sheet
+                        </a>
+                    ` : ''}
+                    <button type="button" onclick="this.closest('.realtime-toast').remove()" class="btn btn-outline btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.65rem;">
+                        Dismiss
+                    </button>
+                `;
+            } else {
+                // Doctor Prescription notification: only allow Accept & Import if valid prescription endpoint
+                const isPrescriptionAccept = acceptUrl && (typeof acceptUrl === 'string') && acceptUrl.startsWith('/prescription/accept/');
+                actionsHtml = `
+                    ${isPrescriptionAccept ? `
                         <form action="${acceptUrl}" method="POST" style="margin: 0;">
                             <button type="submit" class="btn btn-secondary btn-sm" style="font-size: 0.78rem; padding: 0.3rem 0.65rem;">
                                 <i class="ph-bold ph-check"></i> Accept & Import
@@ -273,10 +296,11 @@
                 `;
             }
 
+            const isBroadcastIcon = actionType === 'pharmacy_broadcast' || actionType === 'broadcast';
             toast.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
                     <div style="display: flex; align-items: center; gap: 0.4rem; font-weight: 700; color: var(--text-primary); font-size: 0.92rem;">
-                        <i class="ph-bold ${actionType === 'pharmacy_broadcast' ? 'ph-broadcast' : 'ph-bell-ringing'}" style="color: var(--accent); font-size: 1.15rem;"></i>
+                        <i class="ph-bold ${isBroadcastIcon ? 'ph-broadcast' : 'ph-bell-ringing'}" style="color: var(--accent); font-size: 1.15rem;"></i>
                         <span>${title}</span>
                     </div>
                     <button type="button" onclick="this.closest('.realtime-toast').remove()" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.2rem; line-height: 1;" title="Dismiss">

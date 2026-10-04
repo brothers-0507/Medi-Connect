@@ -942,7 +942,7 @@
             if (data.success) {
                 closePharmacyModal();
                 if (typeof showRealtimeToast === 'function') {
-                    showRealtimeToast('Broadcast Sent', data.message || `Broadcast sent to ${pharmacyName}!`, 'broadcast');
+                    showRealtimeToast('Broadcast Sent', data.message || `Broadcast sent to ${pharmacyName}!`, null, null, 'broadcast');
                 } else {
                     alert(data.message || `Broadcast sent to ${pharmacyName}!`);
                 }

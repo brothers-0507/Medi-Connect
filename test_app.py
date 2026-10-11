@@ -1347,6 +1347,85 @@ class MediConnectTestCase(unittest.TestCase):
             self.assertIn(b'Date & Time Issued', view_res.data)
             self.assertIn(rx.created_at.strftime('%d %b %Y, %I:%M %p').encode(), view_res.data)
 
+    def test_doctor_portal_redesign_privacy_and_qr_separation(self):
+        # 1. Doctor Workspace: Operations Guide and Overlay Modal
+        self.login_as('test_doctor')
+        dash = self.app.get('/dashboard/doctor')
+        self.assertEqual(dash.status_code, 200)
+        self.assertIn(b'Doctor Portal Operations & Clinical Instructions Guide', dash.data)
+        self.assertIn(b'1. Fast Digital Prescriptions', dash.data)
+        self.assertIn(b'2. Overlay Modal Workflow', dash.data)
+        self.assertIn(b'3. Real-Time Patient Push & QR', dash.data)
+        self.assertIn(b'4. Patients History & Time Audit', dash.data)
+        self.assertIn(b'5. Privacy-Preserving Broadcasting', dash.data)
+        self.assertIn(b'6. Credentials & Badges', dash.data)
+        self.assertIn(b'id="prescription-modal"', dash.data)
+        self.assertIn(b'openPrescriptionModal()', dash.data)
+        self.assertIn(b'id="patients-history-section"', dash.data)
+        self.assertIn(b'id="doctor-history-grid"', dash.data)
+        self.assertIn(b'id="history-search-input"', dash.data)
+
+        # 2. Issue prescription via AJAX and verify accurate date/time return
+        ajax_rx = self.app.post('/prescription/create', data={
+            'patient_username': 'test_patient',
+            'patient_name': 'Jane Doe',
+            'patient_age': '28',
+            'patient_contact': '+91 9876543210',
+            'instructions': 'Strict rest, drink warm fluids, avoid cold exposure.',
+            'med_name[]': ['Azithromycin 500mg', 'Paracetamol 650mg'],
+            'med_dosage[]': ['1_TAB', '1_TAB'],
+            'med_frequency[]': ['OD_MORNING', 'TDS'],
+            'med_duration[]': ['3 days', '3 days'],
+            'med_instructions[]': ['After breakfast', 'Post meals']
+        }, headers={'X-Requested-With': 'XMLHttpRequest'})
+        self.assertEqual(ajax_rx.status_code, 200)
+        rx_json = ajax_rx.get_json()
+        self.assertTrue(rx_json['success'])
+        self.assertIn('created_at_fmt', rx_json)
+        self.assertIn('created_at_iso', rx_json)
+        self.assertEqual(len(rx_json['items']), 2)
+        rx_uuid = rx_json['uuid']
+
+        # 3. Privacy & Access Control: Doctor & Patient can view full clinical sheet
+        doc_view = self.app.get(f'/prescription/view/{rx_uuid}')
+        self.assertEqual(doc_view.status_code, 200)
+        self.assertIn(b'Clinical QR (Doc & Pat)', doc_view.data)
+        self.assertIn(b'Pharmacy Checkout QR', doc_view.data)
+        self.assertIn(b'Strict rest, drink warm fluids', doc_view.data)
+
+        self.login_as('test_patient')
+        pat_view = self.app.get(f'/prescription/view/{rx_uuid}')
+        self.assertEqual(pat_view.status_code, 200)
+
+        # 4. Pharmacy cannot access full confidential clinical sheet; redirected to pharmacy dispense view
+        self.login_as('test_pharmacy')
+        ph_full_view = self.app.get(f'/prescription/view/{rx_uuid}')
+        self.assertEqual(ph_full_view.status_code, 302)
+        self.assertIn(f'/prescription/dispense/{rx_uuid}', ph_full_view.location)
+
+        # Pharmacy Dispensing View shows medicines only, NO doctor notes or patient personal contact
+        dispense_res = self.app.get(f'/prescription/dispense/{rx_uuid}')
+        self.assertEqual(dispense_res.status_code, 200)
+        self.assertIn(b'Pharmacy Medication Fulfillment Order', dispense_res.data)
+        self.assertIn(b'Azithromycin 500mg', dispense_res.data)
+        self.assertIn(b'Paracetamol 650mg', dispense_res.data)
+        self.assertNotIn(b'Strict rest, drink warm fluids', dispense_res.data)
+        self.assertNotIn(b'+91 9876543210', dispense_res.data)
+
+        # Pharmacy Quick Checkout API only returns medicine items
+        checkout_api = self.app.get(f'/api/pharmacy/meds-checkout/{rx_uuid}')
+        self.assertEqual(checkout_api.status_code, 200)
+        checkout_data = checkout_api.get_json()
+        self.assertTrue(checkout_data['success'])
+        self.assertEqual(len(checkout_data['items']), 2)
+        self.assertNotIn('instructions', checkout_data)
+
+        # 5. Desktop Scrollbar CSS: Ensure overflow-x is auto, not forced scroll
+        with open('static/css/style.css', 'r', encoding='utf-8') as f:
+            css_content = f.read()
+        self.assertNotIn('overflow-x: scroll !important;', css_content)
+        self.assertIn('overflow-x: auto;', css_content)
+
 if __name__ == '__main__':
     unittest.main()
 

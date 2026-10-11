@@ -786,13 +786,31 @@ def create_prescription():
     db.session.commit()
     
     if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        items_summary = [{
+            'medicine_name': item.medicine_name,
+            'dosage': resolve_dosage_label(item.dosage),
+            'frequency': resolve_frequency_label(item.frequency),
+            'duration': item.duration,
+            'instructions': item.instructions or ''
+        } for item in prescription.items]
+        
         return jsonify({
             'success': True,
             'message': 'Digital prescription created successfully!',
             'uuid': prescription.uuid,
             'id': prescription.id,
             'patient_name': prescription.patient_name,
-            'view_url': url_for('view_prescription', rx_uuid=prescription.uuid)
+            'patient_username': pat_user.username if pat_user else '',
+            'patient_age': prescription.patient_age,
+            'patient_contact': prescription.patient_contact,
+            'created_at_fmt': prescription.created_at.strftime('%d %b %Y, %I:%M %p'),
+            'created_at_iso': prescription.created_at.isoformat(),
+            'instructions': prescription.instructions or '',
+            'items_count': len(prescription.items),
+            'items': items_summary,
+            'is_claimed': prescription.is_claimed,
+            'view_url': url_for('view_prescription', rx_uuid=prescription.uuid),
+            'dispense_url': url_for('pharmacy_dispense_view', rx_uuid=prescription.uuid)
         })
         
     flash('Digital prescription created successfully!', 'success')
@@ -1649,8 +1667,8 @@ def notify_pharmacies_about_broadcast(bc):
                 pharmacy_id=ph.id,
                 broadcast_id=bc.id,
                 prescription_uuid=rx.uuid if rx else None,
-                title=f"New Broadcast Request from {pat_name}",
-                message=f"Patient {pat_name} requested stock & price quotes for Prescription #{rx.uuid[:8] if rx else ''} ({items_count} medications: {med_summary}).",
+                title=f"New Broadcast Request: Medicine Fulfillment ({items_count} Meds)",
+                message=f"Prescription broadcast requesting stock check and quotes for {items_count} medication(s): {med_summary}.",
                 is_read=False,
                 created_at=datetime.now()
             )
@@ -2377,13 +2395,87 @@ def checkout_sale():
 def view_prescription(rx_uuid):
     prescription = Prescription.query.filter_by(uuid=rx_uuid).first_or_404()
     
-    # Secure link for this prescription
-    secure_url = request.url_root.rstrip('/') + url_for('view_prescription', rx_uuid=rx_uuid)
+    # Requirement 5: Access control - full clinical prescription details restricted to doctor and patient
+    user_id = session.get('user_id')
+    user = User.query.get(user_id) if user_id else None
+    if user and user.role == 'pharmacy':
+        flash('Full clinical prescription details and doctor notes are confidential to the doctor and patient. Redirected to pharmacy medication fulfillment view.', 'info')
+        return redirect(url_for('pharmacy_dispense_view', rx_uuid=rx_uuid))
     
-    # Generate Base64 QR Code string
+    # Secure link for Clinical Record (Doctor & Patient View)
+    secure_url = request.url_root.rstrip('/') + url_for('view_prescription', rx_uuid=rx_uuid)
     qr_base64 = generate_qr_base64(secure_url)
     
-    return render_template('view_prescription.html', prescription=prescription, qr_base64=qr_base64, secure_url=secure_url)
+    # Separate QR code for Pharmacy Quick Checkout (Medication Details Only)
+    dispense_url = request.url_root.rstrip('/') + url_for('pharmacy_dispense_view', rx_uuid=rx_uuid)
+    pharmacy_qr_base64 = generate_qr_base64(dispense_url)
+    
+    return render_template(
+        'view_prescription.html', 
+        prescription=prescription, 
+        qr_base64=qr_base64, 
+        secure_url=secure_url,
+        dispense_url=dispense_url,
+        pharmacy_qr_base64=pharmacy_qr_base64
+    )
+
+@app.route('/prescription/dispense/<string:rx_uuid>')
+def pharmacy_dispense_view(rx_uuid):
+    prescription = Prescription.query.filter_by(uuid=rx_uuid).first_or_404()
+    dispense_url = request.url_root.rstrip('/') + url_for('pharmacy_dispense_view', rx_uuid=rx_uuid)
+    pharmacy_qr_base64 = generate_qr_base64(dispense_url)
+    
+    return render_template(
+        'dispense_prescription.html',
+        prescription=prescription,
+        pharmacy_qr_base64=pharmacy_qr_base64,
+        dispense_url=dispense_url
+    )
+
+@app.route('/api/pharmacy/meds-checkout/<string:rx_uuid>')
+def api_pharmacy_meds_checkout(rx_uuid):
+    rx = Prescription.query.filter_by(uuid=rx_uuid).first()
+    if not rx:
+        return jsonify({'success': False, 'message': 'Prescription not found'}), 404
+        
+    pharmacy_id = session.get('user_id')
+    items = []
+    for item in rx.items:
+        med_dict = {
+            'id': item.id,
+            'medicine_name': item.medicine_name,
+            'dosage': resolve_dosage_label(item.dosage),
+            'frequency': resolve_frequency_label(item.frequency),
+            'duration': item.duration,
+            'in_stock': False,
+            'available_stock': 0,
+            'unit_price': 0.0
+        }
+        if pharmacy_id:
+            stock_items = InventoryItem.query.filter(
+                InventoryItem.pharmacy_id == pharmacy_id,
+                func.lower(InventoryItem.medicine_name) == func.lower(item.medicine_name)
+            ).all()
+            if not stock_items:
+                stock_items = InventoryItem.query.filter(
+                    InventoryItem.pharmacy_id == pharmacy_id,
+                    InventoryItem.medicine_name.ilike(f"%{item.medicine_name}%")
+                ).all()
+            total_stock = sum(s.stock_level for s in stock_items)
+            med_dict['in_stock'] = total_stock > 0
+            med_dict['available_stock'] = total_stock
+            med_dict['unit_price'] = stock_items[0].price if stock_items else 0.0
+        items.append(med_dict)
+        
+    return jsonify({
+        'success': True,
+        'uuid': rx.uuid,
+        'order_ref': rx.uuid[:8],
+        'items_count': len(items),
+        'items': items,
+        'created_at': rx.created_at.strftime('%d %b %Y, %I:%M %p') if rx.created_at else '',
+        'is_claimed': rx.is_claimed
+    })
 
 @app.route('/prescription/api/<string:rx_uuid>')
 @login_required
@@ -2431,14 +2523,15 @@ def prescription_api(rx_uuid):
                 'is_expiring_soon': s.is_expiring_soon
             } for s in stock_items if s.stock_level > 0]
             
+    is_pharmacy_caller = bool(user and user.role == 'pharmacy')
     return jsonify({
         'success': True,
         'prescription_id': rx.id,
         'uuid': rx.uuid,
         'patient_name': rx.patient_name,
-        'patient_age': rx.patient_age,
-        'patient_contact': rx.patient_contact,
-        'instructions': rx.instructions or '',
+        'patient_age': None if is_pharmacy_caller else rx.patient_age,
+        'patient_contact': '' if is_pharmacy_caller else (rx.patient_contact or ''),
+        'instructions': '' if is_pharmacy_caller else (rx.instructions or ''),
         'created_at': rx.created_at.strftime('%d %b %Y, %I:%M %p') if rx.created_at else '',
         'is_claimed': rx.is_claimed,
         'items': items

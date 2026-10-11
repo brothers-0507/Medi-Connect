@@ -151,28 +151,17 @@ html {
 
 html {
     width: 100%;
+    min-width: 100%;
+    overflow-x: auto;
+    overflow-y: scroll;
 }
 
-@media (min-width: 851px) {
-    html {
-        overflow-x: scroll !important;
-    }
-    body,
-    body[data-page="landing"] {
-        overflow-x: scroll !important;
-    }
-}
-
-@media (max-width: 850px) {
-    html {
-        max-width: 100vw;
-        overflow-x: hidden !important;
-    }
-    body,
-    body[data-page="landing"] {
-        max-width: 100vw;
-        overflow-x: hidden !important;
-    }
+body,
+body[data-page="landing"] {
+    width: 100%;
+    min-width: 100%;
+    overflow-x: visible;
+    overflow-y: visible;
 }
 
 body {
@@ -476,15 +465,15 @@ header {
 }
 
 .nav-container {
-    max-width: 1200px;
+    max-width: 100%;
     width: 100%;
-    margin: 0 auto;
-    padding: 0.45rem clamp(12px, 3.5vw, 36px);
+    margin: 0;
+    padding: 0.45rem clamp(16px, 2.5vw, 36px);
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     box-sizing: border-box;
     min-height: 56px;
 }
@@ -706,14 +695,14 @@ header {
 /* Main Layout */
 main {
     flex: 1;
-    max-width: 1200px;
+    max-width: 1300px;
     width: 100%;
     min-width: 0;
     margin: 0 auto;
     padding: clamp(1rem, 2.5vw, 2rem) clamp(0.75rem, 2.5vw, 2rem) 1.25rem;
     box-sizing: border-box;
     position: relative;
-    z-index: 1;
+    z-index: auto;
 }
 
 main > *:last-child {
@@ -1076,16 +1065,21 @@ textarea.form-control {
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
     padding-bottom: 0.5rem;
     overflow-x: auto;
-    overflow-y: hidden !important;
-    scrollbar-width: none !important;
-    -ms-overflow-style: none !important;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
 }
 .tabs::-webkit-scrollbar {
-    display: none !important;
-    width: 0 !important;
-    height: 0 !important;
+    height: 6px;
+}
+.tabs::-webkit-scrollbar-track {
+    background: transparent;
+}
+.tabs::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 4px;
 }
 
 .tab-btn {
@@ -1445,6 +1439,150 @@ body[data-page="login"] .flash-messages {
 }
 [data-theme="dark"] .alert-warning i {
     color: #fbbf24;
+}
+
+/* Patient New Prescription Alert Banner (High Visibility in Light & Dark Themes) */
+.patient-prescription-alert {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.25rem;
+    padding: 1.15rem 1.4rem;
+    border-radius: 12px;
+    margin-bottom: 1.5rem;
+    position: relative;
+    box-sizing: border-box;
+    transition: all 0.25s ease;
+    animation: fadeIn 0.4s ease;
+}
+
+/* Light Theme: Crisp, Opaque, High-Contrast Cyan/Indigo Card with Emerald Action */
+[data-theme="light"] .patient-prescription-alert,
+.patient-prescription-alert {
+    background: #ffffff;
+    border: 1.5px solid #0284c7;
+    border-left: 6px solid #0284c7;
+    box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.2), 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .patient-prescription-alert .alert-bell-icon,
+.patient-prescription-alert .alert-bell-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #e0f2fe;
+    color: #0284c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(2, 132, 199, 0.15);
+}
+
+[data-theme="light"] .patient-prescription-alert .alert-title,
+.patient-prescription-alert .alert-title {
+    color: #0f172a;
+    font-size: 1.05rem;
+    font-weight: 750;
+    margin-bottom: 0.2rem;
+    letter-spacing: -0.01em;
+}
+
+[data-theme="light"] .patient-prescription-alert .alert-msg,
+.patient-prescription-alert .alert-msg {
+    color: #334155;
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.45;
+}
+
+[data-theme="light"] .patient-prescription-alert .alert-action-btn,
+.patient-prescription-alert .alert-action-btn {
+    background: #0d9488;
+    color: #ffffff;
+    font-weight: 650;
+    font-size: 0.88rem;
+    padding: 0.55rem 1.15rem;
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+[data-theme="light"] .patient-prescription-alert .alert-action-btn:hover,
+.patient-prescription-alert .alert-action-btn:hover {
+    background: #0f766e;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(13, 148, 136, 0.45);
+}
+
+[data-theme="light"] .patient-prescription-alert .alert-dismiss-btn,
+.patient-prescription-alert .alert-dismiss-btn {
+    color: #64748b;
+    background: transparent;
+    border: none;
+    font-size: 1.35rem;
+    cursor: pointer;
+    padding: 0.35rem;
+    line-height: 1;
+    border-radius: 6px;
+    transition: color 0.2s ease;
+}
+
+[data-theme="light"] .patient-prescription-alert .alert-dismiss-btn:hover,
+.patient-prescription-alert .alert-dismiss-btn:hover {
+    color: #0f172a;
+    background: #f1f5f9;
+}
+
+/* Dark Theme: Deep Rich Opaque Navy Card with Glowing Cyan Border & Luminous Accents */
+[data-theme="dark"] .patient-prescription-alert {
+    background: #111e33;
+    border: 1.5px solid #0284c7;
+    border-left: 6px solid #38bdf8;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px rgba(56, 189, 248, 0.18);
+}
+
+[data-theme="dark"] .patient-prescription-alert .alert-bell-icon {
+    background: rgba(56, 189, 248, 0.16);
+    color: #38bdf8;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+[data-theme="dark"] .patient-prescription-alert .alert-title {
+    color: #ffffff;
+    font-weight: 750;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+[data-theme="dark"] .patient-prescription-alert .alert-msg {
+    color: #cbd5e1;
+}
+
+[data-theme="dark"] .patient-prescription-alert .alert-action-btn {
+    background: #0d9488;
+    color: #ffffff;
+    border: 1px solid rgba(45, 212, 191, 0.4);
+    box-shadow: 0 4px 16px rgba(13, 148, 136, 0.5);
+}
+
+[data-theme="dark"] .patient-prescription-alert .alert-action-btn:hover {
+    background: #14b8a6;
+    box-shadow: 0 6px 20px rgba(20, 184, 166, 0.6);
+}
+
+[data-theme="dark"] .patient-prescription-alert .alert-dismiss-btn {
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .patient-prescription-alert .alert-dismiss-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.08);
 }
 
 /* Interactive Medication Tracker (Medi-Tracker) */

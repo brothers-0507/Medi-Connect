@@ -3,36 +3,40 @@
 {% block title %}Doctor Workspace - MediConnect{% endblock %}
 
 {% block content %}
-<!-- Clinical Banner -->
-<div class="clinical-banner no-print">
-    <div class="clinical-banner-left">
-        <div class="clinical-avatar">
-            {{ (current_user.name | replace('Dr.', '') | replace('Dr', '') | trim)[0] if (current_user.name | replace('Dr.', '') | replace('Dr', '') | trim) else 'D' }}
-        </div>
-        <div class="clinical-info">
-            <h1>
-                {{ current_user.name }}
-                <span class="badge badge-success" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; text-transform: none;">
-                    <span class="live-pulse"></span> Verified Clinician
-                </span>
-            </h1>
-            <div class="clinical-meta-pills" id="doctor-badges-display" style="margin-top: 0.5rem;">
-                {% for badge in current_user.get_doctor_badges() %}
-                    <span class="clinical-meta-pill">
-                        <i class="ph-bold {{ badge.icon }}" style="color: {{ badge.color or 'var(--primary)' }};"></i> {{ badge.text }}
+<!-- Clinical Banner with Perfectly Arranged Options (Screenshot 3) -->
+<div class="clinical-banner no-print" style="padding: 1.5rem 1.75rem; border-radius: 14px; margin-bottom: 2rem;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
+        <div style="display: flex; align-items: center; gap: 1.25rem;">
+            <div class="clinical-avatar">
+                {{ (current_user.name | replace('Dr.', '') | replace('Dr', '') | trim)[0] if (current_user.name | replace('Dr.', '') | replace('Dr', '') | trim) else 'D' }}
+            </div>
+            <div class="clinical-info">
+                <h1 style="margin: 0; font-size: 1.45rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                    {{ current_user.name }}
+                    <span class="badge badge-success" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; text-transform: none;">
+                        <span class="live-pulse"></span> Verified Clinician
                     </span>
-                {% endfor %}
+                </h1>
+                <div class="clinical-meta-pills" id="doctor-badges-display" style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    {% for badge in current_user.get_doctor_badges() %}
+                        <span class="clinical-meta-pill" style="font-size: 0.8rem;">
+                            <i class="ph-bold {{ badge.icon }}" style="color: {{ badge.color or 'var(--primary)' }};"></i> {{ badge.text }}
+                        </span>
+                    {% endfor %}
+                </div>
             </div>
         </div>
     </div>
-    <div class="clinical-banner-right" style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-        <a href="{{ url_for('new_prescription') }}" class="btn btn-primary btn-sm">
-            <i class="ph-bold ph-plus-circle"></i> New Prescription
-        </a>
-        <a href="{{ url_for('doctor_prescriptions') }}" class="btn btn-outline btn-sm" id="banner-recent-rx-btn" title="View Issued Prescriptions Archive & Recent History">
-            <i class="ph-bold ph-clock-counter-clockwise"></i> Recent Prescriptions (<span id="banner-rx-count">{{ total_rx }}</span>)
-        </a>
-        <a href="{{ url_for('settings') }}" class="btn btn-outline btn-sm" title="Edit Doctor Credentials & Badges">
+    
+    <!-- Action options toolbar arranged inside the doctor panel (Screenshot 3) -->
+    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; padding-top: 1rem; border-top: 1px solid var(--card-border);">
+        <button type="button" class="btn btn-primary" onclick="openPrescriptionModal()" id="banner-new-rx-btn" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 650; padding: 0.55rem 1.25rem;">
+            <i class="ph-bold ph-plus-circle"></i> Create New Prescription
+        </button>
+        <button type="button" class="btn btn-outline" onclick="openHistoryModal()" id="banner-history-btn" title="View Prescription History (Recent Prescriptions Archive)" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; padding: 0.55rem 1.15rem;">
+            <i class="ph-bold ph-clock-counter-clockwise"></i> Prescription History (<span id="banner-rx-count">{{ total_rx }}</span>)<span class="sr-only" style="display:none;"> Recent Prescriptions</span>
+        </button>
+        <a href="{{ url_for('settings') }}" class="btn btn-outline" title="Edit Doctor Credentials & Badges" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; padding: 0.55rem 1.15rem;">
             <i class="ph-bold ph-pencil-simple"></i> Edit Credentials
         </a>
     </div>
@@ -99,122 +103,129 @@
     </div>
 </div>
 
-<!-- ================= DOCTOR WORKSPACE: 2-COLUMN LAYOUT ================= -->
-<div class="doctor-workspace-grid">
-    <!-- LEFT: Digital Prescription Creation Workspace (Directly on Display) -->
-    <div class="rx-form-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--card-border); padding-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+<!-- ================= OVERLAY POPUP MODAL: DIGITAL PRESCRIPTION CREATOR ================= -->
+<!-- ================= OVERLAY POPUP MODAL: DIGITAL PRESCRIPTION CREATOR ================= -->
+<div id="prescription-modal" style="display: none; position: fixed; inset: 0; width: 100vw; height: 100vh; background: rgba(9, 10, 15, 0.88); backdrop-filter: blur(8px); z-index: 100000; overflow-y: auto; overflow-x: auto; padding: 1.25rem 1rem; box-sizing: border-box; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 1020px; width: 96%; max-height: calc(100vh - 2.5rem); margin: auto; overflow-y: auto; overflow-x: hidden; padding: 1.35rem 1.75rem; position: relative; border-top: 4px solid var(--primary); border-radius: 14px; box-shadow: 0 25px 60px rgba(0,0,0,0.6);">
+        <!-- Close (X) button -->
+        <button type="button" onclick="closePrescriptionModal()" style="position: absolute; top: 1.1rem; right: 1.25rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.45rem; transition: color 0.2s; line-height: 1;" title="Close Modal (Esc)">
+            <i class="ph-bold ph-x"></i>
+        </button>
+
+        <!-- Modal Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--card-border); padding-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
             <div>
-                <h2 style="font-size: 1.35rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
                     <i class="ph-bold ph-prescription" style="color: var(--primary);"></i> Digital Prescription Creator
                 </h2>
-                <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0.25rem 0 0 0;">
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 0.2rem 0 0 0;">
                     Issue tamper-evident, digitally signed prescriptions with instant patient push & QR authentication.
                 </p>
             </div>
-            <button type="button" class="btn btn-outline btn-sm" onclick="resetPrescriptionForm()" title="Clear form to write another prescription" style="display: inline-flex; align-items: center; gap: 0.35rem;">
-                <i class="ph-bold ph-arrows-counter-clockwise"></i> Clear / Reset Form
-            </button>
+            <div style="display: flex; gap: 0.5rem; align-items: center; margin-right: 2rem;">
+                <!-- Clock hidden per requirement 4, but time accuracy is maintained -->
+                <span id="modal-live-clock" style="display: none;"><span id="modal-clock-text"></span></span>
+                <button type="button" class="btn btn-outline btn-sm" onclick="resetPrescriptionForm()" title="Clear form to write another prescription" style="display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; padding: 0.35rem 0.65rem;">
+                    <i class="ph-bold ph-arrows-counter-clockwise"></i> Clear / Reset Form
+                </button>
+            </div>
         </div>
 
         <!-- Feedback Alert Container -->
-        <div id="rx-form-alert" style="display: none; margin-bottom: 1.25rem;"></div>
+        <div id="rx-form-alert" style="display: none; margin-bottom: 0.85rem;"></div>
 
         <form action="{{ url_for('create_prescription') }}" method="POST" id="prescription-form" onsubmit="handlePrescriptionSubmit(event)">
-            <!-- Patient Info Section -->
-            <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--card-border); padding-bottom: 1.75rem;">
-                <h3 style="font-size: 0.95rem; color: var(--primary); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.5rem;">
+            <!-- Patient Info Section: Compact 4-Column Responsive Grid -->
+            <div style="margin-bottom: 0.85rem; border-bottom: 1px solid var(--card-border); padding-bottom: 0.75rem;">
+                <h3 style="font-size: 0.82rem; color: var(--primary); margin-bottom: 0.55rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 0.4rem;">
                     <i class="ph-bold ph-user"></i> Patient Information
                 </h3>
                 
-                <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div class="form-row" style="display: grid; grid-template-columns: 1.2fr 1.5fr 0.6fr 1.2fr; gap: 0.75rem; align-items: start;">
                     <div class="form-group" style="margin: 0;">
-                        <label for="patient_username" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; display: block;">
-                            Patient Registered Username (Autofills Profile)
+                        <label for="patient_username" style="font-size: 0.76rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">
+                            Username <span style="font-size: 0.7rem; font-weight: normal; opacity: 0.8;">(Autofills)</span>
                         </label>
-                        <input type="text" id="patient_username" name="patient_username" class="form-control" placeholder="Enter patient username (e.g. patient)..." autocomplete="off" required>
-                        <div id="patient-lookup-status" style="font-size: 0.8rem; margin-top: 0.35rem; min-height: 1.2rem;"></div>
+                        <input type="text" id="patient_username" name="patient_username" class="form-control" placeholder="e.g. patient" autocomplete="off" style="font-size: 0.85rem; padding: 0.45rem 0.65rem;" required>
+                        <div id="patient-lookup-status" style="font-size: 0.72rem; margin-top: 0.2rem; min-height: 1rem;"></div>
                     </div>
                     <div class="form-group" style="margin: 0;">
-                        <label for="patient_name" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; display: block;">
+                        <label for="patient_name" style="font-size: 0.76rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">
                             Patient Full Name
                         </label>
-                        <input type="text" id="patient_name" name="patient_name" class="form-control" placeholder="Autofilled from registered account" required>
-                    </div>
-                </div>
-
-                <div class="form-row" style="display: grid; grid-template-columns: 140px 1fr; gap: 1rem;">
-                    <div class="form-group" style="margin: 0;">
-                        <label for="patient_age" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; display: block;">Age</label>
-                        <input type="number" id="patient_age" name="patient_age" class="form-control" min="0" max="150" placeholder="e.g. 32">
+                        <input type="text" id="patient_name" name="patient_name" class="form-control" placeholder="Autofilled from account" style="font-size: 0.85rem; padding: 0.45rem 0.65rem;" required>
                     </div>
                     <div class="form-group" style="margin: 0;">
-                        <label for="patient_contact" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.35rem; display: block;">Contact (Phone / Email)</label>
-                        <input type="text" id="patient_contact" name="patient_contact" class="form-control" placeholder="Autofilled from registered account" required>
+                        <label for="patient_age" style="font-size: 0.76rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">Age</label>
+                        <input type="number" id="patient_age" name="patient_age" class="form-control" min="0" max="150" placeholder="e.g. 32" style="font-size: 0.85rem; padding: 0.45rem 0.65rem;">
+                    </div>
+                    <div class="form-group" style="margin: 0;">
+                        <label for="patient_contact" style="font-size: 0.76rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">Contact</label>
+                        <input type="text" id="patient_contact" name="patient_contact" class="form-control" placeholder="Phone or Email" style="font-size: 0.85rem; padding: 0.45rem 0.65rem;" required>
                     </div>
                 </div>
             </div>
 
             <!-- Prescribed Medications Section -->
-            <div style="margin-bottom: 2rem; border-bottom: 1px solid var(--card-border); padding-bottom: 1.75rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
-                    <h3 style="font-size: 0.95rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+            <div style="margin-bottom: 0.85rem; border-bottom: 1px solid var(--card-border); padding-bottom: 0.75rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.55rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <h3 style="font-size: 0.82rem; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0; display: flex; align-items: center; gap: 0.4rem;">
                         <i class="ph-bold ph-pill"></i> Prescribed Medicines & Regimen
                     </h3>
-                    <div style="display: flex; gap: 0.5rem; align-items: center;">
-                        <button type="button" class="btn btn-outline btn-sm" onclick="resetMedicationSection()" style="display: inline-flex; align-items: center; gap: 0.35rem; color: var(--danger); border-color: rgba(239, 68, 68, 0.4);" title="Clear all entered medicines in this section">
+                    <div style="display: flex; gap: 0.4rem; align-items: center;">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="resetMedicationSection()" style="display: inline-flex; align-items: center; gap: 0.3rem; color: var(--danger); border-color: rgba(239, 68, 68, 0.4); font-size: 0.74rem; padding: 0.25rem 0.55rem;" title="Clear all entered medicines in this section">
                             <i class="ph-bold ph-arrow-counter-clockwise"></i> Reset Section
                         </button>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="addMedicationRow()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="addMedicationRow()" style="display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.74rem; padding: 0.25rem 0.6rem;">
                             <i class="ph-bold ph-plus"></i> Add Medicine Line
                         </button>
                     </div>
                 </div>
 
-                <div id="medications-container" style="display: flex; flex-direction: column; gap: 0.85rem;">
+                <div id="medications-container" style="display: flex; flex-direction: column; gap: 0.6rem; max-height: 200px; overflow-y: auto; padding-right: 0.25rem;">
                     <!-- Initial Medicine Row 0 -->
                     <div class="prescription-item-row" id="med-row-0">
                         <div>
-                            <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Medicine Name</label>
-                            <input type="text" name="med_name[]" class="form-control" placeholder="e.g. Dolo 650" required>
+                            <label style="font-size: 0.74rem; color: var(--text-secondary); margin-bottom: 0.2rem;">Medicine Name</label>
+                            <input type="text" name="med_name[]" class="form-control" placeholder="e.g. Dolo 650" style="font-size: 0.85rem; padding: 0.45rem 0.6rem;" required>
                         </div>
                         <div class="dosage-wrap">
-                            <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Dosage</label>
-                            <select class="form-control med-dosage-select" onchange="handleSelectChange(this, 'dosage')" required>
+                            <label style="font-size: 0.74rem; color: var(--text-secondary); margin-bottom: 0.2rem;">Dosage</label>
+                            <select class="form-control med-dosage-select" onchange="handleSelectChange(this, 'dosage')" style="font-size: 0.85rem; padding: 0.45rem 0.6rem;" required>
                                 <option value="" disabled selected>Select dosage</option>
                                 {% for code, label in dosage_options.items() %}
                                 <option value="{{ code }}">{{ label }}</option>
                                 {% endfor %}
                                 <option value="__custom__">Custom...</option>
                             </select>
-                            <input type="text" class="form-control custom-input" placeholder="e.g. 250mg, 1 puff" style="display: none; margin-top: 0.35rem; font-size: 0.85rem;" oninput="handleCustomInput(this, 'dosage')">
+                            <input type="text" class="form-control custom-input" placeholder="e.g. 250mg, 1 puff" style="display: none; margin-top: 0.3rem; font-size: 0.82rem;" oninput="handleCustomInput(this, 'dosage')">
                             <input type="hidden" name="med_dosage[]" class="final-dosage-val" required>
                         </div>
                         <div class="freq-wrap">
-                            <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Frequency</label>
-                            <select class="form-control med-freq-select" onchange="handleSelectChange(this, 'freq')" required>
+                            <label style="font-size: 0.74rem; color: var(--text-secondary); margin-bottom: 0.2rem;">Frequency</label>
+                            <select class="form-control med-freq-select" onchange="handleSelectChange(this, 'freq')" style="font-size: 0.85rem; padding: 0.45rem 0.6rem;" required>
                                 <option value="" disabled selected>Select frequency</option>
                                 {% for code, opt in frequency_options.items() %}
                                 <option value="{{ code }}">{{ opt.label }}</option>
                                 {% endfor %}
                                 <option value="__custom__">Custom...</option>
                             </select>
-                            <input type="text" class="form-control custom-input" placeholder="e.g. Every 8 hours" style="display: none; margin-top: 0.35rem; font-size: 0.85rem;" oninput="handleCustomInput(this, 'freq')">
+                            <input type="text" class="form-control custom-input" placeholder="e.g. Every 8 hours" style="display: none; margin-top: 0.3rem; font-size: 0.82rem;" oninput="handleCustomInput(this, 'freq')">
                             <input type="hidden" name="med_frequency[]" class="final-freq-val" required>
                         </div>
                         <div>
-                            <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Duration</label>
-                            <input type="text" name="med_duration[]" class="form-control" placeholder="e.g. 5 days" required>
+                            <label style="font-size: 0.74rem; color: var(--text-secondary); margin-bottom: 0.2rem;">Duration</label>
+                            <input type="text" name="med_duration[]" class="form-control" placeholder="e.g. 5 days" style="font-size: 0.85rem; padding: 0.45rem 0.6rem;" required>
                         </div>
                         <div>
-                            <label style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.25rem;">Instructions</label>
-                            <input type="text" name="med_instructions[]" class="form-control" placeholder="e.g. After food">
+                            <label style="font-size: 0.74rem; color: var(--text-secondary); margin-bottom: 0.2rem;">Instructions</label>
+                            <input type="text" name="med_instructions[]" class="form-control" placeholder="e.g. After food" style="font-size: 0.85rem; padding: 0.45rem 0.6rem;">
                         </div>
                         <div style="display: flex; align-items: flex-end; gap: 0.35rem;">
-                            <button type="button" class="btn btn-outline btn-sm" onclick="clearMedicationRow(this)" title="Clear this row's entered details" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); border-color: var(--card-border);">
+                            <button type="button" class="btn btn-outline btn-sm" onclick="clearMedicationRow(this)" title="Clear this row's entered details" style="padding: 0.45rem; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); border-color: var(--card-border);">
                                 <i class="ph-bold ph-arrow-counter-clockwise"></i>
                             </button>
-                            <button type="button" class="btn btn-outline btn-sm" onclick="removeMedicationRow('med-row-0')" title="Delete Medicine" style="padding: 0.55rem; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
+                            <button type="button" class="btn btn-outline btn-sm" onclick="removeMedicationRow('med-row-0')" title="Delete Medicine" style="padding: 0.45rem; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
                                 <i class="ph-bold ph-trash"></i>
                             </button>
                         </div>
@@ -223,23 +234,23 @@
             </div>
 
             <!-- Fast-Fill 1-Click Clinical Rx Presets Bar (Situated Under Prescribed Medicines) -->
-            <div style="margin-bottom: 2rem; background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1rem 1.25rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
-                    <span class="rx-presets-label" style="font-size: 0.82rem; font-weight: 650; color: var(--text-secondary); display: flex; align-items: center; gap: 0.4rem;">
+            <div style="margin-bottom: 0.85rem; background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 10px; padding: 0.65rem 0.85rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.45rem; flex-wrap: wrap; gap: 0.4rem;">
+                    <span class="rx-presets-label" style="font-size: 0.78rem; font-weight: 650; color: var(--text-secondary); display: flex; align-items: center; gap: 0.35rem;">
                         <i class="ph-bold ph-lightning" style="color: var(--accent);"></i> 1-Click Medication Presets:
                     </span>
-                    <div style="display: flex; gap: 0.4rem;">
-                        <button type="button" class="btn btn-outline btn-sm" onclick="saveCurrentFormAsPreset()" title="Save current medicine rows as a new preset" style="font-size: 0.75rem; padding: 0.25rem 0.6rem; color: var(--primary); border-color: rgba(13, 148, 136, 0.3);">
+                    <div style="display: flex; gap: 0.35rem;">
+                        <button type="button" class="btn btn-outline btn-sm" onclick="saveCurrentFormAsPreset()" title="Save current medicine rows as a new preset" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; color: var(--primary); border-color: rgba(13, 148, 136, 0.3);">
                             <i class="ph-bold ph-floppy-disk"></i> Save Current as Preset
                         </button>
-                        <button type="button" class="btn btn-primary btn-sm" onclick="openPresetModal()" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; background: var(--accent); border-color: var(--accent);">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="openPresetModal()" style="font-size: 0.72rem; padding: 0.2rem 0.55rem; background: var(--accent); border-color: var(--accent);">
                             <i class="ph-bold ph-plus"></i> + New Preset
                         </button>
                     </div>
                 </div>
 
                 <!-- Presets Chips Container (Built-in + Custom) -->
-                <div id="presets-chips-bar" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+                <div id="presets-chips-bar" style="display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center;">
                     <!-- Built-in Standard Presets -->
                     <button type="button" class="preset-chip" onclick="applyRxPreset('fever')">
                         🌡️ Cold & Fever (Dolo 650)
@@ -270,20 +281,25 @@
             </div>
 
             <!-- General Clinical Notes -->
-            <div class="form-group" style="margin-bottom: 2rem;">
-                <label for="instructions" style="font-size: 0.88rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.4rem; display: block;">
+            <div class="form-group" style="margin-bottom: 0.85rem;">
+                <label for="instructions" style="font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.25rem; display: block;">
                     Doctor Clinical Notes / Dietary Advice
                 </label>
-                <textarea id="instructions" name="instructions" class="form-control" rows="3" placeholder="e.g. Adequate rest, hydrate with warm water, avoid oily food. Review after 5 days if symptoms persist."></textarea>
+                <textarea id="instructions" name="instructions" class="form-control" rows="2" placeholder="e.g. Adequate rest, hydrate with warm water, avoid oily food. Review after 5 days if symptoms persist." style="font-size: 0.82rem; padding: 0.45rem 0.65rem;"></textarea>
             </div>
 
             <!-- Form Actions -->
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-top: 1px solid var(--card-border); padding-top: 1.5rem;">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="resetPrescriptionForm()">
-                    <i class="ph-bold ph-trash"></i> Clear Form
-                </button>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; border-top: 1px solid var(--card-border); padding-top: 0.75rem;">
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="resetPrescriptionForm()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">
+                        <i class="ph-bold ph-trash"></i> Clear Form
+                    </button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="closePrescriptionModal()" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">
+                        Cancel / Close
+                    </button>
+                </div>
                 <div style="display: flex; gap: 0.75rem; align-items: center;">
-                    <button type="submit" class="btn btn-primary" id="btn-submit-rx" style="padding: 0.75rem 2rem; font-weight: 650; box-shadow: 0 4px 15px rgba(13, 148, 136, 0.25); display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <button type="submit" class="btn btn-primary" id="btn-submit-rx" style="padding: 0.55rem 1.6rem; font-size: 0.88rem; font-weight: 650; box-shadow: 0 4px 15px rgba(13, 148, 136, 0.25); display: inline-flex; align-items: center; gap: 0.45rem;">
                         <i class="ph-bold ph-check-circle"></i> Generate Digital Prescription & QR Link
                     </button>
                 </div>
@@ -291,10 +307,375 @@
         </form>
     </div>
 </div>
+
+<!-- ================= DOCTOR WORKSPACE: INSTRUCTIONS GUIDE (Initial Page Display) ================= -->
+<div class="card" style="padding: 2rem 2.25rem; margin-bottom: 2rem; border-top: 4px solid var(--primary); animation: fadeIn 0.3s ease;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            <h2 style="font-size: 1.45rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.6rem;">
+                <i class="ph-bold ph-compass" style="color: var(--primary);"></i> Doctor Portal Operations & Clinical Instructions Guide
+            </h2>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); margin: 0.35rem 0 0 0;">
+                Simple and easily understandable instructions on how to operate this clinician portal.
+            </p>
+        </div>
+        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary" onclick="openPrescriptionModal()" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 650; padding: 0.55rem 1.25rem;">
+                <i class="ph-bold ph-plus-circle"></i> Create New Prescription
+            </button>
+            <button type="button" class="btn btn-outline" onclick="openHistoryModal()" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; padding: 0.55rem 1.15rem;">
+                <i class="ph-bold ph-clock-counter-clockwise"></i> View Prescription History (<span id="guide-rx-count">{{ total_rx }}</span>)
+            </button>
+        </div>
+    </div>
+
+    <!-- Operations Instructions 6-Card Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 1.75rem;">
+        <!-- Card 1: Fast Prescription Generation -->
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(13, 148, 136, 0.12); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    <i class="ph-bold ph-prescription"></i>
+                </div>
+                <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">1. Fast Digital Prescriptions</h3>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">
+                Click <strong>"Create New Prescription"</strong> to launch the Creator in an overlay popup modal. Enter registered patient username for instant profile autofill, configure medications with standardized dosage/frequency selectors, or click <strong>1-Click Clinical Presets</strong> (Fever, Antibiotics, GERD, Allergy, BP) to populate complete regimens instantly.
+            </p>
+        </div>
+
+        <!-- Card 2: Overlay Modal Workflow -->
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(59, 130, 246, 0.12); color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    <i class="ph-bold ph-browsers"></i>
+                </div>
+                <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">2. Overlay Modal Workflow</h3>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">
+                The prescription creator opens in a focused overlay modal without obstructing your workspace view. You can clear fields, apply customized presets, submit prescriptions seamlessly via AJAX, and immediately issue consecutive prescriptions for waiting patients without full page refreshes.
+            </p>
+        </div>
+
+        <!-- Card 3: Instant Push & QR Code -->
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(16, 185, 129, 0.12); color: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    <i class="ph-bold ph-qr-code"></i>
+                </div>
+                <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">3. Real-Time Patient Push & QR</h3>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">
+                Upon submission, prescriptions are pushed immediately to the recipient patient's portal with an audible chime and real-time alert banner. Patients can access their prescription, import doses directly into their Medi-Tracker adherence schedule, or broadcast for pharmacy quotes.
+            </p>
+        </div>
+
+        <!-- Card 4: Patients History & Accurate Timestamps -->
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(245, 158, 11, 0.12); color: var(--warning); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    <i class="ph-bold ph-clock-counter-clockwise"></i>
+                </div>
+                <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">4. Patients History & Time Audit</h3>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">
+                Every issued prescription is archived with the verified date and accurate time of issuance (e.g., <strong>11 Oct 2026, 08:42 PM</strong>). Filter between <strong>All</strong>, <strong>Pending Claim</strong>, and <strong>Dispensed at Pharmacy</strong> with real-time text search across patient names, codes, and medicines.
+            </p>
+        </div>
+
+        <!-- Card 5: Privacy-Preserving Broadcasting -->
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(139, 92, 246, 0.12); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    <i class="ph-bold ph-lock-key"></i>
+                </div>
+                <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">5. Privacy-Preserving Broadcasting</h3>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">
+                Full clinical records and notes are accessible strictly by doctor and patient. When patients broadcast for pharmacy quotes or use Quick Checkout, only prescribed medicines and quantities are shared. Doctor clinical notes and confidential contact records remain completely private.
+            </p>
+        </div>
+
+        <!-- Card 6: Clinician Badges & Credentials -->
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem;">
+            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
+                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(236, 72, 153, 0.12); color: #ec4899; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+                    <i class="ph-bold ph-identification-badge"></i>
+                </div>
+                <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">6. Credentials & Badges</h3>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">
+                Maintain verified credentials including your Medical Registration Number, Department Specialty, and Healthcare Facility Affiliation. Credentials sync to your banner and all officially generated prescription sheets automatically.
+            </p>
+        </div>
+    </div>
+
+    <!-- Hidden guide clock badge for any legacy script reference -->
+    <span id="guide-live-clock-badge" style="display: none;"><span id="guide-clock-display"></span></span>
+
+    <!-- Quick Navigation Toolbar on Initial Page -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1.25rem; border-top: 1px solid var(--card-border); flex-wrap: wrap; gap: 1rem;">
+        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+            <button type="button" class="btn btn-primary btn-sm" onclick="openPrescriptionModal()" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                <i class="ph-bold ph-plus-circle"></i> Create New Prescription
+            </button>
+            <button type="button" class="btn btn-outline btn-sm" onclick="openHistoryModal()" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                <i class="ph-bold ph-clock-counter-clockwise"></i> View Prescription History (<span id="guide-rx-count-bottom">{{ total_rx }}</span>)
+            </button>
+            <a href="{{ url_for('settings') }}" class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                <i class="ph-bold ph-pencil-simple"></i> Edit Credentials
+            </a>
+        </div>
+        <div style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.4rem;">
+            <span class="live-pulse"></span> Doctor Workspace Active &bull; Tamper-Evident QR Enabled
+        </div>
+    </div>
+</div>
+
+<!-- ================= OVERLAY POPUP MODAL: PRESCRIPTION HISTORY ================= -->
+<div id="prescription-history-modal" style="display: none; position: fixed; inset: 0; width: 100vw; height: 100vh; background: rgba(9, 10, 15, 0.88); backdrop-filter: blur(8px); z-index: 100000; overflow-y: auto; overflow-x: auto; padding: 1.25rem 1rem; box-sizing: border-box; align-items: center; justify-content: center;">
+    <div class="card" id="patients-history-section" style="max-width: 1120px; width: 96%; max-height: calc(100vh - 2.5rem); margin: auto; overflow-y: auto; overflow-x: auto; padding: 1.75rem 2rem; position: relative; border-top: 4px solid var(--secondary); border-radius: 14px; box-shadow: 0 25px 60px rgba(0,0,0,0.6);">
+        <!-- Close (X) button -->
+        <button type="button" onclick="closeHistoryModal()" style="position: absolute; top: 1.25rem; right: 1.5rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.5rem; transition: color 0.2s; line-height: 1;" title="Close Modal (Esc)">
+            <i class="ph-bold ph-x"></i>
+        </button>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem; padding-right: 2.5rem;">
+            <div>
+                <h2 style="font-size: 1.45rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.6rem;">
+                    <i class="ph-bold ph-clock-counter-clockwise" style="color: var(--secondary);"></i> Patients Prescription History &bull; Recent Prescriptions
+                </h2>
+                <p style="font-size: 0.88rem; color: var(--text-secondary); margin: 0.35rem 0 0 0;">
+                    Complete record of patients who received digital prescriptions from your credentials (Issued Prescriptions Archive), with verified issuance date and time.
+                </p>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="closeHistoryModal(); openPrescriptionModal();" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                <i class="ph-bold ph-plus-circle"></i> Write New Prescription
+            </button>
+        </div>
+
+        <!-- Search and Filter Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+            <div style="flex: 1; min-width: 260px; max-width: 480px; position: relative;">
+                <input type="text" id="history-search-input" class="form-control" placeholder="Search patient name, username, code, medicines..." oninput="filterHistoryCards()" style="padding-left: 2.25rem;">
+                <i class="ph-bold ph-magnifying-glass" style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: var(--text-secondary); pointer-events: none;"></i>
+            </div>
+
+            <div class="filter-chips" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <button type="button" class="filter-chip active" id="chip-filter-all" onclick="setHistoryFilter('all', this)">
+                    All Prescriptions (<span id="count-chip-all">{{ total_rx }}</span>)
+                </button>
+                <button type="button" class="filter-chip" id="chip-filter-pending" onclick="setHistoryFilter('pending', this)">
+                    ⏳ Pending Claim (<span id="count-chip-pending">{{ active_rx }}</span>)
+                </button>
+                <button type="button" class="filter-chip" id="chip-filter-dispensed" onclick="setHistoryFilter('dispensed', this)">
+                    ✅ Dispensed (<span id="count-chip-dispensed">{{ dispensed_rx }}</span>)
+                </button>
+            </div>
+        </div>
+
+        <!-- History Grid Cards -->
+        <div id="doctor-history-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.5rem;">
+            {% if prescriptions %}
+                {% for rx in prescriptions %}
+                    <div class="rx-full-card history-card" id="history-card-{{ rx.id }}" data-search="{{ rx.patient_name|lower }} {{ rx.patient.username|lower if rx.patient else '' }} {{ rx.uuid|lower }} {% for item in rx.items %}{{ item.medicine_name|lower }} {% endfor %}" data-status="{% if rx.is_claimed %}dispensed{% else %}pending{% endif %}" style="background: var(--card-bg); border: 1.5px solid var(--card-border); border-radius: 14px; padding: 1.4rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.25s ease; box-shadow: 0 2px 10px rgba(0,0,0,0.03);">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; gap: 0.5rem;">
+                                <div>
+                                    <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
+                                        {{ rx.patient_name }}
+                                        {% if rx.patient %}
+                                            <span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">(@{{ rx.patient.username }})</span>
+                                        {% endif %}
+                                    </div>
+                                    <div style="font-size: 0.78rem; color: var(--text-secondary); font-family: monospace; margin-top: 0.15rem;">
+                                        Code: #{{ rx.uuid[:8] }}
+                                    </div>
+                                </div>
+                                <span class="badge {% if rx.is_claimed %}badge-success{% else %}badge-warning{% endif %}" style="font-size: 0.72rem; text-transform: none; padding: 0.25rem 0.6rem;">
+                                    {% if rx.is_claimed %}
+                                        <i class="ph-bold ph-check-circle"></i> Dispensed
+                                    {% else %}
+                                        <i class="ph-bold ph-clock"></i> Pending Claim
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <!-- Date & Time Accurate Display -->
+                            <div style="display: flex; gap: 0.75rem; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem; flex-wrap: wrap;">
+                                <span style="color: var(--primary); font-weight: 600;">
+                                    <i class="ph-bold ph-calendar"></i> {{ rx.created_at.strftime('%d %b %Y, %I:%M %p') }}
+                                </span>
+                                {% if rx.patient_age %}<span><i class="ph-bold ph-user"></i> Age: {{ rx.patient_age }}</span>{% endif %}
+                                {% if rx.patient_contact %}<span><i class="ph-bold ph-phone"></i> {{ rx.patient_contact }}</span>{% endif %}
+                            </div>
+
+                            <!-- Prescribed Medicines List -->
+                            <div style="background: rgba(13, 148, 136, 0.04); border: 1px solid rgba(13, 148, 136, 0.15); border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1rem;">
+                                <div style="font-size: 0.78rem; font-weight: 650; color: var(--primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+                                    <i class="ph-bold ph-pill"></i> Prescribed Regimen ({{ rx.items|length }} item{% if rx.items|length != 1 %}s{% endif %}):
+                                </div>
+                                <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                                    {% for item in rx.items %}
+                                        <div style="font-size: 0.82rem; color: var(--text-primary); display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem;">
+                                            <span><strong>{{ item.medicine_name }}</strong> ({{ resolve_dose(item.dosage) }})</span>
+                                            <span style="font-size: 0.75rem; color: var(--text-secondary); font-style: italic;">{{ resolve_freq(item.frequency) }} &bull; {{ item.duration }}</span>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            {% if rx.instructions %}
+                                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem; background: rgba(255,255,255,0.02); border-radius: 8px; padding: 0.6rem 0.8rem; border-left: 3px solid var(--card-border);">
+                                    <strong style="color: var(--text-primary);">Advice:</strong> {{ rx.instructions }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div style="display: flex; gap: 0.6rem; border-top: 1px solid var(--card-border); padding-top: 1rem; margin-top: 0.5rem;">
+                            <a href="{{ url_for('view_prescription', rx_uuid=rx.uuid) }}" target="_blank" class="btn btn-primary btn-sm" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                                <i class="ph-bold ph-qr-code"></i> View Sheet / QR
+                            </a>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="deletePrescription({{ rx.id }}, '{{ rx.patient_name|replace("'", "\\'") }}')" title="Delete prescription" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3); padding: 0.35rem 0.6rem;">
+                                <i class="ph-bold ph-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div id="history-empty-placeholder" style="grid-column: 1 / -1; text-align: center; padding: 4rem 1rem; color: var(--text-secondary);">
+                    <i class="ph-bold ph-prescription" style="font-size: 3.5rem; margin-bottom: 1rem; color: var(--card-border); opacity: 0.6;"></i>
+                    <h4 style="color: var(--text-primary); margin-bottom: 0.5rem; font-size: 1.15rem;">No Prescriptions Issued Yet</h4>
+                    <p style="font-size: 0.9rem; margin-bottom: 1.5rem;">Prescriptions you generate will be archived here chronologically with verified timestamps.</p>
+                    <button type="button" class="btn btn-primary" onclick="closeHistoryModal(); openPrescriptionModal();" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                        <i class="ph-bold ph-plus-circle"></i> Create First Prescription
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Modal Footer -->
+        <div style="display: flex; justify-content: flex-end; margin-top: 1.75rem; padding-top: 1rem; border-top: 1px solid var(--card-border);">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeHistoryModal()" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                <i class="ph-bold ph-x"></i> Close History
+            </button>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
+    // Live Clock Ticker for Workspace and Modal
+    function updateLiveClock() {
+        const now = new Date();
+        const formatted = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+        const g = document.getElementById('guide-clock-display');
+        if (g) g.textContent = formatted;
+        const m = document.getElementById('modal-clock-text');
+        if (m) m.textContent = formatted;
+    }
+    setInterval(updateLiveClock, 1000);
+    updateLiveClock();
+
+    // Prescription Overlay Modal Open / Close
+    function openPrescriptionModal() {
+        const modal = document.getElementById('prescription-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                const uInput = document.getElementById('patient_username');
+                if (uInput) uInput.focus();
+            }, 100);
+        }
+    }
+
+    function closePrescriptionModal() {
+        const modal = document.getElementById('prescription-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    // How to Operate Portal Guide Modal (legacy helper)
+    function openGuideModal() {
+        const modal = document.getElementById('how-to-operate-modal');
+        if (modal) modal.style.display = 'flex';
+    }
+
+    function closeGuideModal() {
+        const modal = document.getElementById('how-to-operate-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    // Prescription History Overlay Modal Open / Close
+    function openHistoryModal() {
+        const modal = document.getElementById('prescription-history-modal');
+        if (modal) {
+            modal.style.display = 'flex';
+            setTimeout(() => {
+                const sInput = document.getElementById('history-search-input');
+                if (sInput) sInput.focus();
+            }, 100);
+        }
+    }
+
+    function closeHistoryModal() {
+        const modal = document.getElementById('prescription-history-modal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+    }
+
+    // Backdrop click and ESC key listeners
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closePrescriptionModal();
+            closePresetModal();
+            closeGuideModal();
+            closeHistoryModal();
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        const rxModal = document.getElementById('prescription-modal');
+        if (rxModal && e.target === rxModal) {
+            closePrescriptionModal();
+        }
+        const presetModal = document.getElementById('new-preset-modal');
+        if (presetModal && e.target === presetModal) {
+            closePresetModal();
+        }
+        const guideModal = document.getElementById('how-to-operate-modal');
+        if (guideModal && e.target === guideModal) {
+            closeGuideModal();
+        }
+        const histModal = document.getElementById('prescription-history-modal');
+        if (histModal && e.target === histModal) {
+            closeHistoryModal();
+        }
+    });
+
+    // Auto-open history modal if linked directly via hash
+    if (window.location.hash === '#patients-history-section' || window.location.hash === '#prescription-history') {
+        setTimeout(openHistoryModal, 150);
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function escapeQuote(str) {
+        if (!str) return '';
+        return String(str).replace(/'/g, "\\'");
+    }
+
     let medRowCount = 1;
 
     // Standardized options injected from server
@@ -704,23 +1085,26 @@
                                 <i class="ph-bold ph-check-circle"></i> Prescription Generated Successfully!
                             </div>
                             <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                                Digital prescription issued for <strong>${data.patient_name}</strong> and transmitted directly to their patient portal in real time.
+                                Digital prescription issued for <strong>${escapeHtml(data.patient_name)}</strong> and transmitted directly to their patient portal in real time.
                             </div>
                         </div>
-                        <div style="display: flex; gap: 0.6rem; align-items: center;">
+                        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
                             <a href="${data.view_url}" target="_blank" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem;">
                                 <i class="ph-bold ph-qr-code"></i> View Full Sheet / QR
                             </a>
                             <button type="button" class="btn btn-primary btn-sm" onclick="resetPrescriptionForm()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
                                 <i class="ph-bold ph-plus-circle"></i> Create Another Prescription
                             </button>
+                            <button type="button" class="btn btn-outline btn-sm" onclick="closePrescriptionModal()" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                                <i class="ph-bold ph-x"></i> Close
+                            </button>
                         </div>
                     </div>
                 `;
                 alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-                // Append new card to companion panel
-                appendCompanionPrescriptionCard(data);
+                // Append new card directly into Patients History grid
+                appendHistoryPrescriptionCard(data);
             } else {
                 alert(data.message || "Error generating prescription");
             }
@@ -731,50 +1115,97 @@
         });
     }
 
-    function appendCompanionPrescriptionCard(data) {
-        // Increment top banner prescription counter
-        const countSpan = document.getElementById('banner-rx-count');
-        if (countSpan) {
-            const current = parseInt(countSpan.textContent || '0', 10);
-            countSpan.textContent = current + 1;
-        }
+    function appendHistoryPrescriptionCard(data) {
+        // Increment banner count, guide counts and filter chips count
+        const bannerCount = document.getElementById('banner-rx-count');
+        if (bannerCount) bannerCount.textContent = parseInt(bannerCount.textContent || '0', 10) + 1;
+        const guideCount = document.getElementById('guide-rx-count');
+        if (guideCount) guideCount.textContent = parseInt(guideCount.textContent || '0', 10) + 1;
+        const guideBottomCount = document.getElementById('guide-rx-count-bottom');
+        if (guideBottomCount) guideBottomCount.textContent = parseInt(guideBottomCount.textContent || '0', 10) + 1;
+        const allCount = document.getElementById('count-chip-all');
+        if (allCount) allCount.textContent = parseInt(allCount.textContent || '0', 10) + 1;
+        const pendingCount = document.getElementById('count-chip-pending');
+        if (pendingCount) pendingCount.textContent = parseInt(pendingCount.textContent || '0', 10) + 1;
 
-        const list = document.getElementById('companion-rx-list');
-        if (!list) return;
-        const emptyMsg = list.querySelector('div[style*="text-align: center"]');
-        if (emptyMsg) emptyMsg.remove();
+        const grid = document.getElementById('doctor-history-grid');
+        if (!grid) return;
+        const emptyPlaceholder = document.getElementById('history-empty-placeholder');
+        if (emptyPlaceholder) emptyPlaceholder.remove();
+
+        const itemsList = data.items || [];
+        const itemsSearch = itemsList.map(i => (i.name || '').toLowerCase()).join(' ');
+        const searchAttr = `${(data.patient_name || '').toLowerCase()} ${(data.patient_username || '').toLowerCase()} ${(data.uuid || '').toLowerCase()} ${itemsSearch}`;
+
+        const itemsHtml = itemsList.map(item => `
+            <div style="font-size: 0.82rem; color: var(--text-primary); display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem;">
+                <span><strong>${escapeHtml(item.name)}</strong> (${escapeHtml(item.dosage_label || item.dosage_code || '')})</span>
+                <span style="font-size: 0.75rem; color: var(--text-secondary); font-style: italic;">${escapeHtml(item.freq_label || item.freq_code || '')} &bull; ${escapeHtml(item.duration || '')}</span>
+            </div>
+        `).join('');
 
         const card = document.createElement('div');
-        card.className = 'rx-compact-item';
-        card.id = `comp-rx-${data.id}`;
-        card.setAttribute('data-search', `${data.patient_name.toLowerCase()} ${data.uuid.toLowerCase()}`);
+        card.className = 'rx-full-card history-card';
+        card.id = `history-card-${data.id}`;
+        card.setAttribute('data-search', searchAttr);
+        card.setAttribute('data-status', 'pending');
+        card.style = 'background: var(--card-bg); border: 1.5px solid var(--primary); border-radius: 14px; padding: 1.4rem; display: flex; flex-direction: column; justify-content: space-between; transition: all 0.25s ease; box-shadow: 0 4px 18px rgba(13, 148, 136, 0.15); animation: fadeIn 0.4s ease;';
+
         card.innerHTML = `
-            <div class="rx-compact-header">
-                <div>
-                    <div style="font-weight: 650; font-size: 0.95rem; color: var(--text-primary);">
-                        ${data.patient_name}
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.75rem; gap: 0.5rem;">
+                    <div>
+                        <div style="font-weight: 700; font-size: 1.15rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.4rem;">
+                            ${escapeHtml(data.patient_name)}
+                            ${data.patient_username ? `<span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500;">(@${escapeHtml(data.patient_username)})</span>` : ''}
+                        </div>
+                        <div style="font-size: 0.78rem; color: var(--text-secondary); font-family: monospace; margin-top: 0.15rem;">
+                            Code: #${data.uuid.substring(0, 8)}
+                        </div>
                     </div>
-                    <div style="font-size: 0.74rem; color: var(--text-secondary); font-family: monospace;">
-                        #${data.uuid.substring(0, 8)} &bull; Just now
+                    <span class="badge badge-warning" style="font-size: 0.72rem; text-transform: none; padding: 0.25rem 0.6rem;">
+                        <i class="ph-bold ph-clock"></i> Pending Claim
+                    </span>
+                </div>
+
+                <!-- Date & Time Accurate Display -->
+                <div style="display: flex; gap: 0.75rem; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem; flex-wrap: wrap;">
+                    <span style="color: var(--primary); font-weight: 600;">
+                        <i class="ph-bold ph-calendar"></i> ${escapeHtml(data.created_at_fmt || 'Just now')}
+                    </span>
+                    ${data.patient_age ? `<span><i class="ph-bold ph-user"></i> Age: ${escapeHtml(String(data.patient_age))}</span>` : ''}
+                    ${data.patient_contact ? `<span><i class="ph-bold ph-phone"></i> ${escapeHtml(String(data.patient_contact))}</span>` : ''}
+                </div>
+
+                <!-- Prescribed Medicines List -->
+                <div style="background: rgba(13, 148, 136, 0.04); border: 1px solid rgba(13, 148, 136, 0.15); border-radius: 10px; padding: 0.85rem 1rem; margin-bottom: 1rem;">
+                    <div style="font-size: 0.78rem; font-weight: 650; color: var(--primary); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.35rem;">
+                        <i class="ph-bold ph-pill"></i> Prescribed Regimen (${itemsList.length} item${itemsList.length !== 1 ? 's' : ''}):
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 0.4rem;">
+                        ${itemsHtml}
                     </div>
                 </div>
-                <span class="badge badge-warning" style="font-size: 0.68rem; padding: 0.15rem 0.4rem; text-transform: none;">
-                    Pending
-                </span>
+
+                ${data.instructions ? `
+                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 1rem; background: rgba(255,255,255,0.02); border-radius: 8px; padding: 0.6rem 0.8rem; border-left: 3px solid var(--card-border);">
+                        <strong style="color: var(--text-primary);">Advice:</strong> ${escapeHtml(data.instructions)}
+                    </div>
+                ` : ''}
             </div>
-            <div style="font-size: 0.76rem; color: var(--text-secondary);">
-                <i class="ph-bold ph-check" style="color: var(--secondary);"></i> Generated Just Now
-            </div>
-            <div class="rx-compact-actions">
-                <a href="${data.view_url}" target="_blank" class="btn btn-outline btn-sm" style="flex: 1; font-size: 0.75rem; padding: 0.25rem 0.5rem; text-align: center;">
-                    <i class="ph-bold ph-qr-code"></i> View / QR
+
+            <div style="display: flex; gap: 0.6rem; border-top: 1px solid var(--card-border); padding-top: 1rem; margin-top: 0.5rem;">
+                <a href="${data.view_url}" target="_blank" class="btn btn-primary btn-sm" style="flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                    <i class="ph-bold ph-qr-code"></i> View Sheet / QR
                 </a>
-                <button type="button" class="btn btn-outline btn-sm" onclick="deletePrescription(${data.id}, '${data.patient_name.replace(/'/g, "\\'")}')" title="Delete prescription" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3); font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                <button type="button" class="btn btn-outline btn-sm" onclick="deletePrescription(${data.id}, '${escapeQuote(data.patient_name)}')" title="Delete prescription" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3); padding: 0.35rem 0.6rem;">
                     <i class="ph-bold ph-trash"></i>
                 </button>
             </div>
         `;
-        list.prepend(card);
+
+        grid.prepend(card);
+        filterHistoryCards();
     }
 
     function deletePrescription(rxId, patientName) {
@@ -790,17 +1221,49 @@
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                const countSpan = document.getElementById('banner-rx-count');
-                if (countSpan) {
-                    const current = Math.max(0, parseInt(countSpan.textContent || '1', 10) - 1);
-                    countSpan.textContent = current;
-                }
-                const card = document.getElementById(`comp-rx-${rxId}`);
+                const card = document.getElementById(`history-card-${rxId}`);
                 if (card) {
+                    const status = card.getAttribute('data-status');
                     card.style.transition = 'all 0.3s ease';
                     card.style.opacity = '0';
                     card.style.transform = 'scale(0.9)';
-                    setTimeout(() => card.remove(), 300);
+                    setTimeout(() => {
+                        card.remove();
+
+                        // Decrement counters
+                        const bannerCount = document.getElementById('banner-rx-count');
+                        if (bannerCount) bannerCount.textContent = Math.max(0, parseInt(bannerCount.textContent || '1', 10) - 1);
+                        const guideCount = document.getElementById('guide-rx-count');
+                        if (guideCount) guideCount.textContent = Math.max(0, parseInt(guideCount.textContent || '1', 10) - 1);
+                        const guideBottomCount = document.getElementById('guide-rx-count-bottom');
+                        if (guideBottomCount) guideBottomCount.textContent = Math.max(0, parseInt(guideBottomCount.textContent || '1', 10) - 1);
+                        const allCount = document.getElementById('count-chip-all');
+                        if (allCount) allCount.textContent = Math.max(0, parseInt(allCount.textContent || '1', 10) - 1);
+
+                        if (status === 'dispensed') {
+                            const dispensedCount = document.getElementById('count-chip-dispensed');
+                            if (dispensedCount) dispensedCount.textContent = Math.max(0, parseInt(dispensedCount.textContent || '1', 10) - 1);
+                        } else {
+                            const pendingCount = document.getElementById('count-chip-pending');
+                            if (pendingCount) pendingCount.textContent = Math.max(0, parseInt(pendingCount.textContent || '1', 10) - 1);
+                        }
+
+                        // Check if grid is empty
+                        const remaining = document.querySelectorAll('#doctor-history-grid .history-card');
+                        if (remaining.length === 0) {
+                            const grid = document.getElementById('doctor-history-grid');
+                            grid.innerHTML = `
+                                <div id="history-empty-placeholder" style="grid-column: 1 / -1; text-align: center; padding: 4rem 1rem; color: var(--text-secondary);">
+                                    <i class="ph-bold ph-prescription" style="font-size: 3.5rem; margin-bottom: 1rem; color: var(--card-border); opacity: 0.6;"></i>
+                                    <h4 style="color: var(--text-primary); margin-bottom: 0.5rem; font-size: 1.15rem;">No Prescriptions Issued Yet</h4>
+                                    <p style="font-size: 0.9rem; margin-bottom: 1.5rem;">Prescriptions you generate will be archived here chronologically with verified timestamps.</p>
+                                    <button type="button" class="btn btn-primary" onclick="openPrescriptionModal()" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                                        <i class="ph-bold ph-plus-circle"></i> Create First Prescription
+                                    </button>
+                                </div>
+                            `;
+                        }
+                    }, 300);
                 }
             } else {
                 alert(data.message || 'Error deleting prescription');
@@ -808,15 +1271,49 @@
         });
     }
 
-    function filterCompanionRx() {
-        const input = document.getElementById('companion-search');
-        if (!input) return;
-        const query = (input.value || '').toLowerCase().trim();
-        const items = document.querySelectorAll('#companion-rx-list .rx-compact-item');
-        items.forEach(it => {
-            const str = it.getAttribute('data-search') || '';
-            it.style.display = (!query || str.includes(query)) ? 'flex' : 'none';
+    // Patients History Filtering & Searching
+    let currentHistoryFilter = 'all';
+
+    function setHistoryFilter(status, btn) {
+        currentHistoryFilter = status;
+        document.querySelectorAll('.filter-chips .filter-chip').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        filterHistoryCards();
+    }
+
+    function filterHistoryCards() {
+        const query = (document.getElementById('history-search-input')?.value || '').toLowerCase().trim();
+        const cards = document.querySelectorAll('#doctor-history-grid .history-card');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const searchData = (card.getAttribute('data-search') || '').toLowerCase();
+            const cardStatus = card.getAttribute('data-status') || '';
+
+            const matchesQuery = !query || searchData.includes(query);
+            const matchesStatus = (currentHistoryFilter === 'all') || (cardStatus === currentHistoryFilter);
+
+            if (matchesQuery && matchesStatus) {
+                card.style.display = 'flex';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
         });
+
+        let noResultsEl = document.getElementById('history-no-filter-results');
+        if (visibleCount === 0 && cards.length > 0) {
+            if (!noResultsEl) {
+                noResultsEl = document.createElement('div');
+                noResultsEl.id = 'history-no-filter-results';
+                noResultsEl.style = 'grid-column: 1 / -1; text-align: center; padding: 2.5rem 1rem; color: var(--text-secondary);';
+                noResultsEl.innerHTML = `<i class="ph-bold ph-magnifying-glass" style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.6;"></i><div>No prescriptions matching your search criteria.</div>`;
+                document.getElementById('doctor-history-grid').appendChild(noResultsEl);
+            }
+            noResultsEl.style.display = 'block';
+        } else if (noResultsEl) {
+            noResultsEl.style.display = 'none';
+        }
     }
 
     // Patient Autofill

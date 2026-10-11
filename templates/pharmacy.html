@@ -245,7 +245,7 @@
                         <div>
                             <div style="margin-bottom: 1rem;">
                                 <h3 style="font-size: 1.1rem; margin: 0; display: flex; gap: 0.5rem; align-items: center; width: 100%;">
-                                    Prescription #{{ info.broadcast.prescription.uuid[:8] }}...
+                                    Order Ref #{{ info.broadcast.prescription.uuid[:8] }}
                                     {% if info.status_calc == 'available' %}
                                         <span class="badge badge-success">In Stock</span>
                                     {% elif info.status_calc == 'partial' %}
@@ -253,12 +253,9 @@
                                     {% else %}
                                         <span class="badge badge-danger">Out of Stock</span>
                                     {% endif %}
-                                    <a href="{{ url_for('view_prescription', rx_uuid=info.broadcast.prescription.uuid) }}" target="_blank" style="margin-left: auto; font-size: 0.8rem; color: var(--secondary); display: inline-flex; align-items: center; gap: 0.25rem; text-decoration: none;" title="View official prescription sheet">
-                                        <i class="ph-bold ph-eye"></i> View Full Sheet
-                                    </a>
                                 </h3>
-                                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                                    Patient: <strong>{{ info.broadcast.prescription.patient_name }}</strong> (Age: {{ info.broadcast.prescription.patient_age or 'N/A' }}) | Request Sent: {{ info.broadcast.created_at.strftime('%d %b %Y, %I:%M %p') }}
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.35rem;">
+                                    <i class="ph-bold ph-shield-check" style="color: var(--secondary);"></i> Verified Medication Fulfillment Request &bull; Request Sent: <strong>{{ info.broadcast.created_at.strftime('%d %b %Y, %I:%M %p') }}</strong>
                                 </p>
                             </div>
                             
@@ -394,17 +391,19 @@
                 <div>
                     <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.35rem;">
                         <span class="badge badge-success" style="font-size: 0.75rem; text-transform: none;">
-                            <i class="ph-bold ph-check-circle"></i> Digital Prescription Scanned
+                            <i class="ph-bold ph-check-circle"></i> Quick Checkout QR Verified
                         </span>
                         <span style="font-family: monospace; font-size: 0.85rem; color: var(--text-secondary);" id="scanned-rx-code"></span>
                     </div>
-                    <h3 style="font-size: 1.2rem; color: var(--text-primary); margin: 0 0 0.35rem 0;" id="scanned-rx-patient"></h3>
+                    <h3 style="font-size: 1.15rem; color: var(--text-primary); margin: 0 0 0.35rem 0;" id="scanned-rx-patient">
+                        Medication Dispensing Order
+                    </h3>
                     <div style="font-size: 0.85rem; color: var(--text-secondary);" id="scanned-rx-meta"></div>
-                    <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.35rem; font-style: italic;" id="scanned-rx-notes"></div>
+                    <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.35rem;" id="scanned-rx-notes"></div>
                 </div>
                 <div style="display: flex; gap: 0.5rem; align-items: center;">
                     <a href="#" id="scanned-rx-link" target="_blank" class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem;">
-                        <i class="ph-bold ph-eye"></i> View Full Sheet
+                        <i class="ph-bold ph-receipt"></i> Dispensing Slip
                     </a>
                     <button type="button" class="btn btn-outline btn-sm" onclick="clearScannedPrescription()" title="Clear scanned prescription" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.3);">
                         <i class="ph-bold ph-x"></i> Clear
@@ -776,17 +775,13 @@
                     
                     const rxCard = document.getElementById('scanned-rx-card');
                     rxCard.style.display = 'block';
-                    document.getElementById('scanned-rx-code').textContent = `Prescription #${uuid.substring(0, 8)}`;
-                    document.getElementById('scanned-rx-patient').textContent = `Patient: ${data.patient_name}`;
+                    document.getElementById('scanned-rx-code').textContent = `Order Ref #${uuid.substring(0, 8)}`;
+                    document.getElementById('scanned-rx-patient').textContent = `Medication Dispensing Order (#${uuid.substring(0, 8)})`;
                     document.getElementById('scanned-rx-meta').innerHTML = `
-                        Age: <strong>${data.patient_age || 'N/A'}</strong> &bull; Contact: <strong>${data.patient_contact || 'N/A'}</strong> &bull; Prescribed Medicines: <strong>${data.items.length} detected</strong>
+                        Date & Time Issued: <strong>${data.created_at || 'Verified'}</strong> &bull; Prescribed Medicines: <strong>${data.items.length} items loaded for checkout</strong>
                     `;
-                    if (data.instructions) {
-                        document.getElementById('scanned-rx-notes').textContent = `Doctor Advice: "${data.instructions}"`;
-                    } else {
-                        document.getElementById('scanned-rx-notes').textContent = '';
-                    }
-                    document.getElementById('scanned-rx-link').href = `/prescription/view/${uuid}`;
+                    document.getElementById('scanned-rx-notes').textContent = '';
+                    document.getElementById('scanned-rx-link').href = `/prescription/dispense/${uuid}`;
 
                     // Load EVERY prescribed medicine into an equal slot!
                     const container = document.getElementById('checkout-slots-container');
@@ -823,9 +818,9 @@
                     resultDiv.innerHTML = `
                         <i class="ph-bold ph-check-circle" style="font-size: 1.4rem;"></i>
                         <div>
-                            <strong>${data.items.length} Prescribed Medicine(s) Detected!</strong>
+                            <strong>${data.items.length} Prescribed Medicine(s) Loaded for Quick Checkout!</strong>
                             <div style="font-size: 0.85rem; margin-top: 0.25rem;">
-                                Every item from patient <strong>${data.patient_name}</strong>'s prescription has been allocated an equal slot below. Verify inventory and complete checkout.
+                                Every item from Order Ref #${uuid.substring(0, 8)} has been allocated an equal slot below. Verify inventory and complete checkout.
                             </div>
                         </div>
                     `;
@@ -1259,14 +1254,11 @@
                     <div>
                         <div style="margin-bottom: 1rem;">
                             <h3 style="font-size: 1.1rem; margin: 0; display: flex; gap: 0.5rem; align-items: center; width: 100%;">
-                                Prescription #${info.rx_uuid ? info.rx_uuid.substring(0,8) : ''}...
+                                Order Ref #${info.rx_uuid ? info.rx_uuid.substring(0,8) : ''}
                                 ${statusBadge}
-                                <a href="/prescription/view/${info.rx_uuid}" target="_blank" style="margin-left: auto; font-size: 0.8rem; color: var(--secondary); display: inline-flex; align-items: center; gap: 0.25rem; text-decoration: none;" title="View official prescription sheet">
-                                    <i class="ph-bold ph-eye"></i> View Full Sheet
-                                </a>
                             </h3>
-                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                                Patient: <strong>${escapeHtml(info.patient_name || 'Patient')}</strong> (Age: ${info.patient_age || 'N/A'}) | Request Sent: ${info.created_at_fmt}
+                            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.35rem;">
+                                <i class="ph-bold ph-shield-check" style="color: var(--secondary);"></i> Verified Medication Fulfillment Request &bull; Request Sent: <strong>${info.created_at_fmt}</strong>
                             </p>
                         </div>
                         <h4 style="font-size: 0.85rem; color: var(--secondary); text-transform: uppercase; margin-bottom: 0.5rem;">Medications Prescribed</h4>

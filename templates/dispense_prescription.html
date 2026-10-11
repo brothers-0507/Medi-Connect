@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}Pharmacy Medication Dispensing & Quick Checkout - MediConnect{% endblock %}
+
+{% block content %}
+<div class="no-print" style="margin-bottom: 2rem; animation: fadeIn 0.3s ease;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+        <div>
+            {% if current_user and current_user.role == 'pharmacy' %}
+            <a href="{{ url_for('pharmacy_dashboard') }}" class="btn btn-outline btn-sm" style="margin-bottom: 0.75rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="ph-bold ph-arrow-left"></i> Back to Pharmacy Dashboard
+            </a>
+            {% elif current_user and current_user.role == 'patient' %}
+            <a href="{{ url_for('patient_dashboard') }}" class="btn btn-outline btn-sm" style="margin-bottom: 0.75rem; display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="ph-bold ph-arrow-left"></i> Back to Patient Portal
+            </a>
+            {% endif %}
+            <h1 style="font-size: 2rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.6rem; margin: 0;">
+                <i class="ph-bold ph-pill" style="color: var(--secondary);"></i> Pharmacy Medication Fulfillment Order
+            </h1>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0.35rem 0 0 0;">
+                Verified medication dispensing details for pharmacy inventory matching and quick checkout.
+            </p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+            <button onclick="window.print()" class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                <i class="ph-bold ph-printer"></i> Print Dispensing Slip
+            </button>
+            {% if current_user and current_user.role == 'pharmacy' %}
+            <a href="{{ url_for('pharmacy_dashboard') }}#checkout-tab" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.45rem;">
+                <i class="ph-bold ph-shopping-cart-simple"></i> Open Quick Checkout
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="card" style="max-width: 880px; margin: 0 auto; padding: 2.25rem 2.5rem; border-top: 4px solid var(--secondary); box-shadow: 0 10px 35px rgba(0,0,0,0.06); animation: fadeIn 0.4s ease;">
+    <!-- Order Header & Dispensing Status -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 1.5rem; border-bottom: 1px solid var(--card-border); flex-wrap: wrap; gap: 1.5rem;">
+        <div>
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+                <span class="badge badge-info" style="font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                    <i class="ph-bold ph-shield-check"></i> Pharmacy Fulfillment Spec
+                </span>
+                <span class="badge {% if prescription.is_claimed %}badge-success{% else %}badge-warning{% endif %}" style="font-size: 0.78rem;">
+                    {% if prescription.is_claimed %}
+                        <i class="ph-bold ph-check-circle"></i> Dispensed
+                    {% else %}
+                        <i class="ph-bold ph-clock"></i> Pending Dispensing
+                    {% endif %}
+                </span>
+            </div>
+            <h2 style="font-size: 1.6rem; font-weight: 700; color: var(--text-primary); margin: 0; font-family: monospace;">
+                Ref #{{ prescription.uuid[:8] }}
+            </h2>
+            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.35rem;">
+                <i class="ph-bold ph-calendar"></i> Date & Time Issued: <strong>{{ prescription.created_at.strftime('%d %b %Y, %I:%M %p') }}</strong>
+            </div>
+        </div>
+
+        <!-- Pharmacy Quick Checkout QR -->
+        <div style="text-align: center; background: rgba(255,255,255,0.02); padding: 0.85rem 1rem; border-radius: 12px; border: 1px solid var(--card-border);">
+            {% if pharmacy_qr_base64 %}
+                <img src="data:image/png;base64,{{ pharmacy_qr_base64 }}" alt="Pharmacy Quick Checkout QR" style="width: 110px; height: 110px; border-radius: 8px; display: block; margin: 0 auto;">
+            {% endif %}
+            <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.4rem; font-weight: 600;">
+                Quick Checkout QR
+            </div>
+        </div>
+    </div>
+
+    <!-- Privacy Notice -->
+    <div style="background: rgba(13, 148, 136, 0.06); border: 1px solid rgba(13, 148, 136, 0.2); border-radius: 10px; padding: 0.85rem 1.25rem; margin: 1.5rem 0; display: flex; align-items: center; gap: 0.75rem;">
+        <i class="ph-bold ph-lock-key" style="font-size: 1.3rem; color: var(--primary);"></i>
+        <div style="font-size: 0.85rem; color: var(--text-secondary);">
+            <strong style="color: var(--text-primary);">Medication-Only Privacy Protocol:</strong> In accordance with clinical privacy standards, only prescribed medicines and regimen quantities are shared for fulfillment. Doctor clinical notes and confidential patient contact records remain restricted to clinician and patient.
+        </div>
+    </div>
+
+    <!-- Prescribed Medications Table -->
+    <div style="margin-bottom: 2rem;">
+        <h3 style="font-size: 1.15rem; color: var(--text-primary); font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+            <i class="ph-bold ph-pill" style="color: var(--secondary);"></i> Prescribed Medications to Dispense ({{ prescription.items|length }})
+        </h3>
+
+        <div style="overflow-x: auto;">
+            <table class="table" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 2px solid var(--card-border); text-align: left; font-size: 0.82rem; color: var(--text-secondary); text-transform: uppercase;">
+                        <th style="padding: 0.75rem 0.5rem;">Medicine Name</th>
+                        <th style="padding: 0.75rem 0.5rem;">Dosage</th>
+                        <th style="padding: 0.75rem 0.5rem;">Frequency</th>
+                        <th style="padding: 0.75rem 0.5rem;">Duration</th>
+                        <th style="padding: 0.75rem 0.5rem;">Instructions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in prescription.items %}
+                    <tr style="border-bottom: 1px solid var(--card-border); font-size: 0.92rem;">
+                        <td style="padding: 1rem 0.5rem; font-weight: 700; color: var(--text-primary);">
+                            {{ item.medicine_name }}
+                        </td>
+                        <td style="padding: 1rem 0.5rem;">{{ resolve_dose(item.dosage) }}</td>
+                        <td style="padding: 1rem 0.5rem;">{{ resolve_freq(item.frequency) }}</td>
+                        <td style="padding: 1rem 0.5rem;">{{ item.duration }}</td>
+                        <td style="padding: 1rem 0.5rem; color: var(--text-secondary);">{{ item.instructions or 'Standard pharmacy dispensing' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Bottom Actions -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1.5rem; border-top: 1px solid var(--card-border); flex-wrap: wrap; gap: 1rem;">
+        <div style="font-size: 0.82rem; color: var(--text-secondary); font-family: monospace;">
+            Cryptographic Order Hash: {{ prescription.uuid }}
+        </div>
+        <div style="display: flex; gap: 0.75rem;">
+            {% if current_user and current_user.role == 'pharmacy' %}
+            <a href="{{ url_for('pharmacy_dashboard') }}#checkout-tab" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem;">
+                <i class="ph-bold ph-barcode"></i> Scan at Pharmacy Counter
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

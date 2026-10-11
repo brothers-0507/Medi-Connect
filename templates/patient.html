@@ -21,23 +21,25 @@
     <div id="live-pending-rx-container" class="no-print" style="margin-bottom: 2rem;">
         {% if pending_prescriptions %}
             {% for rx in pending_prescriptions %}
-                <div class="alert alert-info" style="justify-content: space-between; display: flex; align-items: center; border-left: 5px solid var(--accent); background: rgba(139, 92, 246, 0.15); box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15); margin-bottom: 1rem;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem;">
-                        <i class="ph-bold ph-bell-ringing" style="font-size: 1.5rem; color: var(--accent);"></i>
+                <div class="patient-prescription-alert">
+                    <div style="display: flex; align-items: center; gap: 0.85rem;">
+                        <div class="alert-bell-icon">
+                            <i class="ph-bold ph-bell-ringing"></i>
+                        </div>
                         <div>
-                            <strong style="color: var(--text-primary);">New Prescription Alert!</strong>
-                            <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                            <div class="alert-title">New Prescription Alert!</div>
+                            <div class="alert-msg">
                                 You received a prescription from {{ rx.doctor.name if rx.doctor else 'Doctor' }}. Link it to automate your daily dosage tracker.
                             </div>
                         </div>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;">
+                    <div style="display: flex; align-items: center; gap: 0.65rem; flex-shrink: 0;">
                         <form action="{{ url_for('accept_prescription', rx_id=rx.id) }}" method="POST" style="margin: 0;">
-                            <button type="submit" class="btn btn-secondary btn-sm" style="box-shadow: 0 4px 15px rgba(20, 184, 166, 0.3);">
+                            <button type="submit" class="alert-action-btn">
                                 <i class="ph-bold ph-check"></i> Accept & Import
                             </button>
                         </form>
-                        <button type="button" onclick="this.closest('.alert').style.display='none'" style="background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.3rem; line-height: 1; padding: 0.25rem;" title="Dismiss">
+                        <button type="button" class="alert-dismiss-btn" onclick="this.closest('.patient-prescription-alert').style.display='none'" title="Dismiss alert">
                             <i class="ph-bold ph-x"></i>
                         </button>
                     </div>
@@ -386,9 +388,11 @@
                                 {% endfor %}
                             </div>
                         </div>
-                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                            <a href="{{ url_for('view_prescription', rx_uuid=rx.uuid) }}" target="_blank" class="btn btn-outline btn-sm">
-                                <i class="ph ph-eye"></i> View QR
+                            <a href="{{ url_for('view_prescription', rx_uuid=rx.uuid) }}" target="_blank" class="btn btn-outline btn-sm" title="View confidential clinical prescription (Doctor & Patient only)">
+                                <i class="ph-bold ph-file-text"></i> Clinical Sheet
+                            </a>
+                            <a href="{{ url_for('pharmacy_dispense_view', rx_uuid=rx.uuid) }}" target="_blank" class="btn btn-secondary btn-sm" title="Show dedicated medicines-only QR for quick checkout at pharmacy counter">
+                                <i class="ph-bold ph-shopping-cart-simple"></i> Pharmacy Checkout QR
                             </a>
                             
                             <form action="{{ url_for('import_prescription_to_tracker', rx_id=rx.id) }}" method="POST" style="margin: 0;">

@@ -102,24 +102,53 @@
     </div>
 
     <!-- Right Column: Secure Details & Actions -->
-    <div class="no-print">
-        <!-- QR Code Card -->
+    <div class="no-print" style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <!-- QR Code Separation Switcher / Card -->
         <div class="card" style="text-align: center;">
-            <h2 class="card-title" style="justify-content: center;">
-                <span><i class="ph-bold ph-qr-code card-title-icon"></i> Secure QR Link</span>
-            </h2>
-            
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.5rem;">
-                Scan this QR code with any mobile device to securely access this digital prescription instantly.
-            </p>
-            
-            <div class="qr-container">
-                <img src="data:image/png;base64,{{ qr_base64 }}" alt="Prescription QR Code">
-                <div class="qr-link" id="rx-link">{{ secure_url }}</div>
+            <div style="display: flex; gap: 0.5rem; background: rgba(0,0,0,0.15); padding: 0.35rem; border-radius: 10px; margin-bottom: 1.25rem;">
+                <button type="button" class="btn btn-sm btn-primary" id="btn-tab-clinical-qr" onclick="switchQRTab('clinical')" style="flex: 1; font-size: 0.78rem; padding: 0.4rem;">
+                    <i class="ph-bold ph-user-circle"></i> Clinical QR (Doc & Pat)
+                </button>
+                <button type="button" class="btn btn-sm btn-outline" id="btn-tab-pharmacy-qr" onclick="switchQRTab('pharmacy')" style="flex: 1; font-size: 0.78rem; padding: 0.4rem;">
+                    <i class="ph-bold ph-pill"></i> Pharmacy Checkout QR
+                </button>
+            </div>
+
+            <!-- Panel 1: Confidential Clinical QR -->
+            <div id="qr-panel-clinical">
+                <h3 style="font-size: 1rem; color: var(--text-primary); margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                    <i class="ph-bold ph-shield-check" style="color: var(--primary);"></i> Confidential Clinical Record
+                </h3>
+                <p style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 1rem;">
+                    Doctor & Patient exclusive access with complete clinician credentials, patient profile, and dietary advice.
+                </p>
+                <div class="qr-container">
+                    <img src="data:image/png;base64,{{ qr_base64 }}" alt="Confidential Clinical Prescription QR Code">
+                    <div class="qr-link" id="rx-link">{{ secure_url }}</div>
+                </div>
+            </div>
+
+            <!-- Panel 2: Pharmacy Quick Checkout QR -->
+            <div id="qr-panel-pharmacy" style="display: none;">
+                <h3 style="font-size: 1rem; color: var(--text-primary); margin-bottom: 0.35rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
+                    <i class="ph-bold ph-shopping-cart-simple" style="color: var(--secondary);"></i> Pharmacy Quick Checkout QR
+                </h3>
+                <p style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 1rem;">
+                    Separated QR for pharmacy dispensing. Shares <strong>prescribed medicines only</strong>; doctor notes & patient contact remain hidden.
+                </p>
+                <div class="qr-container">
+                    <img src="data:image/png;base64,{{ pharmacy_qr_base64 }}" alt="Pharmacy Quick Checkout QR Code">
+                    <div class="qr-link" id="pharmacy-dispense-link">{{ dispense_url }}</div>
+                </div>
+                <div style="margin-top: 0.85rem;">
+                    <a href="{{ dispense_url }}" target="_blank" class="btn btn-outline btn-sm" style="width: 100%; font-size: 0.8rem;">
+                        <i class="ph-bold ph-eye"></i> Preview Pharmacy Dispensing View
+                    </a>
+                </div>
             </div>
             
             <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
-                <button class="btn btn-outline" style="flex: 1;" onclick="copyLink()">
+                <button class="btn btn-outline" style="flex: 1;" onclick="copyCurrentLink()">
                     <i class="ph ph-copy"></i> Copy Link
                 </button>
                 <button class="btn btn-primary" style="flex: 1;" onclick="window.print()">
@@ -142,13 +171,46 @@
 
 {% block scripts %}
 <script>
-    function copyLink() {
-        const linkText = document.getElementById('rx-link').innerText;
+    let activeQRMode = 'clinical';
+
+    function switchQRTab(mode) {
+        activeQRMode = mode;
+        const btnClinical = document.getElementById('btn-tab-clinical-qr');
+        const btnPharmacy = document.getElementById('btn-tab-pharmacy-qr');
+        const panelClinical = document.getElementById('qr-panel-clinical');
+        const panelPharmacy = document.getElementById('qr-panel-pharmacy');
+
+        if (mode === 'clinical') {
+            btnClinical.className = 'btn btn-sm btn-primary';
+            btnPharmacy.className = 'btn btn-sm btn-outline';
+            panelClinical.style.display = 'block';
+            panelPharmacy.style.display = 'none';
+        } else {
+            btnClinical.className = 'btn btn-sm btn-outline';
+            btnPharmacy.className = 'btn btn-sm btn-primary';
+            panelClinical.style.display = 'none';
+            panelPharmacy.style.display = 'block';
+        }
+    }
+
+    function copyCurrentLink() {
+        const linkElem = activeQRMode === 'clinical' 
+            ? document.getElementById('rx-link') 
+            : document.getElementById('pharmacy-dispense-link');
+        const linkText = linkElem ? linkElem.innerText.trim() : '';
+        if (!linkText) return;
+
         navigator.clipboard.writeText(linkText).then(() => {
-            alert('Secure prescription link copied to clipboard!');
+            alert(activeQRMode === 'clinical' 
+                ? 'Confidential Clinical Prescription link copied to clipboard!' 
+                : 'Pharmacy Quick Checkout link copied to clipboard!');
         }).catch(err => {
             console.error('Error copying text: ', err);
         });
+    }
+
+    function copyLink() {
+        copyCurrentLink();
     }
 </script>
 {% endblock %}

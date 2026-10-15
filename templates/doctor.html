@@ -49,9 +49,6 @@
             <button type="button" class="btn btn-outline" onclick="openPresetModal()" title="Create and manage 1-Click Medication Presets" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; padding: 0.55rem 1.15rem;">
                 <i class="ph-bold ph-lightning" style="color: var(--accent);"></i> 1-Click Presets
             </button>
-            <button type="button" class="btn btn-outline" onclick="openGuideModal()" title="View Clinical Operating Directives Guide" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; padding: 0.55rem 1.15rem;">
-                <i class="ph-bold ph-book-open"></i> Operations Guide
-            </button>
         </div>
     </div>
 </div>
@@ -516,180 +513,6 @@
     </div>
 </div>
 
-<!-- ================= POPUP MODAL: DOCTOR PORTAL OPERATIONS & CLINICAL INSTRUCTIONS GUIDE ================= -->
-<div id="how-to-operate-modal" style="display: none; position: fixed; inset: 0; width: 100vw; height: 100vh; background: rgba(9, 10, 15, 0.88); backdrop-filter: blur(8px); z-index: 100000; overflow-y: auto; overflow-x: hidden; padding: 1.25rem 1rem; box-sizing: border-box; align-items: center; justify-content: center;">
-    <div class="card" style="max-width: 1020px; width: 96%; max-height: calc(100vh - 2.5rem); margin: auto; overflow-y: auto; overflow-x: hidden; padding: 1.75rem 2rem; position: relative; border-top: 4px solid var(--primary); border-radius: 14px; box-shadow: 0 25px 60px rgba(0,0,0,0.6);">
-        <!-- Close (X) button -->
-        <button type="button" onclick="closeGuideModal()" style="position: absolute; top: 1.25rem; right: 1.5rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.45rem; transition: color 0.2s; line-height: 1;" title="Close Modal (Esc)">
-            <i class="ph-bold ph-x"></i>
-        </button>
-
-        <!-- Modal Header -->
-        <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--card-border); padding-bottom: 0.85rem; padding-right: 2rem;">
-            <div style="display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.75rem; font-weight: 750; text-transform: uppercase; letter-spacing: 0.06em; color: var(--primary); background: rgba(13, 148, 136, 0.09); padding: 0.2rem 0.65rem; border-radius: 20px; margin-bottom: 0.45rem;">
-                <i class="ph-bold ph-shield-check"></i> Standard Operating Guidelines
-            </div>
-            <h2 style="font-size: 1.35rem; font-weight: 750; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.55rem;">
-                <i class="ph-bold ph-compass" style="color: var(--primary);"></i> Doctor Portal Operations & Clinical Instructions Guide
-            </h2>
-            <p style="font-size: 0.86rem; color: var(--text-secondary); margin: 0.35rem 0 0 0;">
-                Formal clinical directives and verified procedural standards for digital prescription issuance, patient transmission, and cryptographic audit.
-            </p>
-        </div>
-
-        <!-- 6 Directives Grid -->
-        <div class="blended-scattered-grid">
-            <!-- 1. Fast Digital Prescriptions -->
-            <div class="blended-scattered-card card-accent-primary">
-                <div>
-                    <div class="scattered-card-header">
-                        <div class="scattered-icon-wrap icon-primary">
-                            <i class="ph-bold ph-prescription"></i>
-                        </div>
-                        <div class="scattered-meta">
-                            <span class="scattered-step-badge">Directive 01</span>
-                            <h3 class="scattered-title">1. Fast Digital Prescriptions</h3>
-                        </div>
-                    </div>
-                    <p class="scattered-body">
-                        Launch via <strong>Create New Prescription</strong>. Enter registered patient username for automated clinical profile resolution, or select <strong>1-Click Medication Presets</strong> (Fever, Antibiotics, GERD, Allergy, BP) for rapid verified medication regimen composition.
-                    </p>
-                </div>
-                <div class="scattered-footer">
-                    <button type="button" class="scattered-action-link" onclick="closeGuideModal(); openPrescriptionModal();">
-                        <span>Open Creator</span> <i class="ph-bold ph-arrow-up-right"></i>
-                    </button>
-                    <span class="scattered-status-tag"><i class="ph-bold ph-sparkle"></i> 1-Click Ready</span>
-                </div>
-            </div>
-
-            <!-- 2. Overlay Modal Workflow -->
-            <div class="blended-scattered-card card-accent-blue">
-                <div>
-                    <div class="scattered-card-header">
-                        <div class="scattered-icon-wrap icon-blue">
-                            <i class="ph-bold ph-browsers"></i>
-                        </div>
-                        <div class="scattered-meta">
-                            <span class="scattered-step-badge">Directive 02</span>
-                            <h3 class="scattered-title">2. Overlay Modal Workflow</h3>
-                        </div>
-                    </div>
-                    <p class="scattered-body">
-                        The digital prescription creator operates in an overlay popup modal to maintain clinical focus. Perform inline validation, seamless AJAX submission, and rapid consecutive patient prescribing without full page refreshes.
-                    </p>
-                </div>
-                <div class="scattered-footer">
-                    <span class="scattered-status-tag"><i class="ph-bold ph-lightning"></i> AJAX Dispatch</span>
-                    <span class="scattered-status-tag"><i class="ph-bold ph-arrows-in-simple"></i> Non-Blocking</span>
-                </div>
-            </div>
-
-            <!-- 3. Real-Time Patient Push & QR -->
-            <div class="blended-scattered-card card-accent-green">
-                <div>
-                    <div class="scattered-card-header">
-                        <div class="scattered-icon-wrap icon-green">
-                            <i class="ph-bold ph-qr-code"></i>
-                        </div>
-                        <div class="scattered-meta">
-                            <span class="scattered-step-badge">Directive 03</span>
-                            <h3 class="scattered-title">3. Real-Time Patient Push & QR</h3>
-                        </div>
-                    </div>
-                    <p class="scattered-body">
-                        Submissions automatically trigger instant websocket delivery to the recipient patient portal with real-time notification alerts, automated Medi-Tracker dose scheduling, and unique cryptographic QR verification.
-                    </p>
-                </div>
-                <div class="scattered-footer">
-                    <span class="scattered-status-tag text-green"><i class="ph-bold ph-wifi-high"></i> Live Sync</span>
-                    <span class="scattered-status-tag"><i class="ph-bold ph-shield-check"></i> Tamper-Proof</span>
-                </div>
-            </div>
-
-            <!-- 4. Patients History & Time Audit -->
-            <div class="blended-scattered-card card-accent-amber">
-                <div>
-                    <div class="scattered-card-header">
-                        <div class="scattered-icon-wrap icon-amber">
-                            <i class="ph-bold ph-clock-counter-clockwise"></i>
-                        </div>
-                        <div class="scattered-meta">
-                            <span class="scattered-step-badge">Directive 04</span>
-                            <h3 class="scattered-title">4. Patients History & Time Audit</h3>
-                        </div>
-                    </div>
-                    <p class="scattered-body">
-                        Every generated prescription is archived with verified issuance date and exact local time. Access the archive to filter by <strong>Pending Claim</strong> or <strong>Dispensed</strong>, and perform real-time text query searches.
-                    </p>
-                </div>
-                <div class="scattered-footer">
-                    <button type="button" class="scattered-action-link" onclick="closeGuideModal(); openHistoryModal();">
-                        <span>View History</span> <i class="ph-bold ph-arrow-up-right"></i>
-                    </button>
-                    <span class="scattered-status-tag"><i class="ph-bold ph-calendar"></i> Local Timestamp</span>
-                </div>
-            </div>
-
-            <!-- 5. Privacy-Preserving Broadcasting -->
-            <div class="blended-scattered-card card-accent-purple">
-                <div>
-                    <div class="scattered-card-header">
-                        <div class="scattered-icon-wrap icon-purple">
-                            <i class="ph-bold ph-lock-key"></i>
-                        </div>
-                        <div class="scattered-meta">
-                            <span class="scattered-step-badge">Directive 05</span>
-                            <h3 class="scattered-title">5. Privacy-Preserving Broadcasting</h3>
-                        </div>
-                    </div>
-                    <p class="scattered-body">
-                        Doctor notes and full clinical diagnoses remain strictly confidential between doctor and patient. Patient broadcast dispatches to pharmacies selectively expose prescribed medication items only, protecting personal health data.
-                    </p>
-                </div>
-                <div class="scattered-footer">
-                    <span class="scattered-status-tag text-purple"><i class="ph-bold ph-shield-chevron"></i> Zero-Knowledge Rx</span>
-                    <span class="scattered-status-tag"><i class="ph-bold ph-eye-slash"></i> Notes Protected</span>
-                </div>
-            </div>
-
-            <!-- 6. Credentials & Badges -->
-            <div class="blended-scattered-card card-accent-rose">
-                <div>
-                    <div class="scattered-card-header">
-                        <div class="scattered-icon-wrap icon-rose">
-                            <i class="ph-bold ph-identification-badge"></i>
-                        </div>
-                        <div class="scattered-meta">
-                            <span class="scattered-step-badge">Directive 06</span>
-                            <h3 class="scattered-title">6. Credentials & Badges</h3>
-                        </div>
-                    </div>
-                    <p class="scattered-body">
-                        Your medical registration council number, clinical specialty department, and affiliated hospital facility are cryptographically stamped into official prescription headers and live doctor verification badges.
-                    </p>
-                </div>
-                <div class="scattered-footer">
-                    <a href="{{ url_for('settings') }}" class="scattered-action-link">
-                        <span>Edit Badges</span> <i class="ph-bold ph-pencil-simple"></i>
-                    </a>
-                    <span class="scattered-status-tag"><i class="ph-bold ph-certificate"></i> Verified Staff</span>
-                </div>
-            </div>
-        </div>
-
-        <div style="margin-top: 1.5rem; text-align: right; border-top: 1px solid var(--card-border); padding-top: 1rem;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="closeGuideModal()">
-                Close Guide
-            </button>
-        </div>
-
-        <!-- Hidden state elements preserved for script counters -->
-        <span id="guide-rx-count" style="display: none;">{{ total_rx }}</span>
-        <span id="guide-rx-count-bottom" style="display: none;">{{ total_rx }}</span>
-        <span id="guide-live-clock-badge" style="display: none;"><span id="guide-clock-display"></span></span>
-    </div>
-</div>
 
 <!-- ================= OVERLAY POPUP MODAL: PRESCRIPTION HISTORY ================= -->
 <div id="prescription-history-modal" style="display: none; position: fixed; inset: 0; width: 100vw; height: 100vh; background: rgba(9, 10, 15, 0.88); backdrop-filter: blur(8px); z-index: 100000; overflow-y: auto; overflow-x: auto; padding: 1.25rem 1rem; box-sizing: border-box; align-items: center; justify-content: center;">
@@ -829,8 +652,6 @@
     function updateLiveClock() {
         const now = new Date();
         const formatted = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
-        const g = document.getElementById('guide-clock-display');
-        if (g) g.textContent = formatted;
         const m = document.getElementById('modal-clock-text');
         if (m) m.textContent = formatted;
     }
@@ -854,17 +675,6 @@
         if (modal) {
             modal.style.display = 'none';
         }
-    }
-
-    // How to Operate Portal Guide Modal (legacy helper)
-    function openGuideModal() {
-        const modal = document.getElementById('how-to-operate-modal');
-        if (modal) modal.style.display = 'flex';
-    }
-
-    function closeGuideModal() {
-        const modal = document.getElementById('how-to-operate-modal');
-        if (modal) modal.style.display = 'none';
     }
 
     // Prescription History Overlay Modal Open / Close
@@ -891,7 +701,6 @@
         if (e.key === 'Escape') {
             closePrescriptionModal();
             closePresetModal();
-            closeGuideModal();
             closeHistoryModal();
         }
     });
@@ -904,10 +713,6 @@
         const presetModal = document.getElementById('new-preset-modal');
         if (presetModal && e.target === presetModal) {
             closePresetModal();
-        }
-        const guideModal = document.getElementById('how-to-operate-modal');
-        if (guideModal && e.target === guideModal) {
-            closeGuideModal();
         }
         const histModal = document.getElementById('prescription-history-modal');
         if (histModal && e.target === histModal) {
@@ -1400,17 +1205,9 @@
     }
 
     function appendHistoryPrescriptionCard(data) {
-        // Increment banner count, hero stats, guide counts and filter chips count
+        // Increment banner count and filter chips count
         const bannerCount = document.getElementById('banner-rx-count');
         if (bannerCount) bannerCount.textContent = parseInt(bannerCount.textContent || '0', 10) + 1;
-        const statTotal = document.getElementById('banner-stat-total');
-        if (statTotal) statTotal.textContent = parseInt(statTotal.textContent || '0', 10) + 1;
-        const statActive = document.getElementById('banner-stat-active');
-        if (statActive) statActive.textContent = parseInt(statActive.textContent || '0', 10) + 1;
-        const guideCount = document.getElementById('guide-rx-count');
-        if (guideCount) guideCount.textContent = parseInt(guideCount.textContent || '0', 10) + 1;
-        const guideBottomCount = document.getElementById('guide-rx-count-bottom');
-        if (guideBottomCount) guideBottomCount.textContent = parseInt(guideBottomCount.textContent || '0', 10) + 1;
         const allCount = document.getElementById('count-chip-all');
         if (allCount) allCount.textContent = parseInt(allCount.textContent || '0', 10) + 1;
         const pendingCount = document.getElementById('count-chip-pending');
@@ -1521,12 +1318,6 @@
                         // Decrement counters
                         const bannerCount = document.getElementById('banner-rx-count');
                         if (bannerCount) bannerCount.textContent = Math.max(0, parseInt(bannerCount.textContent || '1', 10) - 1);
-                        const statTotal = document.getElementById('banner-stat-total');
-                        if (statTotal) statTotal.textContent = Math.max(0, parseInt(statTotal.textContent || '1', 10) - 1);
-                        const guideCount = document.getElementById('guide-rx-count');
-                        if (guideCount) guideCount.textContent = Math.max(0, parseInt(guideCount.textContent || '1', 10) - 1);
-                        const guideBottomCount = document.getElementById('guide-rx-count-bottom');
-                        if (guideBottomCount) guideBottomCount.textContent = Math.max(0, parseInt(guideBottomCount.textContent || '1', 10) - 1);
                         const allCount = document.getElementById('count-chip-all');
                         if (allCount) allCount.textContent = Math.max(0, parseInt(allCount.textContent || '1', 10) - 1);
 

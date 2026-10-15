@@ -1348,17 +1348,12 @@ class MediConnectTestCase(unittest.TestCase):
             self.assertIn(rx.created_at.strftime('%d %b %Y, %I:%M %p').encode(), view_res.data)
 
     def test_doctor_portal_redesign_privacy_and_qr_separation(self):
-        # 1. Doctor Workspace: Operations Guide and Overlay Modal
+        # 1. Doctor Workspace: Clean Header and Overlay Modal (Operations Guide removed)
         self.login_as('test_doctor')
         dash = self.app.get('/dashboard/doctor')
         self.assertEqual(dash.status_code, 200)
-        self.assertIn(b'Doctor Portal Operations & Clinical Instructions Guide', dash.data)
-        self.assertIn(b'1. Fast Digital Prescriptions', dash.data)
-        self.assertIn(b'2. Overlay Modal Workflow', dash.data)
-        self.assertIn(b'3. Real-Time Patient Push & QR', dash.data)
-        self.assertIn(b'4. Patients History & Time Audit', dash.data)
-        self.assertIn(b'5. Privacy-Preserving Broadcasting', dash.data)
-        self.assertIn(b'6. Credentials & Badges', dash.data)
+        self.assertNotIn(b'Doctor Portal Operations & Clinical Instructions Guide', dash.data)
+        self.assertNotIn(b'Operations Guide', dash.data)
         self.assertIn(b'id="prescription-modal"', dash.data)
         self.assertIn(b'openPrescriptionModal()', dash.data)
         self.assertIn(b'id="patients-history-section"', dash.data)

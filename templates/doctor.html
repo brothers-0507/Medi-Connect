@@ -3,42 +3,56 @@
 {% block title %}Doctor Workspace - MediConnect{% endblock %}
 
 {% block content %}
-<!-- Clinical Banner with Perfectly Arranged Options (Screenshot 3) -->
-<div class="clinical-banner no-print" style="padding: 1.5rem 1.75rem; border-radius: 14px; margin-bottom: 2rem;">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.25rem;">
-        <div style="display: flex; align-items: center; gap: 1.25rem;">
-            <div class="clinical-avatar">
+<!-- ================= REDESIGNED DOCTOR CLINICAL PANEL ================= -->
+<div class="doctor-hero-banner clinical-banner no-print">
+    <div class="doctor-hero-top">
+        <!-- Left: Clinician Avatar, Identity & Credentials -->
+        <div class="doctor-hero-profile">
+            <div class="doctor-hero-avatar clinical-avatar">
                 {{ (current_user.name | replace('Dr.', '') | replace('Dr', '') | trim)[0] if (current_user.name | replace('Dr.', '') | replace('Dr', '') | trim) else 'D' }}
             </div>
-            <div class="clinical-info">
-                <h1 style="margin: 0; font-size: 1.45rem; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
-                    {{ current_user.name }}
-                    <span class="badge badge-success" style="font-size: 0.72rem; padding: 0.2rem 0.5rem; text-transform: none;">
+            <div class="doctor-hero-info clinical-info">
+                <div class="doctor-hero-name">
+                    <span>{{ current_user.name }}</span>
+                    <span class="badge badge-success" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; border-radius: 20px; font-weight: 600; text-transform: none; display: inline-flex; align-items: center; gap: 0.4rem;">
                         <span class="live-pulse"></span> Verified Clinician
                     </span>
-                </h1>
-                <div class="clinical-meta-pills" id="doctor-badges-display" style="margin-top: 0.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                </div>
+                <div class="clinical-meta-pills" id="doctor-badges-display" style="margin-top: 0.55rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     {% for badge in current_user.get_doctor_badges() %}
-                        <span class="clinical-meta-pill" style="font-size: 0.8rem;">
+                        <span class="clinical-meta-pill" style="font-size: 0.8rem; padding: 0.25rem 0.65rem;">
                             <i class="ph-bold {{ badge.icon }}" style="color: {{ badge.color or 'var(--primary)' }};"></i> {{ badge.text }}
                         </span>
                     {% endfor %}
                 </div>
             </div>
         </div>
+
+        <!-- Right: Doctor Workspace Online Indicator -->
+        <div class="doctor-hero-status-pill">
+            <span class="live-pulse"></span> Doctor Workspace Online &bull; Direct Patient Sync Active
+        </div>
     </div>
     
-    <!-- Action options toolbar arranged inside the doctor panel (Screenshot 3) -->
-    <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; padding-top: 1rem; border-top: 1px solid var(--card-border);">
-        <button type="button" class="btn btn-primary" onclick="openPrescriptionModal()" id="banner-new-rx-btn" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 650; padding: 0.55rem 1.25rem;">
-            <i class="ph-bold ph-plus-circle"></i> Create New Prescription
-        </button>
-        <button type="button" class="btn btn-outline" onclick="openHistoryModal()" id="banner-history-btn" title="View Prescription History (Recent Prescriptions Archive)" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; padding: 0.55rem 1.15rem;">
-            <i class="ph-bold ph-clock-counter-clockwise"></i> Prescription History (<span id="banner-rx-count">{{ total_rx }}</span>)<span class="sr-only" style="display:none;"> Recent Prescriptions</span>
-        </button>
-        <a href="{{ url_for('settings') }}" class="btn btn-outline" title="Edit Doctor Credentials & Badges" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; padding: 0.55rem 1.15rem;">
-            <i class="ph-bold ph-pencil-simple"></i> Edit Credentials
-        </a>
+    <!-- Action Options Toolbar -->
+    <div class="doctor-hero-actions">
+        <div class="doctor-hero-btns">
+            <button type="button" class="btn btn-primary" onclick="openPrescriptionModal()" id="banner-new-rx-btn" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 650; padding: 0.55rem 1.3rem;">
+                <i class="ph-bold ph-plus-circle"></i> Create New Prescription
+            </button>
+            <button type="button" class="btn btn-outline" onclick="openHistoryModal()" id="banner-history-btn" title="View Prescription History (Recent Prescriptions Archive)" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; padding: 0.55rem 1.15rem;">
+                <i class="ph-bold ph-clock-counter-clockwise"></i> Prescription History (<span id="banner-rx-count">{{ total_rx }}</span>)<span class="sr-only" style="display:none;"> Recent Prescriptions</span>
+            </button>
+            <a href="{{ url_for('settings') }}" class="btn btn-outline" title="Edit Doctor Credentials & Badges" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; padding: 0.55rem 1.15rem;">
+                <i class="ph-bold ph-pencil-simple"></i> Edit Credentials
+            </a>
+            <button type="button" class="btn btn-outline" onclick="openPresetModal()" title="Create and manage 1-Click Medication Presets" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; padding: 0.55rem 1.15rem;">
+                <i class="ph-bold ph-lightning" style="color: var(--accent);"></i> 1-Click Presets
+            </button>
+            <button type="button" class="btn btn-outline" onclick="openGuideModal()" title="View Clinical Operating Directives Guide" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; padding: 0.55rem 1.15rem;">
+                <i class="ph-bold ph-book-open"></i> Operations Guide
+            </button>
+        </div>
     </div>
 </div>
 
@@ -308,127 +322,372 @@
     </div>
 </div>
 
-<!-- ================= DOCTOR WORKSPACE: INSTRUCTIONS GUIDE (Initial Page Display) ================= -->
-<div class="card" style="padding: 2rem 2.25rem; margin-bottom: 2rem; border-top: 4px solid var(--primary); animation: fadeIn 0.3s ease;">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <h2 style="font-size: 1.45rem; font-weight: 700; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.6rem;">
+
+<!-- ================= DOCTOR WORKSPACE: PUZZLE QUOTE COLLAGE & MEDICAL TELEMETRY ================= -->
+<div class="puzzle-showcase-wrap no-print">
+    <!-- 12-Column Interlocking Puzzle Grid -->
+    <div class="puzzle-cards-grid">
+        <!-- Piece 1: Empathetic Connection (Quote 1 - Span 7) -->
+        <div class="puzzle-quote-card puzzle-piece-1">
+            <!-- ECG Waveform Telemetry Watermark -->
+            <svg class="puzzle-card-watermark" viewBox="0 0 500 160" fill="none" preserveAspectRatio="none">
+                <path d="M 0 110 L 110 110 L 125 110 L 132 95 L 140 125 L 148 110 L 165 110 L 175 106 L 185 45 L 198 165 L 210 75 L 220 118 L 228 110 L 310 110 L 325 95 L 333 125 L 341 110 L 370 110 L 500 110" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <div class="puzzle-card-content">
+                <div>
+                    <div class="card-top-row">
+                        <div class="card-glowing-badge badge-mint" title="Empathetic Patient Engagement">
+                            <i class="ph-bold ph-heartbeat"></i>
+                        </div>
+                        <span class="floating-quote-mark">&ldquo;</span>
+                    </div>
+                    <p class="floating-quote-text">
+                        You have to understand what are they worried about, what are their fears, what are they trying to do? If we don&rsquo;t engage with them that way, it doesn&rsquo;t matter what technology we use.
+                    </p>
+                </div>
+                <div class="floating-card-footer">
+                    <span class="floating-meta-pill">
+                        <i class="ph-bold ph-user-focus"></i> Empathetic Care
+                    </span>
+                    <span class="floating-meta-sub">
+                        Human Connection
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Piece 2: Patient-Centered Science (Quote 5 - Span 5) -->
+        <div class="puzzle-quote-card puzzle-piece-2">
+            <!-- DNA Helix Telemetry Watermark -->
+            <svg class="puzzle-card-watermark" viewBox="0 0 350 160" fill="none" preserveAspectRatio="none">
+                <g stroke-width="1.8">
+                    <path d="M 40 110 Q 100 50 160 110 T 280 110 T 360 110" />
+                    <path d="M 40 110 Q 100 170 160 110 T 280 110 T 360 110" />
+                    <line x1="100" y1="80" x2="100" y2="140" stroke-dasharray="2 3" />
+                    <line x1="160" y1="110" x2="160" y2="110" />
+                    <line x1="220" y1="80" x2="220" y2="140" stroke-dasharray="2 3" />
+                    <line x1="280" y1="110" x2="280" y2="110" />
+                </g>
+            </svg>
+            <div class="puzzle-card-content">
+                <div>
+                    <div class="card-top-row">
+                        <div class="card-glowing-badge badge-teal" title="Collaborative Patient-Centered Science">
+                            <i class="ph-bold ph-dna"></i>
+                        </div>
+                        <span class="floating-quote-mark">&ldquo;</span>
+                    </div>
+                    <p class="floating-quote-text">
+                        The intersection of technology and healthcare reshapes medicine from a reactive practice into a highly collaborative, patient-centered science.
+                    </p>
+                </div>
+                <div class="floating-card-footer">
+                    <span class="floating-meta-pill">
+                        <i class="ph-bold ph-shield-plus"></i> Patient-Centered Science
+                    </span>
+                    <span class="floating-meta-sub">
+                        Collaborative Care
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Piece 3: Care & Digital Innovation Bridge (Quote 2 - Span 4) -->
+        <div class="puzzle-quote-card puzzle-piece-3">
+            <!-- Stethoscope Telemetry Watermark -->
+            <svg class="puzzle-card-watermark" viewBox="0 0 280 160" fill="none" preserveAspectRatio="none">
+                <g stroke-width="1.8">
+                    <path d="M 50 25 C 50 65, 80 80, 105 80 C 130 80, 160 65, 160 25" />
+                    <circle cx="50" cy="25" r="3.5" fill="currentColor" />
+                    <circle cx="160" cy="25" r="3.5" fill="currentColor" />
+                    <path d="M 105 80 L 105 115 C 105 135, 135 142, 155 145" />
+                    <circle cx="170" cy="145" r="11" stroke-width="2" />
+                </g>
+            </svg>
+            <div class="puzzle-card-content">
+                <div>
+                    <div class="card-top-row">
+                        <div class="card-glowing-badge badge-blue" title="Care & Digital Innovation">
+                            <i class="ph-bold ph-stethoscope"></i>
+                        </div>
+                        <span class="floating-quote-mark">&ldquo;</span>
+                    </div>
+                    <p class="floating-quote-text">
+                        Technology in healthcare bridges human care and digital innovation, transforming how patients and doctors connect.
+                    </p>
+                </div>
+                <div class="floating-card-footer">
+                    <span class="floating-meta-pill">
+                        <i class="ph-bold ph-arrows-left-right"></i> Innovation Bridge
+                    </span>
+                    <span class="floating-meta-sub">
+                        Doctor-Patient Connection
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Piece 4: Agent for Social Good (Quote 3 - Span 4) -->
+        <div class="puzzle-quote-card puzzle-piece-4">
+            <!-- Radar / Diagnostic Auscultation Watermark -->
+            <svg class="puzzle-card-watermark" viewBox="0 0 280 160" fill="none" preserveAspectRatio="none">
+                <g stroke-width="1.5">
+                    <circle cx="190" cy="85" r="60" stroke-dasharray="3 4" />
+                    <circle cx="190" cy="85" r="40" stroke-width="1.8" />
+                    <circle cx="190" cy="85" r="20" />
+                    <line x1="190" y1="20" x2="190" y2="150" stroke-dasharray="2 3" opacity="0.4" />
+                    <line x1="125" y1="85" x2="255" y2="85" stroke-dasharray="2 3" opacity="0.4" />
+                </g>
+            </svg>
+            <div class="puzzle-card-content">
+                <div>
+                    <div class="card-top-row">
+                        <div class="card-glowing-badge badge-emerald" title="Technology for Social Good">
+                            <i class="ph-bold ph-hand-heart"></i>
+                        </div>
+                        <span class="floating-quote-mark">&ldquo;</span>
+                    </div>
+                    <p class="floating-quote-text">
+                        Technology does more than delight, entertain and make our lives more convenient; it&rsquo;s also an agent for social good.
+                    </p>
+                </div>
+                <div class="floating-card-footer">
+                    <span class="floating-meta-pill">
+                        <i class="ph-bold ph-sparkle"></i> Social Good
+                    </span>
+                    <span class="floating-meta-sub">
+                        Ethical Technology
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Piece 5: Scientific Mysteries & Digital World (Quote 4 - Span 4) -->
+        <div class="puzzle-quote-card puzzle-piece-5">
+            <!-- Atom Science Watermark -->
+            <svg class="puzzle-card-watermark" viewBox="0 0 280 160" fill="none" preserveAspectRatio="none">
+                <g stroke-width="1.5">
+                    <ellipse cx="180" cy="80" rx="60" ry="24" transform="rotate(30 180 80)" />
+                    <ellipse cx="180" cy="80" rx="60" ry="24" transform="rotate(-30 180 80)" />
+                    <circle cx="180" cy="80" r="4.5" fill="currentColor" />
+                </g>
+            </svg>
+            <div class="puzzle-card-content">
+                <div>
+                    <div class="card-top-row">
+                        <div class="card-glowing-badge badge-indigo" title="Science & Youth Collaboration">
+                            <i class="ph-bold ph-atom"></i>
+                        </div>
+                        <span class="floating-quote-mark">&ldquo;</span>
+                    </div>
+                    <p class="floating-quote-text">
+                        We will explore the mysteries of science and harness the power of technology and innovation. We will realize the opportunities of the digital world. Our youth will learn more from and with each other.
+                    </p>
+                </div>
+                <div class="floating-card-footer">
+                    <span class="floating-meta-pill">
+                        <i class="ph-bold ph-compass"></i> Scientific Discovery
+                    </span>
+                    <span class="floating-meta-sub">
+                        Digital Horizons
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Minimal Dock -->
+    <div class="floating-dock-bar">
+        <div class="dock-quote-wrap">
+            <span class="dock-maxim-quote">
+                &ldquo;Salus aegroti suprema lex esto &bull; Let the health of the patient be the supreme law.&rdquo;
+            </span>
+            <span class="dock-maxim-author">&mdash; Cicero</span>
+        </div>
+        <div class="floating-dock-icons" title="Clinical Equipment & Diagnostic Instruments Suite">
+            <i class="ph-bold ph-stethoscope" title="Stethoscope"></i>
+            <i class="ph-bold ph-heartbeat" title="Cardiac Telemetry"></i>
+            <i class="ph-bold ph-prescription" title="Digital Prescription"></i>
+            <i class="ph-bold ph-pill" title="Pharmacology"></i>
+            <i class="ph-bold ph-microscope" title="Microscopy"></i>
+            <i class="ph-bold ph-thermometer" title="Thermometry"></i>
+            <i class="ph-bold ph-dna" title="Genomic Diagnostics"></i>
+        </div>
+    </div>
+</div>
+
+<!-- ================= POPUP MODAL: DOCTOR PORTAL OPERATIONS & CLINICAL INSTRUCTIONS GUIDE ================= -->
+<div id="how-to-operate-modal" style="display: none; position: fixed; inset: 0; width: 100vw; height: 100vh; background: rgba(9, 10, 15, 0.88); backdrop-filter: blur(8px); z-index: 100000; overflow-y: auto; overflow-x: hidden; padding: 1.25rem 1rem; box-sizing: border-box; align-items: center; justify-content: center;">
+    <div class="card" style="max-width: 1020px; width: 96%; max-height: calc(100vh - 2.5rem); margin: auto; overflow-y: auto; overflow-x: hidden; padding: 1.75rem 2rem; position: relative; border-top: 4px solid var(--primary); border-radius: 14px; box-shadow: 0 25px 60px rgba(0,0,0,0.6);">
+        <!-- Close (X) button -->
+        <button type="button" onclick="closeGuideModal()" style="position: absolute; top: 1.25rem; right: 1.5rem; background: transparent; border: none; color: var(--text-secondary); cursor: pointer; font-size: 1.45rem; transition: color 0.2s; line-height: 1;" title="Close Modal (Esc)">
+            <i class="ph-bold ph-x"></i>
+        </button>
+
+        <!-- Modal Header -->
+        <div style="margin-bottom: 1.5rem; border-bottom: 1px solid var(--card-border); padding-bottom: 0.85rem; padding-right: 2rem;">
+            <div style="display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.75rem; font-weight: 750; text-transform: uppercase; letter-spacing: 0.06em; color: var(--primary); background: rgba(13, 148, 136, 0.09); padding: 0.2rem 0.65rem; border-radius: 20px; margin-bottom: 0.45rem;">
+                <i class="ph-bold ph-shield-check"></i> Standard Operating Guidelines
+            </div>
+            <h2 style="font-size: 1.35rem; font-weight: 750; color: var(--text-primary); margin: 0; display: flex; align-items: center; gap: 0.55rem;">
                 <i class="ph-bold ph-compass" style="color: var(--primary);"></i> Doctor Portal Operations & Clinical Instructions Guide
             </h2>
-            <p style="font-size: 0.88rem; color: var(--text-secondary); margin: 0.35rem 0 0 0;">
-                Simple and easily understandable instructions on how to operate this clinician portal.
+            <p style="font-size: 0.86rem; color: var(--text-secondary); margin: 0.35rem 0 0 0;">
+                Formal clinical directives and verified procedural standards for digital prescription issuance, patient transmission, and cryptographic audit.
             </p>
         </div>
-        <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
-            <button type="button" class="btn btn-primary" onclick="openPrescriptionModal()" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 650; padding: 0.55rem 1.25rem;">
-                <i class="ph-bold ph-plus-circle"></i> Create New Prescription
+
+        <!-- 6 Directives Grid -->
+        <div class="blended-scattered-grid">
+            <!-- 1. Fast Digital Prescriptions -->
+            <div class="blended-scattered-card card-accent-primary">
+                <div>
+                    <div class="scattered-card-header">
+                        <div class="scattered-icon-wrap icon-primary">
+                            <i class="ph-bold ph-prescription"></i>
+                        </div>
+                        <div class="scattered-meta">
+                            <span class="scattered-step-badge">Directive 01</span>
+                            <h3 class="scattered-title">1. Fast Digital Prescriptions</h3>
+                        </div>
+                    </div>
+                    <p class="scattered-body">
+                        Launch via <strong>Create New Prescription</strong>. Enter registered patient username for automated clinical profile resolution, or select <strong>1-Click Medication Presets</strong> (Fever, Antibiotics, GERD, Allergy, BP) for rapid verified medication regimen composition.
+                    </p>
+                </div>
+                <div class="scattered-footer">
+                    <button type="button" class="scattered-action-link" onclick="closeGuideModal(); openPrescriptionModal();">
+                        <span>Open Creator</span> <i class="ph-bold ph-arrow-up-right"></i>
+                    </button>
+                    <span class="scattered-status-tag"><i class="ph-bold ph-sparkle"></i> 1-Click Ready</span>
+                </div>
+            </div>
+
+            <!-- 2. Overlay Modal Workflow -->
+            <div class="blended-scattered-card card-accent-blue">
+                <div>
+                    <div class="scattered-card-header">
+                        <div class="scattered-icon-wrap icon-blue">
+                            <i class="ph-bold ph-browsers"></i>
+                        </div>
+                        <div class="scattered-meta">
+                            <span class="scattered-step-badge">Directive 02</span>
+                            <h3 class="scattered-title">2. Overlay Modal Workflow</h3>
+                        </div>
+                    </div>
+                    <p class="scattered-body">
+                        The digital prescription creator operates in an overlay popup modal to maintain clinical focus. Perform inline validation, seamless AJAX submission, and rapid consecutive patient prescribing without full page refreshes.
+                    </p>
+                </div>
+                <div class="scattered-footer">
+                    <span class="scattered-status-tag"><i class="ph-bold ph-lightning"></i> AJAX Dispatch</span>
+                    <span class="scattered-status-tag"><i class="ph-bold ph-arrows-in-simple"></i> Non-Blocking</span>
+                </div>
+            </div>
+
+            <!-- 3. Real-Time Patient Push & QR -->
+            <div class="blended-scattered-card card-accent-green">
+                <div>
+                    <div class="scattered-card-header">
+                        <div class="scattered-icon-wrap icon-green">
+                            <i class="ph-bold ph-qr-code"></i>
+                        </div>
+                        <div class="scattered-meta">
+                            <span class="scattered-step-badge">Directive 03</span>
+                            <h3 class="scattered-title">3. Real-Time Patient Push & QR</h3>
+                        </div>
+                    </div>
+                    <p class="scattered-body">
+                        Submissions automatically trigger instant websocket delivery to the recipient patient portal with real-time notification alerts, automated Medi-Tracker dose scheduling, and unique cryptographic QR verification.
+                    </p>
+                </div>
+                <div class="scattered-footer">
+                    <span class="scattered-status-tag text-green"><i class="ph-bold ph-wifi-high"></i> Live Sync</span>
+                    <span class="scattered-status-tag"><i class="ph-bold ph-shield-check"></i> Tamper-Proof</span>
+                </div>
+            </div>
+
+            <!-- 4. Patients History & Time Audit -->
+            <div class="blended-scattered-card card-accent-amber">
+                <div>
+                    <div class="scattered-card-header">
+                        <div class="scattered-icon-wrap icon-amber">
+                            <i class="ph-bold ph-clock-counter-clockwise"></i>
+                        </div>
+                        <div class="scattered-meta">
+                            <span class="scattered-step-badge">Directive 04</span>
+                            <h3 class="scattered-title">4. Patients History & Time Audit</h3>
+                        </div>
+                    </div>
+                    <p class="scattered-body">
+                        Every generated prescription is archived with verified issuance date and exact local time. Access the archive to filter by <strong>Pending Claim</strong> or <strong>Dispensed</strong>, and perform real-time text query searches.
+                    </p>
+                </div>
+                <div class="scattered-footer">
+                    <button type="button" class="scattered-action-link" onclick="closeGuideModal(); openHistoryModal();">
+                        <span>View History</span> <i class="ph-bold ph-arrow-up-right"></i>
+                    </button>
+                    <span class="scattered-status-tag"><i class="ph-bold ph-calendar"></i> Local Timestamp</span>
+                </div>
+            </div>
+
+            <!-- 5. Privacy-Preserving Broadcasting -->
+            <div class="blended-scattered-card card-accent-purple">
+                <div>
+                    <div class="scattered-card-header">
+                        <div class="scattered-icon-wrap icon-purple">
+                            <i class="ph-bold ph-lock-key"></i>
+                        </div>
+                        <div class="scattered-meta">
+                            <span class="scattered-step-badge">Directive 05</span>
+                            <h3 class="scattered-title">5. Privacy-Preserving Broadcasting</h3>
+                        </div>
+                    </div>
+                    <p class="scattered-body">
+                        Doctor notes and full clinical diagnoses remain strictly confidential between doctor and patient. Patient broadcast dispatches to pharmacies selectively expose prescribed medication items only, protecting personal health data.
+                    </p>
+                </div>
+                <div class="scattered-footer">
+                    <span class="scattered-status-tag text-purple"><i class="ph-bold ph-shield-chevron"></i> Zero-Knowledge Rx</span>
+                    <span class="scattered-status-tag"><i class="ph-bold ph-eye-slash"></i> Notes Protected</span>
+                </div>
+            </div>
+
+            <!-- 6. Credentials & Badges -->
+            <div class="blended-scattered-card card-accent-rose">
+                <div>
+                    <div class="scattered-card-header">
+                        <div class="scattered-icon-wrap icon-rose">
+                            <i class="ph-bold ph-identification-badge"></i>
+                        </div>
+                        <div class="scattered-meta">
+                            <span class="scattered-step-badge">Directive 06</span>
+                            <h3 class="scattered-title">6. Credentials & Badges</h3>
+                        </div>
+                    </div>
+                    <p class="scattered-body">
+                        Your medical registration council number, clinical specialty department, and affiliated hospital facility are cryptographically stamped into official prescription headers and live doctor verification badges.
+                    </p>
+                </div>
+                <div class="scattered-footer">
+                    <a href="{{ url_for('settings') }}" class="scattered-action-link">
+                        <span>Edit Badges</span> <i class="ph-bold ph-pencil-simple"></i>
+                    </a>
+                    <span class="scattered-status-tag"><i class="ph-bold ph-certificate"></i> Verified Staff</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 1.5rem; text-align: right; border-top: 1px solid var(--card-border); padding-top: 1rem;">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeGuideModal()">
+                Close Guide
             </button>
-            <button type="button" class="btn btn-outline" onclick="openHistoryModal()" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; padding: 0.55rem 1.15rem;">
-                <i class="ph-bold ph-clock-counter-clockwise"></i> View Prescription History (<span id="guide-rx-count">{{ total_rx }}</span>)
-            </button>
-        </div>
-    </div>
-
-    <!-- Operations Instructions 6-Card Grid -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 1.75rem;">
-        <!-- Card 1: Fast Prescription Generation -->
-        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem;">
-            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
-                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(13, 148, 136, 0.12); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-                    <i class="ph-bold ph-prescription"></i>
-                </div>
-                <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">1. Fast Digital Prescriptions</h3>
-            </div>
-            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">
-                Click <strong>"Create New Prescription"</strong> to launch the Creator in an overlay popup modal. Enter registered patient username for instant profile autofill, configure medications with standardized dosage/frequency selectors, or click <strong>1-Click Clinical Presets</strong> (Fever, Antibiotics, GERD, Allergy, BP) to populate complete regimens instantly.
-            </p>
         </div>
 
-        <!-- Card 2: Overlay Modal Workflow -->
-        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem;">
-            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
-                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(59, 130, 246, 0.12); color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-                    <i class="ph-bold ph-browsers"></i>
-                </div>
-                <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">2. Overlay Modal Workflow</h3>
-            </div>
-            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">
-                The prescription creator opens in a focused overlay modal without obstructing your workspace view. You can clear fields, apply customized presets, submit prescriptions seamlessly via AJAX, and immediately issue consecutive prescriptions for waiting patients without full page refreshes.
-            </p>
-        </div>
-
-        <!-- Card 3: Instant Push & QR Code -->
-        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem;">
-            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
-                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(16, 185, 129, 0.12); color: var(--secondary); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-                    <i class="ph-bold ph-qr-code"></i>
-                </div>
-                <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">3. Real-Time Patient Push & QR</h3>
-            </div>
-            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">
-                Upon submission, prescriptions are pushed immediately to the recipient patient's portal with an audible chime and real-time alert banner. Patients can access their prescription, import doses directly into their Medi-Tracker adherence schedule, or broadcast for pharmacy quotes.
-            </p>
-        </div>
-
-        <!-- Card 4: Patients History & Accurate Timestamps -->
-        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem;">
-            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
-                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(245, 158, 11, 0.12); color: var(--warning); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-                    <i class="ph-bold ph-clock-counter-clockwise"></i>
-                </div>
-                <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">4. Patients History & Time Audit</h3>
-            </div>
-            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">
-                Every issued prescription is archived with the verified date and accurate time of issuance (e.g., <strong>11 Oct 2026, 08:42 PM</strong>). Filter between <strong>All</strong>, <strong>Pending Claim</strong>, and <strong>Dispensed at Pharmacy</strong> with real-time text search across patient names, codes, and medicines.
-            </p>
-        </div>
-
-        <!-- Card 5: Privacy-Preserving Broadcasting -->
-        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem;">
-            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
-                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(139, 92, 246, 0.12); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-                    <i class="ph-bold ph-lock-key"></i>
-                </div>
-                <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">5. Privacy-Preserving Broadcasting</h3>
-            </div>
-            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">
-                Full clinical records and notes are accessible strictly by doctor and patient. When patients broadcast for pharmacy quotes or use Quick Checkout, only prescribed medicines and quantities are shared. Doctor clinical notes and confidential contact records remain completely private.
-            </p>
-        </div>
-
-        <!-- Card 6: Clinician Badges & Credentials -->
-        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--card-border); border-radius: 12px; padding: 1.25rem;">
-            <div style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.6rem;">
-                <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(236, 72, 153, 0.12); color: #ec4899; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-                    <i class="ph-bold ph-identification-badge"></i>
-                </div>
-                <h3 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin: 0;">6. Credentials & Badges</h3>
-            </div>
-            <p style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.6; margin: 0;">
-                Maintain verified credentials including your Medical Registration Number, Department Specialty, and Healthcare Facility Affiliation. Credentials sync to your banner and all officially generated prescription sheets automatically.
-            </p>
-        </div>
-    </div>
-
-    <!-- Hidden guide clock badge for any legacy script reference -->
-    <span id="guide-live-clock-badge" style="display: none;"><span id="guide-clock-display"></span></span>
-
-    <!-- Quick Navigation Toolbar on Initial Page -->
-    <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 1.25rem; border-top: 1px solid var(--card-border); flex-wrap: wrap; gap: 1rem;">
-        <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
-            <button type="button" class="btn btn-primary btn-sm" onclick="openPrescriptionModal()" style="display: inline-flex; align-items: center; gap: 0.4rem;">
-                <i class="ph-bold ph-plus-circle"></i> Create New Prescription
-            </button>
-            <button type="button" class="btn btn-outline btn-sm" onclick="openHistoryModal()" style="display: inline-flex; align-items: center; gap: 0.4rem;">
-                <i class="ph-bold ph-clock-counter-clockwise"></i> View Prescription History (<span id="guide-rx-count-bottom">{{ total_rx }}</span>)
-            </button>
-            <a href="{{ url_for('settings') }}" class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem;">
-                <i class="ph-bold ph-pencil-simple"></i> Edit Credentials
-            </a>
-        </div>
-        <div style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.4rem;">
-            <span class="live-pulse"></span> Doctor Workspace Active &bull; Tamper-Evident QR Enabled
-        </div>
+        <!-- Hidden state elements preserved for script counters -->
+        <span id="guide-rx-count" style="display: none;">{{ total_rx }}</span>
+        <span id="guide-rx-count-bottom" style="display: none;">{{ total_rx }}</span>
+        <span id="guide-live-clock-badge" style="display: none;"><span id="guide-clock-display"></span></span>
     </div>
 </div>
 
@@ -659,6 +918,31 @@
     // Auto-open history modal if linked directly via hash
     if (window.location.hash === '#patients-history-section' || window.location.hash === '#prescription-history') {
         setTimeout(openHistoryModal, 150);
+    }
+
+    // Blended Clinical Reflections Rotator
+    const CLINICAL_QUOTES = [
+        { text: "Wherever the art of medicine is loved, there is also a love of humanity.", author: "Hippocrates, Father of Modern Medicine" },
+        { text: "The good physician treats the disease; the great physician treats the patient who has the disease.", author: "Sir William Osler" },
+        { text: "Medicines cure diseases, but only doctors can cure patients.", author: "Carl Jung" },
+        { text: "Cure sometimes, treat often, comfort always.", author: "Edward Livingston Trudeau" },
+        { text: "In the hands of an insightful clinician, digital precision meets compassionate care.", author: "Clinical Informatics Principle" }
+    ];
+    let currentQuoteIdx = 0;
+    function rotateClinicalQuote() {
+        currentQuoteIdx = (currentQuoteIdx + 1) % CLINICAL_QUOTES.length;
+        const qText = document.getElementById('clinical-quote-text');
+        const qAuthor = document.getElementById('clinical-quote-author');
+        if (qText && qAuthor) {
+            qText.style.opacity = '0';
+            qAuthor.style.opacity = '0';
+            setTimeout(() => {
+                qText.innerHTML = `&ldquo;${escapeHtml(CLINICAL_QUOTES[currentQuoteIdx].text)}&rdquo;`;
+                qAuthor.innerHTML = `&mdash; ${escapeHtml(CLINICAL_QUOTES[currentQuoteIdx].author)}`;
+                qText.style.opacity = '1';
+                qAuthor.style.opacity = '1';
+            }, 200);
+        }
     }
 
     function escapeHtml(str) {
@@ -1116,9 +1400,13 @@
     }
 
     function appendHistoryPrescriptionCard(data) {
-        // Increment banner count, guide counts and filter chips count
+        // Increment banner count, hero stats, guide counts and filter chips count
         const bannerCount = document.getElementById('banner-rx-count');
         if (bannerCount) bannerCount.textContent = parseInt(bannerCount.textContent || '0', 10) + 1;
+        const statTotal = document.getElementById('banner-stat-total');
+        if (statTotal) statTotal.textContent = parseInt(statTotal.textContent || '0', 10) + 1;
+        const statActive = document.getElementById('banner-stat-active');
+        if (statActive) statActive.textContent = parseInt(statActive.textContent || '0', 10) + 1;
         const guideCount = document.getElementById('guide-rx-count');
         if (guideCount) guideCount.textContent = parseInt(guideCount.textContent || '0', 10) + 1;
         const guideBottomCount = document.getElementById('guide-rx-count-bottom');
@@ -1233,6 +1521,8 @@
                         // Decrement counters
                         const bannerCount = document.getElementById('banner-rx-count');
                         if (bannerCount) bannerCount.textContent = Math.max(0, parseInt(bannerCount.textContent || '1', 10) - 1);
+                        const statTotal = document.getElementById('banner-stat-total');
+                        if (statTotal) statTotal.textContent = Math.max(0, parseInt(statTotal.textContent || '1', 10) - 1);
                         const guideCount = document.getElementById('guide-rx-count');
                         if (guideCount) guideCount.textContent = Math.max(0, parseInt(guideCount.textContent || '1', 10) - 1);
                         const guideBottomCount = document.getElementById('guide-rx-count-bottom');
@@ -1243,9 +1533,13 @@
                         if (status === 'dispensed') {
                             const dispensedCount = document.getElementById('count-chip-dispensed');
                             if (dispensedCount) dispensedCount.textContent = Math.max(0, parseInt(dispensedCount.textContent || '1', 10) - 1);
+                            const statDisp = document.getElementById('banner-stat-dispensed');
+                            if (statDisp) statDisp.textContent = Math.max(0, parseInt(statDisp.textContent || '1', 10) - 1);
                         } else {
                             const pendingCount = document.getElementById('count-chip-pending');
                             if (pendingCount) pendingCount.textContent = Math.max(0, parseInt(pendingCount.textContent || '1', 10) - 1);
+                            const statActive = document.getElementById('banner-stat-active');
+                            if (statActive) statActive.textContent = Math.max(0, parseInt(statActive.textContent || '1', 10) - 1);
                         }
 
                         // Check if grid is empty

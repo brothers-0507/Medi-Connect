@@ -14,13 +14,13 @@
             <div class="doctor-hero-info clinical-info">
                 <div class="doctor-hero-name">
                     <span>{{ current_user.name }}</span>
-                    <span class="badge badge-success" style="font-size: 0.75rem; padding: 0.25rem 0.65rem; border-radius: 20px; font-weight: 600; text-transform: none; display: inline-flex; align-items: center; gap: 0.4rem;">
+                    <span class="badge badge-success clinical-verified-badge">
                         <span class="live-pulse"></span> Verified Clinician
                     </span>
                 </div>
-                <div class="clinical-meta-pills" id="doctor-badges-display" style="margin-top: 0.55rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                <div class="clinical-meta-pills" id="doctor-badges-display">
                     {% for badge in current_user.get_doctor_badges() %}
-                        <span class="clinical-meta-pill" style="font-size: 0.8rem; padding: 0.25rem 0.65rem;">
+                        <span class="clinical-meta-pill">
                             <i class="ph-bold {{ badge.icon }}" style="color: {{ badge.color or 'var(--primary)' }};"></i> {{ badge.text }}
                         </span>
                     {% endfor %}
@@ -37,16 +37,16 @@
     <!-- Action Options Toolbar -->
     <div class="doctor-hero-actions">
         <div class="doctor-hero-btns">
-            <button type="button" class="btn btn-primary" onclick="openPrescriptionModal()" id="banner-new-rx-btn" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 650; padding: 0.55rem 1.3rem;">
+            <button type="button" class="btn btn-primary" onclick="openPrescriptionModal()" id="banner-new-rx-btn">
                 <i class="ph-bold ph-plus-circle"></i> Create New Prescription
             </button>
-            <button type="button" class="btn btn-outline" onclick="openHistoryModal()" id="banner-history-btn" title="View Prescription History (Recent Prescriptions Archive)" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; padding: 0.55rem 1.15rem;">
+            <button type="button" class="btn btn-outline" onclick="openHistoryModal()" id="banner-history-btn" title="View Prescription History (Recent Prescriptions Archive)">
                 <i class="ph-bold ph-clock-counter-clockwise"></i> Prescription History (<span id="banner-rx-count">{{ total_rx }}</span>)<span class="sr-only" style="display:none;"> Recent Prescriptions</span>
             </button>
-            <a href="{{ url_for('settings') }}" class="btn btn-outline" title="Edit Doctor Credentials & Badges" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; padding: 0.55rem 1.15rem;">
+            <a href="{{ url_for('settings') }}" class="btn btn-outline" title="Edit Doctor Credentials & Badges">
                 <i class="ph-bold ph-pencil-simple"></i> Edit Credentials
             </a>
-            <button type="button" class="btn btn-outline" onclick="openPresetModal()" title="Create and manage 1-Click Medication Presets" style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; padding: 0.55rem 1.15rem;">
+            <button type="button" class="btn btn-outline" onclick="openPresetModal()" title="Create and manage 1-Click Medication Presets">
                 <i class="ph-bold ph-lightning" style="color: var(--accent);"></i> 1-Click Presets
             </button>
         </div>

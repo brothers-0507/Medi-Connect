@@ -31,7 +31,8 @@
                 <i class="ph-bold ph-activity"></i> MediConnect
             </a>
             
-            <nav class="nav-user">
+            <!-- Desktop Navigation (visible on screens >= 768px) -->
+            <nav class="nav-user desktop-nav">
                 <button type="button" id="theme-toggle-btn" class="theme-toggle-btn" onclick="toggleClinicalTheme()" title="Toggle Light / Dark Mode" aria-label="Toggle Light / Dark Mode">
                     <i id="theme-icon" class="ph-bold ph-moon"></i>
                 </button>
@@ -57,14 +58,14 @@
                         <span>{{ current_user.name }}</span>
                         <span class="badge-role">({{ current_user.role }})</span>
                     </div>
-                    <a href="{{ url_for(current_user.role + '_dashboard') }}" class="btn btn-primary btn-sm">
-                        <i class="ph-bold ph-layout"></i> My Dashboard
+                    <a href="{{ url_for(current_user.role + '_dashboard') }}" class="btn btn-primary btn-sm" title="My Dashboard">
+                        <i class="ph-bold ph-layout"></i> <span class="nav-btn-label">My Dashboard</span>
                     </a>
                     <a href="{{ url_for('settings') }}" class="btn btn-outline btn-sm" title="Account Settings">
-                        <i class="ph-bold ph-gear"></i> Settings
+                        <i class="ph-bold ph-gear"></i> <span class="nav-btn-label">Settings</span>
                     </a>
-                    <a href="{{ url_for('logout') }}" class="btn btn-outline btn-sm">
-                        <i class="ph-bold ph-sign-out"></i> Log Out
+                    <a href="{{ url_for('logout') }}" class="btn btn-outline btn-sm" title="Log Out">
+                        <i class="ph-bold ph-sign-out"></i> <span class="nav-btn-label">Log Out</span>
                     </a>
                 {% else %}
                     <a href="{{ url_for('login') }}" class="btn btn-outline btn-sm">
@@ -109,8 +110,94 @@
                     </div>
                 {% endif %}
             </nav>
+
+            <!-- Mobile Hamburger Toggle (< 768px) -->
+            <button type="button" id="mobile-nav-toggle" class="mobile-nav-toggle no-print" onclick="toggleMobileNavDrawer()" aria-label="Toggle navigation menu" aria-expanded="false">
+                <i class="ph-bold ph-list" id="mobile-hamburger-icon"></i>
+            </button>
         </div>
     </header>
+
+    <!-- Mobile Slide-Out Navigation Drawer & Backdrop (< 768px) -->
+    <div id="mobile-nav-backdrop" class="mobile-nav-backdrop no-print" onclick="toggleMobileNavDrawer(false)"></div>
+    <aside id="mobile-nav-drawer" class="mobile-nav-drawer no-print" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Mobile Navigation Menu">
+        <div class="mobile-drawer-header">
+            <a href="{{ url_for('index') }}" class="logo" onclick="toggleMobileNavDrawer(false)">
+                <i class="ph-bold ph-activity"></i> MediConnect
+            </a>
+            <button type="button" class="mobile-drawer-close" onclick="toggleMobileNavDrawer(false)" aria-label="Close menu">
+                <i class="ph-bold ph-x"></i>
+            </button>
+        </div>
+
+        <div class="mobile-drawer-body">
+            {% if current_user %}
+                <div class="mobile-drawer-user-card">
+                    <div class="mobile-drawer-avatar">
+                        {{ current_user.name[0]|upper if current_user.name else 'U' }}
+                    </div>
+                    <div class="mobile-drawer-user-info">
+                        <div class="mobile-drawer-username">{{ current_user.name }}</div>
+                        <div class="mobile-drawer-role-badge">
+                            <span class="live-pulse"></span> {{ current_user.role|capitalize }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mobile-drawer-menu-list">
+                    <a href="{{ url_for(current_user.role + '_dashboard') }}" class="mobile-drawer-item active-item" onclick="toggleMobileNavDrawer(false)">
+                        <i class="ph-bold ph-layout"></i>
+                        <span>My Dashboard</span>
+                    </a>
+                    <a href="{{ url_for('settings') }}" class="mobile-drawer-item" onclick="toggleMobileNavDrawer(false)">
+                        <i class="ph-bold ph-gear"></i>
+                        <span>Account Settings</span>
+                    </a>
+                    {% if current_user.role in ['patient', 'pharmacy'] %}
+                    <button type="button" class="mobile-drawer-item mobile-drawer-btn" onclick="toggleMobileNavDrawer(false); toggleNotificationDrawer();">
+                        <i class="ph-bold ph-bell"></i>
+                        <span>Notification Center</span>
+                    </button>
+                    {% endif %}
+                    <button type="button" class="mobile-drawer-item mobile-drawer-btn" onclick="toggleClinicalTheme()">
+                        <i class="ph-bold ph-moon theme-toggle-icon-mobile"></i>
+                        <span class="theme-label-mobile">Dark / Light Mode</span>
+                    </button>
+                </div>
+
+                <div class="mobile-drawer-footer">
+                    <a href="{{ url_for('logout') }}" class="mobile-drawer-logout" onclick="toggleMobileNavDrawer(false)">
+                        <i class="ph-bold ph-sign-out"></i>
+                        <span>Log Out</span>
+                    </a>
+                </div>
+            {% else %}
+                <div class="mobile-drawer-menu-list">
+                    <a href="{{ url_for('login') }}" class="mobile-drawer-item" onclick="toggleMobileNavDrawer(false)">
+                        <i class="ph-bold ph-sign-in"></i>
+                        <span>Log In</span>
+                    </a>
+                    <div class="mobile-drawer-heading">Register Portals:</div>
+                    <a href="{{ url_for('register', role='doctor') }}" class="mobile-drawer-item" onclick="toggleMobileNavDrawer(false)">
+                        <i class="ph-bold ph-stethoscope"></i>
+                        <span>Doctor Portal</span>
+                    </a>
+                    <a href="{{ url_for('register', role='patient') }}" class="mobile-drawer-item" onclick="toggleMobileNavDrawer(false)">
+                        <i class="ph-bold ph-user"></i>
+                        <span>Patient Space</span>
+                    </a>
+                    <a href="{{ url_for('register', role='pharmacy') }}" class="mobile-drawer-item" onclick="toggleMobileNavDrawer(false)">
+                        <i class="ph-bold ph-first-aid"></i>
+                        <span>Pharmacy Network</span>
+                    </a>
+                    <button type="button" class="mobile-drawer-item mobile-drawer-btn" onclick="toggleClinicalTheme()">
+                        <i class="ph-bold ph-moon theme-toggle-icon-mobile"></i>
+                        <span class="theme-label-mobile">Dark / Light Mode</span>
+                    </button>
+                </div>
+            {% endif %}
+        </div>
+    </aside>
 
     {% if current_user and current_user.role in ['patient', 'pharmacy'] %}
     <!-- Slide-out Persistent Notification Center -->

@@ -209,11 +209,10 @@ body {
         width: 100%;
     }
     .nav-container {
-        min-width: 1100px !important;
-        max-width: 1540px !important;
-        margin: 0 auto !important;
         width: 100% !important;
-        padding: 0.45rem clamp(16px, 2vw, 32px) !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0.45rem clamp(16px, 2.5vw, 48px) !important;
     }
     main {
         min-width: 1100px !important;
@@ -505,10 +504,10 @@ header {
 }
 
 .nav-container {
-    max-width: 1540px;
+    max-width: 100%;
     width: 100%;
-    margin: 0 auto;
-    padding: 0.45rem clamp(16px, 2vw, 32px);
+    margin: 0;
+    padding: 0.45rem clamp(16px, 2.5vw, 48px);
     display: flex;
     flex-direction: row;
     justify-content: space-between;
@@ -2159,39 +2158,55 @@ body[data-role="doctor"] .clinical-banner {
     width: 100%;
 }
 
+/* 2 on top row (span 6 each), 3 on bottom row (span 4 each) */
 .puzzle-piece-1 {
-    grid-column: span 7;
+    grid-column: span 6;
+    background: linear-gradient(135deg, rgba(230, 248, 244, 0.92) 0%, rgba(240, 253, 250, 0.85) 100%);
+    border-color: rgba(52, 211, 153, 0.35);
+    box-shadow: 0 10px 30px rgba(13, 148, 136, 0.08), 0 0 20px rgba(52, 211, 153, 0.12);
 }
 
 .puzzle-piece-2 {
-    grid-column: span 5;
+    grid-column: span 6;
+    background: linear-gradient(135deg, rgba(234, 246, 255, 0.92) 0%, rgba(240, 249, 255, 0.85) 100%);
+    border-color: rgba(56, 189, 248, 0.35);
+    box-shadow: 0 10px 30px rgba(2, 132, 199, 0.08), 0 0 20px rgba(56, 189, 248, 0.12);
 }
 
 .puzzle-piece-3 {
     grid-column: span 4;
+    background: linear-gradient(135deg, rgba(238, 248, 255, 0.92) 0%, rgba(242, 247, 252, 0.85) 100%);
+    border-color: rgba(56, 189, 248, 0.30);
+    box-shadow: 0 10px 30px rgba(2, 132, 199, 0.07);
 }
 
 .puzzle-piece-4 {
     grid-column: span 4;
+    background: linear-gradient(135deg, rgba(238, 253, 244, 0.92) 0%, rgba(254, 252, 235, 0.85) 100%);
+    border-color: rgba(16, 185, 129, 0.32);
+    box-shadow: 0 10px 30px rgba(16, 185, 129, 0.08);
 }
 
 .puzzle-piece-5 {
     grid-column: span 4;
+    background: linear-gradient(135deg, rgba(246, 243, 255, 0.92) 0%, rgba(242, 242, 255, 0.85) 100%);
+    border-color: rgba(129, 140, 248, 0.35);
+    box-shadow: 0 10px 30px rgba(99, 102, 241, 0.08), 0 0 20px rgba(129, 140, 248, 0.12);
 }
 
 /* Individual Puzzle Quote Card */
 .puzzle-quote-card {
     position: relative;
     border-radius: 20px;
-    padding: 1.65rem 1.8rem;
+    padding: 1.65rem 1.85rem;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 220px;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1.5px solid rgba(13, 148, 136, 0.16);
-    box-shadow: 0 10px 30px rgba(13, 148, 136, 0.07), 0 2px 8px rgba(0, 0, 0, 0.02);
+    min-height: 225px;
+    backdrop-filter: blur(24px) saturate(190%);
+    -webkit-backdrop-filter: blur(24px) saturate(190%);
+    border: 1.5px solid rgba(255, 255, 255, 0.75);
+    box-shadow: 0 10px 30px rgba(13, 148, 136, 0.08), 0 2px 8px rgba(0, 0, 0, 0.02);
     transition: all 0.28s cubic-bezier(0.4, 0, 0.2, 1);
     box-sizing: border-box;
     overflow: hidden;
@@ -2199,65 +2214,38 @@ body[data-role="doctor"] .clinical-banner {
 
 .puzzle-quote-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 18px 40px rgba(13, 148, 136, 0.14), 0 4px 12px rgba(0, 0, 0, 0.04);
-    border-color: rgba(45, 212, 191, 0.55);
-}
-
-/* Distinct Glassmorphic Backgrounds for each Puzzle Piece */
-.puzzle-piece-1 {
-    background: linear-gradient(135deg, rgba(246, 243, 236, 0.92) 0%, rgba(240, 253, 250, 0.85) 100%);
-    border-color: rgba(52, 211, 153, 0.3);
-}
-
-.puzzle-piece-2 {
-    background: linear-gradient(135deg, rgba(236, 247, 245, 0.92) 0%, rgba(240, 249, 255, 0.85) 100%);
-    border-color: rgba(45, 212, 191, 0.3);
-}
-
-.puzzle-piece-3 {
-    background: linear-gradient(135deg, rgba(240, 249, 255, 0.92) 0%, rgba(245, 243, 238, 0.85) 100%);
-    border-color: rgba(56, 189, 248, 0.3);
-}
-
-.puzzle-piece-4 {
-    background: linear-gradient(135deg, rgba(236, 253, 245, 0.92) 0%, rgba(246, 245, 242, 0.85) 100%);
-    border-color: rgba(16, 185, 129, 0.3);
-}
-
-.puzzle-piece-5 {
-    background: linear-gradient(135deg, rgba(245, 243, 255, 0.92) 0%, rgba(240, 253, 250, 0.85) 100%);
-    border-color: rgba(129, 140, 248, 0.3);
+    box-shadow: 0 18px 45px rgba(13, 148, 136, 0.16), 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 /* Dark Mode Palette */
 [data-theme="dark"] .puzzle-piece-1 {
-    background: linear-gradient(135deg, rgba(16, 38, 44, 0.85) 0%, rgba(12, 28, 36, 0.88) 100%);
-    border-color: rgba(52, 211, 153, 0.25);
-    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.35);
+    background: linear-gradient(135deg, rgba(16, 38, 44, 0.86) 0%, rgba(12, 28, 36, 0.90) 100%);
+    border-color: rgba(52, 211, 153, 0.28);
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.35), 0 0 25px rgba(52, 211, 153, 0.10);
 }
 
 [data-theme="dark"] .puzzle-piece-2 {
-    background: linear-gradient(135deg, rgba(14, 34, 40, 0.85) 0%, rgba(10, 24, 32, 0.88) 100%);
-    border-color: rgba(45, 212, 191, 0.25);
-    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.35);
+    background: linear-gradient(135deg, rgba(14, 34, 48, 0.86) 0%, rgba(10, 24, 38, 0.90) 100%);
+    border-color: rgba(56, 189, 248, 0.28);
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.35), 0 0 25px rgba(56, 189, 248, 0.10);
 }
 
 [data-theme="dark"] .puzzle-piece-3 {
-    background: linear-gradient(135deg, rgba(13, 30, 42, 0.85) 0%, rgba(10, 24, 34, 0.88) 100%);
+    background: linear-gradient(135deg, rgba(13, 30, 42, 0.86) 0%, rgba(10, 24, 34, 0.90) 100%);
     border-color: rgba(56, 189, 248, 0.25);
     box-shadow: 0 14px 35px rgba(0, 0, 0, 0.35);
 }
 
 [data-theme="dark"] .puzzle-piece-4 {
-    background: linear-gradient(135deg, rgba(12, 36, 32, 0.85) 0%, rgba(10, 28, 26, 0.88) 100%);
+    background: linear-gradient(135deg, rgba(12, 36, 30, 0.86) 0%, rgba(10, 28, 24, 0.90) 100%);
     border-color: rgba(16, 185, 129, 0.25);
     box-shadow: 0 14px 35px rgba(0, 0, 0, 0.35);
 }
 
 [data-theme="dark"] .puzzle-piece-5 {
-    background: linear-gradient(135deg, rgba(24, 28, 48, 0.85) 0%, rgba(16, 20, 38, 0.88) 100%);
-    border-color: rgba(129, 140, 248, 0.25);
-    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.35);
+    background: linear-gradient(135deg, rgba(24, 24, 48, 0.86) 0%, rgba(16, 18, 38, 0.90) 100%);
+    border-color: rgba(129, 140, 248, 0.28);
+    box-shadow: 0 14px 35px rgba(0, 0, 0, 0.35), 0 0 25px rgba(129, 140, 248, 0.10);
 }
 
 /* Subtle Embedded Watermark inside each puzzle card */
@@ -2308,7 +2296,7 @@ body[data-role="doctor"] .clinical-banner {
 .card-glowing-badge {
     width: 38px;
     height: 38px;
-    border-radius: 11px;
+    border-radius: 50%;
     background: rgba(13, 148, 136, 0.1);
     color: var(--primary);
     display: inline-flex;
@@ -2319,9 +2307,9 @@ body[data-role="doctor"] .clinical-banner {
 }
 
 .badge-mint {
-    background: rgba(52, 211, 153, 0.15);
+    background: rgba(52, 211, 153, 0.18);
     color: #059669;
-    box-shadow: 0 0 12px rgba(52, 211, 153, 0.35);
+    box-shadow: 0 0 14px rgba(52, 211, 153, 0.35);
 }
 
 [data-theme="dark"] .badge-mint {
@@ -2329,9 +2317,9 @@ body[data-role="doctor"] .clinical-banner {
 }
 
 .badge-teal {
-    background: rgba(13, 148, 136, 0.15);
+    background: rgba(13, 148, 136, 0.18);
     color: #0f766e;
-    box-shadow: 0 0 12px rgba(45, 212, 191, 0.3);
+    box-shadow: 0 0 14px rgba(45, 212, 191, 0.30);
 }
 
 [data-theme="dark"] .badge-teal {
@@ -2339,9 +2327,9 @@ body[data-role="doctor"] .clinical-banner {
 }
 
 .badge-blue {
-    background: rgba(2, 132, 199, 0.15);
+    background: rgba(2, 132, 199, 0.18);
     color: #0284c7;
-    box-shadow: 0 0 12px rgba(56, 189, 248, 0.3);
+    box-shadow: 0 0 14px rgba(56, 189, 248, 0.30);
 }
 
 [data-theme="dark"] .badge-blue {
@@ -2349,9 +2337,9 @@ body[data-role="doctor"] .clinical-banner {
 }
 
 .badge-emerald {
-    background: rgba(16, 185, 129, 0.15);
+    background: rgba(16, 185, 129, 0.18);
     color: #059669;
-    box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+    box-shadow: 0 0 14px rgba(16, 185, 129, 0.35);
 }
 
 [data-theme="dark"] .badge-emerald {
@@ -2359,9 +2347,9 @@ body[data-role="doctor"] .clinical-banner {
 }
 
 .badge-indigo {
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(99, 102, 241, 0.18);
     color: #4f46e5;
-    box-shadow: 0 0 12px rgba(99, 102, 241, 0.35);
+    box-shadow: 0 0 14px rgba(99, 102, 241, 0.35);
 }
 
 [data-theme="dark"] .badge-indigo {
@@ -2376,17 +2364,83 @@ body[data-role="doctor"] .clinical-banner {
     opacity: 0.28;
 }
 
+/* Quote Text Justification: Justify quote alignment inside as explicitly requested */
 .floating-quote-text {
-    font-family: 'Playfair Display', 'Merriweather', Georgia, serif;
-    font-size: 1.06rem;
-    font-weight: 650;
-    color: #102A2E;
-    line-height: 1.52;
     margin: 0.35rem 0 1rem 0;
     flex-grow: 1;
+    text-align: justify;
+    text-justify: inter-word;
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    line-height: 1.6;
 }
 
-[data-theme="dark"] .floating-quote-text {
+/* Typography styles per quote - all justified inside */
+.quote-font-serif {
+    font-family: 'Playfair Display', 'Merriweather', Garamond, Georgia, serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #102A2E;
+    line-height: 1.6;
+    text-align: justify !important;
+    text-justify: inter-word !important;
+}
+
+.quote-font-sans {
+    font-family: 'Inter', var(--font-sans);
+    font-size: 1.02rem;
+    font-weight: 500;
+    color: #102A2E;
+    line-height: 1.6;
+    text-align: justify !important;
+    text-justify: inter-word !important;
+}
+
+.highlight-science {
+    color: #0284c7;
+    font-weight: 750;
+    transition: color 0.2s ease;
+}
+
+[data-theme="dark"] .highlight-science {
+    color: #38bdf8;
+}
+
+.quote-font-rounded {
+    font-family: 'Outfit', 'Inter', sans-serif;
+    font-size: 1.03rem;
+    font-weight: 550;
+    color: #102A2E;
+    line-height: 1.6;
+    text-align: justify !important;
+    text-justify: inter-word !important;
+}
+
+.quote-font-editorial {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #102A2E;
+    line-height: 1.6;
+    text-align: justify !important;
+    text-justify: inter-word !important;
+}
+
+.quote-font-highcontrast {
+    font-family: 'Playfair Display', 'Merriweather', Georgia, serif;
+    font-size: 1.02rem;
+    font-weight: 650;
+    color: #102A2E;
+    line-height: 1.6;
+    text-align: justify !important;
+    text-justify: inter-word !important;
+}
+
+[data-theme="dark"] .quote-font-serif,
+[data-theme="dark"] .quote-font-sans,
+[data-theme="dark"] .quote-font-rounded,
+[data-theme="dark"] .quote-font-editorial,
+[data-theme="dark"] .quote-font-highcontrast {
     color: #f1f5f9;
 }
 
@@ -2417,6 +2471,53 @@ body[data-role="doctor"] .clinical-banner {
     color: #2dd4bf;
 }
 
+/* Specific Footer Metadata Typography */
+.text-cursive {
+    font-family: 'Caveat', 'Playfair Display', cursive, serif !important;
+    font-size: 1.05rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.05em !important;
+    color: #0f766e !important;
+    text-transform: uppercase !important;
+}
+
+[data-theme="dark"] .text-cursive {
+    color: #2dd4bf !important;
+}
+
+.text-bold-science {
+    font-family: 'Inter', sans-serif !important;
+    font-weight: 800 !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.06em !important;
+    color: #0284c7 !important;
+}
+
+[data-theme="dark"] .text-bold-science {
+    color: #38bdf8 !important;
+}
+
+.font-italic-serif {
+    font-family: 'Playfair Display', Georgia, serif !important;
+    font-style: italic !important;
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    color: var(--text-secondary) !important;
+}
+
+.font-spaced-serif {
+    font-family: 'Playfair Display', Georgia, serif !important;
+    font-weight: 750 !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.1em !important;
+    text-transform: uppercase !important;
+    color: #6366f1 !important;
+}
+
+[data-theme="dark"] .font-spaced-serif {
+    color: #818cf8 !important;
+}
+
 .floating-meta-sub {
     font-size: 0.72rem;
     color: var(--text-secondary);
@@ -2427,33 +2528,33 @@ body[data-role="doctor"] .clinical-banner {
     color: #94a3b8;
 }
 
-/* Floating Minimal Dock */
+/* Floating Minimal Dock / Bottom Banner */
 .floating-dock-bar {
     position: relative;
     z-index: 2;
     width: fit-content;
     max-width: 90%;
-    margin: 1.5rem auto 0 auto;
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    background: rgba(255, 255, 255, 0.82);
-    border: 1.5px solid rgba(255, 255, 255, 0.9);
+    margin: 1.75rem auto 0 auto;
+    backdrop-filter: blur(24px) saturate(190%);
+    -webkit-backdrop-filter: blur(24px) saturate(190%);
+    background: rgba(255, 255, 255, 0.88);
+    border: 1.5px solid rgba(13, 148, 136, 0.22);
     border-radius: 9999px;
-    padding: 0.85rem 2.4rem;
+    padding: 0.95rem 2.8rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.55rem;
-    box-shadow: 0 8px 24px rgba(13, 148, 136, 0.08), 0 2px 6px rgba(0, 0, 0, 0.03);
+    gap: 0.65rem;
+    box-shadow: 0 10px 30px rgba(13, 148, 136, 0.10), 0 0 25px rgba(45, 212, 191, 0.16);
     box-sizing: border-box;
     text-align: center;
 }
 
 [data-theme="dark"] .floating-dock-bar {
-    background: rgba(14, 28, 36, 0.85);
-    border-color: rgba(45, 212, 191, 0.25);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    background: rgba(14, 28, 36, 0.88);
+    border-color: rgba(45, 212, 191, 0.30);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.40), 0 0 25px rgba(45, 212, 191, 0.15);
 }
 
 .dock-quote-wrap {
@@ -2468,7 +2569,7 @@ body[data-role="doctor"] .clinical-banner {
 .dock-maxim-quote {
     font-family: 'Playfair Display', 'Merriweather', Georgia, serif;
     font-style: italic;
-    font-size: 0.92rem;
+    font-size: 0.95rem;
     color: #102A2E;
     font-weight: 600;
     text-align: center;
@@ -2492,9 +2593,9 @@ body[data-role="doctor"] .clinical-banner {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 1.25rem;
-    font-size: 1.2rem;
-    color: var(--primary);
+    gap: 1.4rem;
+    font-size: 1.25rem;
+    color: #0f766e;
     width: 100%;
 }
 
@@ -2515,15 +2616,15 @@ body[data-role="doctor"] .clinical-banner {
 /* Responsive Media Queries */
 @media (max-width: 1100px) {
     .puzzle-cards-grid {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(6, 1fr);
         gap: 1rem;
     }
     .puzzle-piece-1,
-    .puzzle-piece-2,
-    .puzzle-piece-3,
-    .puzzle-piece-4 {
-        grid-column: span 1;
+    .puzzle-piece-2 {
+        grid-column: span 6;
     }
+    .puzzle-piece-3,
+    .puzzle-piece-4,
     .puzzle-piece-5 {
         grid-column: span 2;
     }
@@ -2531,20 +2632,33 @@ body[data-role="doctor"] .clinical-banner {
 
 @media (max-width: 768px) {
     .puzzle-cards-grid {
-        grid-template-columns: 1fr;
-        gap: 0.9rem;
+        grid-template-columns: 1fr !important;
+        gap: 0.85rem !important;
     }
     .puzzle-piece-1,
     .puzzle-piece-2,
     .puzzle-piece-3,
     .puzzle-piece-4,
     .puzzle-piece-5 {
-        grid-column: span 1;
+        grid-column: span 1 !important;
+        width: 100% !important;
+        min-height: auto !important;
+        padding: 1.35rem 1.15rem !important;
     }
     .floating-dock-bar {
-        border-radius: 20px;
-        padding: 0.85rem 1.25rem;
-        width: 100%;
+        border-radius: 16px !important;
+        padding: 0.85rem 1.15rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .dock-quote-wrap {
+        font-size: 0.82rem !important;
+    }
+    .floating-dock-icons {
+        gap: 0.85rem !important;
+        font-size: 1.15rem !important;
+        flex-wrap: wrap !important;
     }
 }
 
@@ -3885,10 +3999,10 @@ body[data-page="landing"] header {
 }
 
 body[data-page="landing"] .nav-container {
-    max-width: 1200px;
+    max-width: 100%;
     width: 100%;
-    margin: 0 auto;
-    padding: 0.45rem clamp(12px, 3.5vw, 36px);
+    margin: 0;
+    padding: 0.45rem clamp(16px, 2.5vw, 48px);
     display: flex;
     flex-direction: row;
     justify-content: space-between;
@@ -5642,6 +5756,236 @@ body[data-page="landing"] footer {
 [data-theme="dark"] .tech-pill {
     background: rgba(255, 255, 255, 0.06);
     color: #94a3b8;
+}
+
+/* ==========================================================================
+   UNIVERSAL MOBILE RESPONSIVENESS (<= 768px)
+   Perfect mobile layout for Doctor, Patient, Pharmacy and Landing Portals
+   ========================================================================== */
+@media screen and (max-width: 768px) {
+    html, body {
+        overflow-x: hidden !important;
+        width: 100% !important;
+        max-width: 100vw !important;
+        position: relative !important;
+    }
+    
+    header {
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+        height: auto !important;
+        overflow: hidden !important;
+    }
+    
+    .nav-container,
+    body[data-page="landing"] .nav-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0.45rem 10px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 6px !important;
+        min-height: 52px !important;
+    }
+    
+    .logo,
+    body[data-page="landing"] .logo {
+        font-size: 16px !important;
+        gap: 5px !important;
+    }
+    
+    .nav-user,
+    body[data-page="landing"] .nav-user {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        gap: 4px !important;
+        justify-content: flex-end !important;
+        width: auto !important;
+        max-width: 100% !important;
+    }
+    
+    .nav-user .btn,
+    .nav-user .btn-sm {
+        height: 28px !important;
+        padding: 0 7px !important;
+        font-size: 0.72rem !important;
+        gap: 3px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .user-badge {
+        height: 28px !important;
+        padding: 0 7px !important;
+        font-size: 0.72rem !important;
+        max-width: 130px !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+    }
+    
+    .user-badge .badge-role {
+        display: none !important;
+    }
+    
+    .theme-toggle-btn,
+    .nav-notification-btn {
+        width: 28px !important;
+        height: 28px !important;
+        min-width: 28px !important;
+        font-size: 13px !important;
+    }
+    
+    /* Main Layout */
+    main,
+    body[data-page="landing"] main {
+        padding: 0.85rem 0.65rem 1.25rem !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+        min-width: 0 !important;
+    }
+    
+    /* Doctor Portal Hero Banner on Mobile */
+    .doctor-hero-banner,
+    body[data-role="doctor"] .clinical-banner {
+        padding: 1.15rem 0.85rem !important;
+        border-radius: 16px !important;
+        margin-bottom: 1.15rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    .doctor-hero-top {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 0.75rem !important;
+        margin-bottom: 0.75rem !important;
+        width: 100% !important;
+    }
+    
+    .doctor-hero-profile {
+        width: 100% !important;
+        gap: 0.75rem !important;
+        align-items: flex-start !important;
+    }
+    
+    .doctor-hero-avatar {
+        width: 44px !important;
+        height: 44px !important;
+        font-size: 1.35rem !important;
+        border-radius: 12px !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .doctor-hero-name {
+        font-size: 1.2rem !important;
+        flex-wrap: wrap !important;
+        white-space: normal !important;
+        gap: 0.4rem !important;
+    }
+    
+    .clinical-meta-pills {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.35rem !important;
+        width: 100% !important;
+    }
+    
+    .clinical-meta-pill {
+        font-size: 0.74rem !important;
+        padding: 0.25rem 0.55rem !important;
+        width: fit-content !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    .doctor-hero-status-pill {
+        width: 100% !important;
+        justify-content: center !important;
+        text-align: center !important;
+        font-size: 0.74rem !important;
+        padding: 0.35rem 0.5rem !important;
+        box-sizing: border-box !important;
+        white-space: normal !important;
+    }
+    
+    .doctor-hero-actions {
+        padding-top: 0.75rem !important;
+        width: 100% !important;
+    }
+    
+    .doctor-hero-btns {
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 0.5rem !important;
+    }
+    
+    .doctor-hero-btns .btn,
+    .doctor-hero-btns a.btn {
+        width: 100% !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+        padding: 0.6rem 1rem !important;
+        font-size: 0.88rem !important;
+    }
+    
+    /* General Cards across Patient & Pharmacy */
+    .card {
+        padding: 1.15rem 0.95rem !important;
+        border-radius: 14px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    .tabs {
+        overflow-x: auto !important;
+        white-space: nowrap !important;
+        -webkit-overflow-scrolling: touch !important;
+        width: 100% !important;
+        padding-bottom: 4px !important;
+        gap: 0.35rem !important;
+    }
+    
+    .tab-btn {
+        padding: 0.5rem 0.85rem !important;
+        font-size: 0.84rem !important;
+        flex-shrink: 0 !important;
+    }
+    
+    .patient-prescription-alert {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.75rem !important;
+        padding: 0.85rem !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    .patient-prescription-alert > div:last-child {
+        width: 100% !important;
+        justify-content: flex-end !important;
+    }
+    
+    .table-responsive,
+    .card:has(table) {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        width: 100% !important;
+    }
+    
+    table {
+        min-width: 480px;
+    }
+    
+    .team-cards-grid {
+        grid-template-columns: 1fr !important;
+    }
 }
 
 
